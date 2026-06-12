@@ -15,8 +15,8 @@ samplesheet: 'ChromSimSamplesheet.txt'
 ## Example (STRS project):
 ##   hic_control:  '/path/to/STRS/hic/maps/control_megaMap_inter_30.hic'
 ##   hic_sorbitol: '/path/to/STRS/hic/maps/sorbitol_megaMap_inter_30.hic'
-hic_control:  '/path/to/your/control.hic'
-hic_sorbitol: '/path/to/your/sorbitol.hic'
+hic_control:  '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic'
+hic_sorbitol: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic'
 
 ## ── Genome FASTA ─────────────────────────────────────────────────────────────
 ## Used by extract_ctcf_sites.py (FIMO motif orientation).
@@ -148,7 +148,7 @@ smc_bond:
 tiling:
   tile_size:  2500
   chrom_size: 70000
-  padding:    250
+  padding:    270
 
 sim_run:
   smc_steps_per_block:  1

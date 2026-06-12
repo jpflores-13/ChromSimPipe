@@ -1,3 +1,0 @@
-CTCF_Type	CTCF_Peaks_Path
-control	/work/users/j/p/jpflores/projects/STRS/data/processed/cutntag/output/peaks/STRS_HEK293_eGFP-YAP_CTCF_cont_0h_peaks.narrowPeak
-sorbitol	/work/users/j/p/jpflores/projects/STRS/data/processed/cutntag/output/peaks/STRS_HEK293_eGFP-YAP_CTCF_sorbitol_1h_peaks.narrowPeak

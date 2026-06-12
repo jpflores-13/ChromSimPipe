@@ -27,7 +27,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=128G
-#SBATCH --time=2:00:00
+#SBATCH --time=8:00:00
 #SBATCH --partition=general
 
 set -euo pipefail
@@ -56,25 +56,24 @@ done
 # =============================================================================
 # STEP -1: Create conda environments (idempotent — safe to re-run)
 # =============================================================================
+
+# Always load anaconda so conda/mamba are available for all later steps
+module load anaconda/2024.02 2>/dev/null || true
+
+# Prefer mamba (ships with anaconda/2024.02; faster, lower memory).
+# IMPORTANT: use the same runner for both create AND run — mamba stores envs
+# in ~/.local/share/mamba/envs/ which conda run cannot find by name.
+if command -v mamba &>/dev/null; then
+    ENV_CREATE="mamba env create"
+    ENV_RUN="mamba run"
+else
+    ENV_CREATE="conda env create"
+    ENV_RUN="conda run"
+fi
+
 if [[ "${SKIP_ENVS}" != "1" ]]; then
     echo "=== Step -1: Setting up conda environments ==="
-
-    # Load the anaconda module (Longleaf-specific; harmless if already loaded)
-    module load anaconda/2024.02 2>/dev/null || true
-
-    # Prefer mamba (ships with anaconda/2024.02; uses ~5-10x less memory than
-    # the conda solver and is much faster). Fall back to conda if unavailable.
-    # IMPORTANT: use the same runner for both create AND run — mamba stores envs
-    # in ~/.local/share/mamba/envs/ which conda run cannot find by name.
-    if command -v mamba &>/dev/null; then
-        ENV_CREATE="mamba env create"
-        ENV_RUN="mamba run"
-        echo "  Using mamba solver (faster, lower memory)"
-    else
-        ENV_CREATE="conda env create"
-        ENV_RUN="conda run"
-        echo "  Using conda solver (mamba not found)"
-    fi
+    echo "  Using: ${ENV_RUN%% *}"
 
     if ${ENV_CREATE%% *} env list 2>/dev/null | grep -qE "cohesin_sim"; then
         echo "  Already exists: cohesin_sim"
@@ -93,12 +92,6 @@ if [[ "${SKIP_ENVS}" != "1" ]]; then
     fi
 else
     echo "=== Step -1: Skipping conda env creation (--skip-envs) ==="
-    # Still need ENV_RUN so later steps work correctly
-    if command -v mamba &>/dev/null; then
-        ENV_RUN="mamba run"
-    else
-        ENV_RUN="conda run"
-    fi
 fi
 
 # =============================================================================
@@ -199,12 +192,12 @@ convert_hic() {
 
 convert_hic \
     "data/hic/$(basename ${HIC_CONTROL})" \
-    "data/mcool/control.mcool" \
+    "data/mcool/control.cool" \
     "${RESOLUTION}"
 
 convert_hic \
     "data/hic/$(basename ${HIC_SORBITOL})" \
-    "data/mcool/sorbitol.mcool" \
+    "data/mcool/sorbitol.cool" \
     "${RESOLUTION}"
 
 # =============================================================================
@@ -300,5 +293,5 @@ echo ""
 echo "=== Setup complete ==="
 echo ""
 echo "Next steps:"
-echo "  1. Verify the locus in config/SimConfig.yaml (locus.name)"
-echo "  2. Launch simulations: sbatch SimPipe.sh"
+echo "  1. Verify the locus in config/ChromSimConfig.yaml (locus.name)"
+echo "  2. Launch simulations: sbatch ChromSimPipe.sh"

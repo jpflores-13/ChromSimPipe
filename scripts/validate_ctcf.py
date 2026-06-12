@@ -2,29 +2,23 @@
 """
 Validate CTCF BED files: parsing, coordinate conversion, and polychrom format.
 
-Runs a series of checks on the BED files to make sure they will be read
-correctly by the simulation pipeline. Run this BEFORE launching simulations.
+BED paths and conditions are read from configs/parameters.py (which reads
+ChromSimConfig.yaml). No arguments needed for a standard run.
 
 Usage:
     python scripts/validate_ctcf.py
-
-    # Or point to specific BED files:
-    python scripts/validate_ctcf.py \
-        --mesc data/ctcf_oriented_mm10_GSE96107_ES_chr3_34000000_36000000.bed \
-        --neuron data/ctcf_oriented_mm10_GSE96107_CN_chr3_34000000_36000000.bed
 """
 
 import os
 import sys
-import argparse
 import numpy as np
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from configs.parameters import (
     CHROM, REGION_START, REGION_END, RESOLUTION, N_MONOMERS,
-    SOX2_START_MONOMER, SOX2_END_MONOMER,
-    CTCF_SITES_MESC, CTCF_SITES_NEURON, CTCF_SITES_PLACEHOLDER,
+    ANCHOR_MONOMER, CTCF_BEDS,
+    CTCF_SITES_PLACEHOLDER,
     get_ctcf_arrays, load_ctcf_from_bed,
 )
 
@@ -43,7 +37,6 @@ n_warn = 0
 
 
 def check(condition, msg, warn_only=False):
-    """Print a test result. Returns True if passed."""
     global n_pass, n_fail, n_warn
     if condition:
         print(f"  [{PASS}] {msg}")
@@ -76,22 +69,18 @@ def header(title):
 def validate_bed_file(bed_path, label):
     header(f"BED FILE: {label} — {os.path.basename(bed_path)}")
 
-    # File exists?
     if not check(os.path.isfile(bed_path), f"File exists: {bed_path}"):
         return None
 
-    # Read lines
     with open(bed_path) as f:
         raw_lines = f.readlines()
 
     info(f"Total lines: {len(raw_lines)}")
 
-    # Check for track header
     has_track = any(l.strip().startswith("track") for l in raw_lines)
     if has_track:
         info("Track header found (will be skipped by loader)")
 
-    # Parse data lines
     data_lines = []
     bad_lines = []
     for i, line in enumerate(raw_lines, 1):
@@ -125,7 +114,6 @@ def validate_bed_file(bed_path, label):
         check(False, "At least one data line found")
         return None
 
-    # Check chromosome
     on_chrom = [d for d in data_lines if d["chrom"] == CHROM]
     off_chrom = [d for d in data_lines if d["chrom"] != CHROM]
     check(len(on_chrom) > 0, f"Sites on {CHROM}: {len(on_chrom)}")
@@ -133,15 +121,12 @@ def validate_bed_file(bed_path, label):
         check(False, f"Sites on other chromosomes: {len(off_chrom)} (will be ignored)",
               warn_only=True)
 
-    # Check strand values
     strands = set(d["strand"] for d in on_chrom)
-    check(strands <= {"+", "-"},
-          f"Strand values are +/- only: {strands}")
+    check(strands <= {"+", "-"}, f"Strand values are +/- only: {strands}")
     n_plus = sum(1 for d in on_chrom if d["strand"] == "+")
     n_minus = sum(1 for d in on_chrom if d["strand"] == "-")
     info(f"Orientation breakdown: {n_plus} forward (+), {n_minus} reverse (-)")
 
-    # Check coordinates are within region
     in_region = []
     out_of_region = []
     for d in on_chrom:
@@ -156,12 +141,10 @@ def validate_bed_file(bed_path, label):
     if out_of_region:
         info(f"Sites outside region (will be ignored): {len(out_of_region)}")
 
-    # Check start < end
     bad_coords = [d for d in on_chrom if d["start"] >= d["end"]]
     check(len(bad_coords) == 0,
           f"All peaks have start < end: {len(bad_coords)} violations")
 
-    # Check reasonable peak widths
     widths = [d["end"] - d["start"] for d in on_chrom]
     if widths:
         info(f"Peak widths: min={min(widths)} bp, max={max(widths)} bp, "
@@ -196,12 +179,10 @@ def validate_conversion(sites_data, label):
 
     info(f"Converted {len(monomers)} sites to monomer coordinates")
 
-    # Check all positions within [0, N_MONOMERS)
     check(all(0 <= p < N_MONOMERS for p in positions),
           f"All positions in [0, {N_MONOMERS}): "
           f"range [{min(positions)}, {max(positions)}]")
 
-    # Check for duplicates at same monomer
     unique_pos = set(positions)
     if len(unique_pos) < len(positions):
         dups = len(positions) - len(unique_pos)
@@ -209,23 +190,17 @@ def validate_conversion(sites_data, label):
               warn_only=True)
         info("(Multiple peaks mapping to the same monomer — only last one used)")
 
-    # Check orientations
     check(all(o in (+1, -1) for o in orientations),
           f"All orientations are +1 or -1")
-
-    # Check positions are sorted
     check(positions == sorted(positions),
           "Positions are sorted in ascending order")
 
-    # Show monomer positions
     info(f"Monomer positions: {positions}")
     info(f"Orientations:      {['+' if o == 1 else '-' for o in orientations]}")
 
-    # Check density (sites per 100 monomers = sites per 100 kb)
     density = len(monomers) / (N_MONOMERS / 100)
     info(f"CTCF density: {density:.1f} sites per 100 monomers (100 kb)")
 
-    # Convergent pairs (sites that form TAD boundaries)
     convergent = 0
     for i in range(len(monomers) - 1):
         if monomers[i][1] == +1 and monomers[i + 1][1] == -1:
@@ -238,12 +213,12 @@ def validate_conversion(sites_data, label):
 # ---------------------------------------------------------------------------
 # 3. Validate load_ctcf_from_bed() function
 # ---------------------------------------------------------------------------
-def validate_loader(bed_path, cell_type, expected_manual):
-    header(f"LOADER FUNCTION: load_ctcf_from_bed(cell_type='{cell_type}')")
+def validate_loader(bed_path, condition, expected_manual):
+    header(f"LOADER FUNCTION: load_ctcf_from_bed(condition='{condition}')")
 
     try:
-        loaded = load_ctcf_from_bed(bed_path, cell_type=cell_type)
-        check(True, f"load_ctcf_from_bed() ran without errors")
+        loaded = load_ctcf_from_bed(bed_path, condition=condition)
+        check(True, "load_ctcf_from_bed() ran without errors")
     except Exception as e:
         check(False, f"load_ctcf_from_bed() raised: {e}")
         return
@@ -263,7 +238,6 @@ def validate_loader(bed_path, cell_type, expected_manual):
                     if a != b:
                         print(f"        Mismatch at index {i}: loader={a} vs manual={b}")
 
-    # Check tuples
     if loaded:
         check(all(isinstance(s, tuple) and len(s) == 2 for s in loaded),
               "All entries are (position, orientation) tuples")
@@ -276,11 +250,11 @@ def validate_loader(bed_path, cell_type, expected_manual):
 # ---------------------------------------------------------------------------
 # 4. Validate get_ctcf_arrays() output
 # ---------------------------------------------------------------------------
-def validate_arrays(cell_type, expected_sites):
-    header(f"POLYCHROM FORMAT: get_ctcf_arrays(cell_type='{cell_type}')")
+def validate_arrays(condition, expected_sites):
+    header(f"POLYCHROM FORMAT: get_ctcf_arrays(condition='{condition}')")
 
     try:
-        positions, orientations = get_ctcf_arrays(cell_type=cell_type)
+        positions, orientations = get_ctcf_arrays(condition=condition)
         check(True, "get_ctcf_arrays() ran without errors")
     except Exception as e:
         check(False, f"get_ctcf_arrays() raised: {e}")
@@ -300,12 +274,9 @@ def validate_arrays(cell_type, expected_sites):
     if expected_sites:
         expected_pos = np.array([s[0] for s in expected_sites], dtype=int)
         expected_ori = np.array([s[1] for s in expected_sites], dtype=int)
-        check(np.array_equal(positions, expected_pos),
-              "Positions match loaded sites")
-        check(np.array_equal(orientations, expected_ori),
-              "Orientations match loaded sites")
+        check(np.array_equal(positions, expected_pos), "Positions match loaded sites")
+        check(np.array_equal(orientations, expected_ori), "Orientations match loaded sites")
 
-    # Simulate what LEFSimulator would do: build stall arrays
     left_stall = np.zeros(N_MONOMERS, dtype=bool)
     right_stall = np.zeros(N_MONOMERS, dtype=bool)
     for pos, ori in zip(positions, orientations):
@@ -314,140 +285,101 @@ def validate_arrays(cell_type, expected_sites):
         elif ori == -1:
             right_stall[pos] = True
 
-    n_left = left_stall.sum()
-    n_right = right_stall.sum()
-    info(f"LEF stall arrays: {n_left} left-blockers (+1), {n_right} right-blockers (-1)")
+    info(f"LEF stall arrays: {left_stall.sum()} left-blockers (+1), {right_stall.sum()} right-blockers (-1)")
     info(f"Total occupied monomers: {(left_stall | right_stall).sum()} / {N_MONOMERS}")
 
-    # Check CTCF near Sox2
-    sox2_range = range(SOX2_START_MONOMER - 50, SOX2_END_MONOMER + 50)
-    near_sox2 = [(p, o) for p, o in zip(positions, orientations)
-                 if p in sox2_range]
-    if near_sox2:
-        info(f"CTCF sites within ±50kb of Sox2 ({SOX2_START_MONOMER}-{SOX2_END_MONOMER}):")
-        for p, o in near_sox2:
-            dist = p - SOX2_START_MONOMER
+    # Check CTCF near the locus anchor point
+    anchor_range = range(ANCHOR_MONOMER - 50, ANCHOR_MONOMER + 50)
+    near_anchor = [(p, o) for p, o in zip(positions, orientations) if p in anchor_range]
+    if near_anchor:
+        anchor_bp = ANCHOR_MONOMER * RESOLUTION + REGION_START
+        info(f"CTCF sites within ±50 kb of anchor (monomer {ANCHOR_MONOMER}, {anchor_bp:,} bp):")
+        for p, o in near_anchor:
+            dist = p - ANCHOR_MONOMER
             strand = "+" if o == +1 else "-"
             genomic = p * RESOLUTION + REGION_START
             info(f"  monomer {p} ({genomic:,} bp), orientation {strand}, "
                  f"{'upstream' if dist < 0 else 'downstream'} {abs(dist)} kb")
     else:
-        check(False, f"No CTCF sites near Sox2 (±50 kb)", warn_only=True)
+        check(False, f"No CTCF sites near anchor ±50 kb (monomer {ANCHOR_MONOMER})", warn_only=True)
 
 
 # ---------------------------------------------------------------------------
-# 5. Compare mESC vs neuron
+# 5. Compare two conditions
 # ---------------------------------------------------------------------------
-def compare_cell_types():
-    header("COMPARISON: mESC vs neuron CTCF landscapes")
+def compare_conditions(cond_a, cond_b):
+    header(f"COMPARISON: {cond_a} vs {cond_b} CTCF landscapes")
 
-    pos_es, ori_es = get_ctcf_arrays("mESC")
-    pos_cn, ori_cn = get_ctcf_arrays("neuron")
+    pos_a, ori_a = get_ctcf_arrays(condition=cond_a)
+    pos_b, ori_b = get_ctcf_arrays(condition=cond_b)
 
-    info(f"mESC:   {len(pos_es)} sites")
-    info(f"Neuron: {len(pos_cn)} sites")
+    info(f"{cond_a}: {len(pos_a)} sites")
+    info(f"{cond_b}: {len(pos_b)} sites")
 
-    # Shared positions (within 2 monomers = 2 kb)
+    tolerance = 2  # monomers = 2 kb
     shared = 0
-    es_only = 0
-    cn_only = 0
-    tolerance = 2  # monomers
+    a_only = 0
+    b_only = 0
 
-    for p in pos_es:
-        if any(abs(p - q) <= tolerance for q in pos_cn):
+    for p in pos_a:
+        if any(abs(p - q) <= tolerance for q in pos_b):
             shared += 1
         else:
-            es_only += 1
+            a_only += 1
 
-    for p in pos_cn:
-        if not any(abs(p - q) <= tolerance for q in pos_es):
-            cn_only += 1
+    for p in pos_b:
+        if not any(abs(p - q) <= tolerance for q in pos_a):
+            b_only += 1
 
     info(f"Shared (within {tolerance} kb): {shared}")
-    info(f"mESC-specific: {es_only}")
-    info(f"Neuron-specific: {cn_only}")
+    info(f"{cond_a}-specific: {a_only}")
+    info(f"{cond_b}-specific: {b_only}")
 
-    check(not np.array_equal(pos_es, pos_cn),
-          "mESC and neuron have DIFFERENT CTCF landscapes")
+    check(not np.array_equal(pos_a, pos_b),
+          f"{cond_a} and {cond_b} have DIFFERENT CTCF landscapes")
 
-    # Coverage around Sox2
-    sox2_window = range(SOX2_START_MONOMER - 100, SOX2_END_MONOMER + 100)
-    es_near = sum(1 for p in pos_es if p in sox2_window)
-    cn_near = sum(1 for p in pos_cn if p in sox2_window)
-    info(f"Sites within ±100 kb of Sox2: mESC={es_near}, neuron={cn_near}")
+    anchor_window = range(ANCHOR_MONOMER - 100, ANCHOR_MONOMER + 100)
+    a_near = sum(1 for p in pos_a if p in anchor_window)
+    b_near = sum(1 for p in pos_b if p in anchor_window)
+    info(f"Sites within ±100 kb of anchor: {cond_a}={a_near}, {cond_b}={b_near}")
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(description="Validate CTCF BED files for simulation")
-    parser.add_argument("--mesc", default=None,
-                        help="BED file for mESC CTCF sites")
-    parser.add_argument("--neuron", default=None,
-                        help="BED file for neuron CTCF sites")
-    args = parser.parse_args()
-
-    # Auto-detect BED files if not specified
-    data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
-
-    if args.mesc is None:
-        candidates = [
-            "ctcf_oriented_mm10_GSE96107_ES_chr3_34000000_36000000.bed",
-            "ctcf_oriented_mm10_mESC_Bruce4_chr3_34000000_36000000.bed",
-        ]
-        for c in candidates:
-            path = os.path.join(data_dir, c)
-            if os.path.isfile(path):
-                args.mesc = path
-                break
-
-    if args.neuron is None:
-        candidates = [
-            "ctcf_oriented_mm10_GSE96107_CN_chr3_34000000_36000000.bed",
-        ]
-        for c in candidates:
-            path = os.path.join(data_dir, c)
-            if os.path.isfile(path):
-                args.neuron = path
-                break
-
     print("=" * 70)
     print("  CTCF VALIDATION — Pre-simulation checks")
     print("=" * 70)
     print(f"  Region:     {CHROM}:{REGION_START:,}-{REGION_END:,}")
     print(f"  Resolution: {RESOLUTION} bp/monomer")
     print(f"  Monomers:   {N_MONOMERS}")
-    print(f"  Sox2:       monomers {SOX2_START_MONOMER}-{SOX2_END_MONOMER}")
+    print(f"  Anchor:     monomer {ANCHOR_MONOMER} ({ANCHOR_MONOMER * RESOLUTION + REGION_START:,} bp)")
+    print(f"  Conditions: {list(CTCF_BEDS)}")
     print(f"  Placeholder CTCF: {CTCF_SITES_PLACEHOLDER}")
 
-    # --- mESC ---
-    if args.mesc:
-        es_raw = validate_bed_file(args.mesc, "mESC")
-        es_monomers = validate_conversion(es_raw, "mESC")
-        es_loaded = validate_loader(args.mesc, "mESC", es_monomers)
-        validate_arrays("mESC", es_loaded)
-    else:
-        header("mESC — NO BED FILE FOUND")
-        info("Using placeholder sites from parameters.py")
-        validate_arrays("mESC", None)
+    loaded_per_condition = {}
 
-    # --- Neuron ---
-    if args.neuron:
-        cn_raw = validate_bed_file(args.neuron, "neuron")
-        cn_monomers = validate_conversion(cn_raw, "neuron")
-        cn_loaded = validate_loader(args.neuron, "neuron", cn_monomers)
-        validate_arrays("neuron", cn_loaded)
-    else:
-        header("NEURON — NO BED FILE FOUND")
-        info("Using placeholder sites from parameters.py")
-        validate_arrays("neuron", None)
+    for condition, bed_path in CTCF_BEDS.items():
+        if os.path.isfile(bed_path):
+            raw = validate_bed_file(bed_path, condition)
+            monomers = validate_conversion(raw, condition)
+            loaded = validate_loader(bed_path, condition, monomers)
+            validate_arrays(condition, loaded)
+            loaded_per_condition[condition] = loaded
+        else:
+            header(f"{condition.upper()} — BED FILE NOT FOUND")
+            info(f"Expected: {bed_path}")
+            info("Using placeholder sites from parameters.py")
+            validate_arrays(condition, None)
 
-    # --- Comparison ---
-    if args.mesc and args.neuron:
-        compare_cell_types()
+    # Compare the first two conditions if both were loaded
+    conditions = list(CTCF_BEDS)
+    if len(conditions) >= 2:
+        cond_a, cond_b = conditions[0], conditions[1]
+        if cond_a in loaded_per_condition and cond_b in loaded_per_condition:
+            compare_conditions(cond_a, cond_b)
 
-    # --- Summary ---
     header("SUMMARY")
     print(f"  Passed: {n_pass}")
     print(f"  Warnings: {n_warn}")

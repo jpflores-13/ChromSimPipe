@@ -58,6 +58,7 @@ RESOLUTION   = int(_cfg.get("resolution", 1000))
 N_MONOMERS   = (REGION_END - REGION_START) // RESOLUTION
 
 _ASSEMBLY    = _cfg.get("genome_assembly", "hg38")
+ANCHOR_MONOMER = (_locus["anchor_bp"] - REGION_START) // RESOLUTION
 
 
 # =============================================================================
@@ -132,6 +133,13 @@ CTCF_BED_PROMOTER = (
     f"data/ctcf_beds/promoter_stall_sites_{CHROM}_{REGION_START}_{REGION_END}.bed"
 )
 AUTO_LOAD_CTCF_FROM_BED = True
+
+# All non-promoter ctcf_types declared in the config, mapped to their BED paths.
+_ctcf_types = sorted({
+    c["ctcf_type"] for c in _cfg.get("conditions", [])
+    if c.get("ctcf_type") and c.get("ctcf_type") != "promoter"
+})
+CTCF_BEDS = {t: _ctcf_bed_path(t) for t in _ctcf_types}
 
 
 # =============================================================================
@@ -303,8 +311,8 @@ def get_tiled_ctcf_arrays(condition="control"):
 DATA = dict(
     hic_control    = _cfg.get("hic_control",   ""),
     hic_sorbitol   = _cfg.get("hic_sorbitol",  ""),
-    mcool_control  = "data/mcool/control.mcool",
-    mcool_sorbitol = "data/mcool/sorbitol.mcool",
+    mcool_control  = "data/mcool/control.cool",
+    mcool_sorbitol = "data/mcool/sorbitol.cool",
     resolution     = RESOLUTION,
 )
 

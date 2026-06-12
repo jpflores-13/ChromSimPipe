@@ -11,7 +11,7 @@
 #
 # Requirements (run setup_data.sh first):
 #   - conda envs: cohesin_sim, ctcf_extraction
-#   - data/mcool/control.mcool  (or let the pipeline convert it)
+#   - data/mcool/control.cool   (or let the pipeline convert it)
 #   - data/ctcf_beds/*.bed       (or let the pipeline extract them)
 #   - config/ChromSimConfig.yaml (edit paths before running)
 #
