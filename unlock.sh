@@ -21,9 +21,14 @@ else
     module load python/3.12.4 2>/dev/null || true
 fi
 
+SNAKEFILE="workflows/ChromSimPipe.snakefile"
+CONFIG="config/ChromSimConfig.yaml"
+[ -f "workflows/STRSsim.snakefile" ] && SNAKEFILE="workflows/STRSsim.snakefile"
+[ -f "config/SimConfig.yaml" ] && CONFIG="config/SimConfig.yaml"
+
 snakemake \
-    --snakefile  workflows/STRSsim.snakefile \
-    --configfile config/SimConfig.yaml \
+    --snakefile  "${SNAKEFILE}" \
+    --configfile "${CONFIG}" \
     --unlock
 
 echo "Lock released."

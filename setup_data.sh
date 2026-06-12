@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # ##############################################################################
 # filename:    setup_data.sh
-# project:     STRSsim
-# description: Create conda envs, convert STRS .hic files to .mcool, extract
-#              oriented CTCF sites, and validate. Run once from the STRSsim/
-#              repo root before launching simulations.
+# project:     ChromSimPipe
+# description: Create conda envs, convert .hic files to .mcool, extract
+#              oriented CTCF sites, and validate. Run once from the repo
+#              root before launching simulations.
+#
+# Paths are read from config/ChromSimConfig.yaml and ChromSimSamplesheet.txt.
+# Edit those files before running this script.
 #
 # Usage (interactive — recommended for first run):
 #   srun --mem=32G --cpus-per-task=4 --pty bash
@@ -13,17 +16,12 @@
 # Usage (batch):
 #   sbatch setup_data.sh [options]
 #
-# Options (all have defaults; override any path without editing the script):
-#   --strs-root DIR       Root of the STRS project [/work/users/j/p/jpflores/projects/STRS]
-#   --hic-control FILE    Control .hic file (relative to --strs-root/data/processed/hic/maps/)
-#   --hic-sorbitol FILE   Sorbitol .hic file
-#   --ctcf-control FILE   Control CTCF narrowPeak (relative to --strs-root/.../peaks/)
-#   --ctcf-sorbitol FILE  Sorbitol CTCF narrowPeak
-#   --genome FILE         Path to hg38 FASTA [/proj/phanstiel_lab/Reference/...]
-#   --resolution INT      .mcool resolution in bp [1000]
+# Options:
+#   --genome FILE         Override genome FASTA path (otherwise read from config)
+#   --resolution INT      Override .mcool resolution in bp (otherwise from config)
 #   --skip-envs           Skip conda environment creation
 # ##############################################################################
-#SBATCH --job-name=STRSsim_setup
+#SBATCH --job-name=ChromSimPipe_setup
 #SBATCH --output=logs/setup_%j.out
 #SBATCH --error=logs/setup_%j.err
 #SBATCH --ntasks=1
@@ -36,15 +34,10 @@ set -euo pipefail
 mkdir -p logs
 
 # =============================================================================
-# DEFAULTS — override any of these with the flags above
+# DEFAULTS — paths are read from config; only these flags override
 # =============================================================================
-STRS_ROOT="/work/users/j/p/jpflores/projects/STRS"
-HIC_CONTROL_NAME="YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic"
-HIC_SORBITOL_NAME="YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic"
-CTCF_CONTROL_NAME="STRS_HEK293_eGFP-YAP_CTCF_cont_0h_peaks.narrowPeak"
-CTCF_SORBITOL_NAME="STRS_HEK293_eGFP-YAP_CTCF_sorbitol_1h_peaks.narrowPeak"
-HG38_FASTA="/proj/phanstiel_lab/Reference/human/hg38/fasta/GRCh38.primary_assembly.genome.fa"
-RESOLUTION=1000
+GENOME_OVERRIDE=""
+RESOLUTION_OVERRIDE=""
 SKIP_ENVS=0
 
 # =============================================================================
@@ -52,24 +45,13 @@ SKIP_ENVS=0
 # =============================================================================
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --strs-root)      STRS_ROOT="$2";         shift 2 ;;
-        --hic-control)    HIC_CONTROL_NAME="$2";  shift 2 ;;
-        --hic-sorbitol)   HIC_SORBITOL_NAME="$2"; shift 2 ;;
-        --ctcf-control)   CTCF_CONTROL_NAME="$2"; shift 2 ;;
-        --ctcf-sorbitol)  CTCF_SORBITOL_NAME="$2"; shift 2 ;;
-        --genome)         HG38_FASTA="$2";        shift 2 ;;
-        --resolution)     RESOLUTION="$2";        shift 2 ;;
-        --skip-envs)      SKIP_ENVS=1;            shift ;;
-        -h|--help)        sed -n '2,23p' "$0"; exit 0 ;;
+        --genome)         GENOME_OVERRIDE="$2";      shift 2 ;;
+        --resolution)     RESOLUTION_OVERRIDE="$2";  shift 2 ;;
+        --skip-envs)      SKIP_ENVS=1;               shift ;;
+        -h|--help)        sed -n '2,22p' "$0"; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
 done
-
-# Assemble full paths from root + filenames
-HIC_CONTROL="${STRS_ROOT}/data/processed/hic/maps/${HIC_CONTROL_NAME}"
-HIC_SORBITOL="${STRS_ROOT}/data/processed/hic/maps/${HIC_SORBITOL_NAME}"
-CTCF_CONTROL_PEAKS="${STRS_ROOT}/data/processed/cutntag/output/peaks/${CTCF_CONTROL_NAME}"
-CTCF_SORBITOL_PEAKS="${STRS_ROOT}/data/processed/cutntag/output/peaks/${CTCF_SORBITOL_NAME}"
 
 # =============================================================================
 # STEP -1: Create conda environments (idempotent — safe to re-run)
@@ -120,27 +102,46 @@ else
 fi
 
 # =============================================================================
-# READ LOCUS + GENOME ASSEMBLY FROM SimConfig.yaml
+# READ ALL PATHS FROM ChromSimConfig.yaml (falls back to SimConfig.yaml)
 # =============================================================================
 echo ""
-echo "=== Reading locus and settings from config/SimConfig.yaml ==="
+_CFG_FILE="config/ChromSimConfig.yaml"
+[[ ! -f "${_CFG_FILE}" ]] && _CFG_FILE="config/SimConfig.yaml"
+echo "=== Reading settings from ${_CFG_FILE} ==="
 
-# Use python/pyyaml to read the config — avoids a bash YAML parser
-_config_vals=$(${ENV_RUN} -n cohesin_sim python - <<'PYEOF'
+_config_vals=$(${ENV_RUN} -n cohesin_sim python - "${_CFG_FILE}" <<'PYEOF'
 import yaml, sys
-with open("config/SimConfig.yaml") as f:
+cfg_path = sys.argv[1]
+with open(cfg_path) as f:
     cfg = yaml.safe_load(f)
 loc = cfg["locus"]
+samplesheet = cfg.get("samplesheet", "ChromSimSamplesheet.txt")
 print(f"LOCUS_KEY={loc['name']}")
 print(f"LOCUS_CHROM={loc['chrom']}")
 print(f"LOCUS_START={loc['region_start']}")
 print(f"LOCUS_END={loc['region_end']}")
 print(f"GENOME_ASSEMBLY={cfg.get('genome_assembly', 'hg38')}")
+print(f"HIC_CONTROL={cfg.get('hic_control', '')}")
+print(f"HIC_SORBITOL={cfg.get('hic_sorbitol', '')}")
+print(f"GENOME_FROM_CFG={cfg.get('genome', '')}")
+print(f"RESOLUTION={cfg.get('resolution', 1000)}")
+print(f"SAMPLESHEET={samplesheet}")
 PYEOF
 )
 eval "${_config_vals}"
+
+# Command-line overrides
+[[ -n "${GENOME_OVERRIDE}" ]]     && GENOME_FROM_CFG="${GENOME_OVERRIDE}"
+[[ -n "${RESOLUTION_OVERRIDE}" ]] && RESOLUTION="${RESOLUTION_OVERRIDE}"
+HG38_FASTA="${GENOME_FROM_CFG}"
+
 echo "  Locus: ${LOCUS_KEY}  ${LOCUS_CHROM}:${LOCUS_START}-${LOCUS_END}"
 echo "  Assembly: ${GENOME_ASSEMBLY}"
+echo "  Samplesheet: ${SAMPLESHEET}"
+
+# Read CTCF peak paths from samplesheet
+CTCF_CONTROL_PEAKS=$(awk -F'\t' 'NR>1 && $1=="control"  {print $2; exit}' "${SAMPLESHEET}" 2>/dev/null || echo "")
+CTCF_SORBITOL_PEAKS=$(awk -F'\t' 'NR>1 && $1=="sorbitol" {print $2; exit}' "${SAMPLESHEET}" 2>/dev/null || echo "")
 
 # =============================================================================
 # STEP 0: Create directory structure
@@ -150,7 +151,7 @@ mkdir -p data/hic data/mcool data/genome data/motifs data/ctcf_beds
 mkdir -p results/polychrom_3d results/analysis results/figures logs
 
 # =============================================================================
-# STEP 1: Symlink .hic files into STRSsim data directory
+# STEP 1: Symlink .hic files into data directory
 # =============================================================================
 echo ""
 echo "=== Step 1: Symlinking .hic files ==="
@@ -159,7 +160,7 @@ for hic_var in HIC_CONTROL HIC_SORBITOL; do
     hic_path="${!hic_var}"
     hic_dest="data/hic/$(basename ${hic_path})"
     if [[ ! -f "${hic_path}" ]]; then
-        echo "  WARNING: ${hic_path} not found — pass --strs-root or --hic-control/--hic-sorbitol to override"
+        echo "  WARNING: ${hic_path} not found — edit hic_control/hic_sorbitol in ${_CFG_FILE}"
     elif [[ ! -e "${hic_dest}" ]]; then
         ln -s "${hic_path}" "${hic_dest}"
         echo "  Linked: ${hic_dest}"

@@ -1,5 +1,5 @@
 """
-Simulation parameters loader — reads config/SimConfig.yaml.
+Simulation parameters loader — reads config/ChromSimConfig.yaml (falls back to SimConfig.yaml).
 
 Presents the same public API as the original hardcoded parameters.py so all
 downstream scripts work without modification:
@@ -18,9 +18,11 @@ downstream scripts work without modification:
 import numpy as np
 import os as _os
 
-# ── Locate and load SimConfig.yaml ────────────────────────────────────────────
+# ── Locate and load config (ChromSimConfig.yaml preferred, falls back to SimConfig.yaml) ──
 _REPO_ROOT   = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), ".."))
-_CONFIG_PATH = _os.path.join(_REPO_ROOT, "config", "SimConfig.yaml")
+_CONFIG_PATH = _os.path.join(_REPO_ROOT, "config", "ChromSimConfig.yaml")
+if not _os.path.exists(_CONFIG_PATH):
+    _CONFIG_PATH = _os.path.join(_REPO_ROOT, "config", "SimConfig.yaml")
 
 try:
     import yaml as _yaml

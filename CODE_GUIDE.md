@@ -1,5 +1,5 @@
 ---
-title: "STRSsim Code Guide"
+title: "ChromSimPipe Code Guide"
 subtitle: "End-to-end walkthrough of the cohesin loop-extrusion simulation codebase"
 date: "2026"
 geometry: "margin=1in"
@@ -21,19 +21,17 @@ contains, or where a specific variable is set.
 
 ---
 
-## STRS Project: Quick-Start and Codebase Walkthrough
+## Quick-Start and Codebase Walkthrough
 
-*This section covers the STRS-specific configuration — HEK293T cells, hg38,
-hyperosmotic stress. The rest of this guide was written for an earlier version
-of the codebase (mESC/Sox2/mm10) and still describes the mechanics correctly;
-just substitute STRS-specific names where noted.*
+### What this pipeline does
 
-### What this repo does
+ChromSimPipe is a physics-based simulation framework for testing mechanistic
+hypotheses about 3D chromatin organisation. Given CTCF binding data and Hi-C
+maps, it simulates cohesin loop extrusion under different parameter conditions
+and compares the resulting contact maps to experimental Hi-C.
 
-STRSsim is a physics-based simulation framework for testing mechanistic
-hypotheses about how hyperosmotic stress (sorbitol treatment) reorganizes
-3D chromatin in HEK293T cells. The core question: **can we explain the
-stress-induced changes in Hi-C contact maps purely from what we can measure
+The included example (STRS project, Flores et al. 2026) asks: **can we explain
+the stress-induced changes in Hi-C contact maps purely from what we can measure
 — changes in CTCF binding and cohesin dynamics — without invoking anything
 we can't observe?**
 
@@ -41,8 +39,9 @@ The simulation models cohesin loop extrusion: cohesin rings load onto
 chromatin and extrude DNA into loops, stalling when they encounter CTCF
 sites oriented the right way. Where cohesins stall and how long they live
 determines the 3D contact map. By varying which CTCF sites are present
-(control vs. sorbitol CUT&Tag peaks) and cohesin dynamics parameters, the
-simulation tests five specific hypotheses:
+and cohesin dynamics parameters, the simulation tests user-defined hypotheses.
+
+**Example conditions (STRS use case):**
 
 | Condition | Cohesin | CTCF sites | Tests |
 |-----------|---------|-----------|-------|
@@ -55,58 +54,61 @@ simulation tests five specific hypotheses:
 ### Data flow
 
 ```
-STRS CUT&Tag peaks (.narrowPeak)
+CTCF peaks (.narrowPeak)
     ↓  extract_ctcf_sites_hg38.py   (add strand orientation via FIMO)
 Oriented CTCF BED files
     ↓  run_simulation.py + polychrom  (cohesin loop extrusion + 3D polymer)
 Simulated contact maps
     ↓  run_analysis_all.py
-Comparison figures  ←→  real Hi-C (.mcool, from .hic via hic2cool)
+Comparison figures  ←→  experimental Hi-C (.mcool, from .hic via hic2cool)
 ```
 
 ### Setup: run this once
 
+Edit `config/ChromSimConfig.yaml` (Hi-C paths, locus, conditions) and
+`ChromSimSamplesheet.txt` (CTCF peak paths) before running.
+
 ```bash
-cd /work/users/j/p/jpflores/projects/STRSsim
+cd ~/projects/ChromSimPipe   # or wherever you cloned it
 bash setup_data.sh
 ```
 
-`setup_data.sh` handles everything end-to-end:
+`setup_data.sh` reads all paths from `ChromSimConfig.yaml` and the samplesheet, then:
 
 1. **Step −1** — creates the two conda environments (`cohesin_sim` and
    `ctcf_extraction`) if they don't already exist.
-2. **Steps 1–3** — symlinks your `.hic` Hi-C files from the STRS project and
-   converts them to `.mcool` at 1 kb resolution (takes ~10–15 min;
-   run from an interactive node: `srun --mem=32G --cpus-per-task=4 --pty bash`).
+2. **Steps 1–3** — symlinks your `.hic` Hi-C files and converts them to
+   `.mcool` at 1 kb resolution (~10–15 min; run interactively:
+   `srun --mem=32G --cpus-per-task=4 --pty bash`).
 3. **Step 4** — runs `extract_ctcf_sites_hg38.py` via `conda run -n
-   ctcf_extraction` for all 4 loci × 2 conditions (8 BED files total). Uses
-   FIMO to find the JASPAR CTCF motif in each peak and assign strand orientation.
-4. **Step 5** — symlinks the oriented BEDs to the paths `configs/parameters.py`
-   expects.
-5. **Step 6** — validates all BED files before any simulation runs.
+   ctcf_extraction`. Uses FIMO to find the JASPAR CTCF motif in each peak and
+   assign strand orientation.
+4. **Step 6** — validates all BED files before any simulation runs.
 
-After setup, pick a locus in `configs/parameters.py`:
+After setup, pick a locus in `config/ChromSimConfig.yaml`:
 
-```python
-ACTIVE_LOCUS = "chr1_fig1"   # chr1:64,210,000–66,170,000  (JAK1/AK4/LEPR)
-# other options: "chr4_fig1", "chr6_fig1", "chr16_sox8"
+```yaml
+locus:
+  name: chr1_fig1   # chr1:64,210,000–66,170,000  (JAK1/AK4/LEPR)
+  # other options: chr4_fig1, chr6_fig1, chr16_sox8
 ```
 
 Then launch:
 
 ```bash
-sbatch SimPipe.sh
+sbatch ChromSimPipe.sh
 ```
 
-### The central config: `configs/parameters.py`
+### The central config: `config/ChromSimConfig.yaml`
 
-This one file is the source of truth for everything. At the top, `ACTIVE_LOCUS`
+This YAML file is the source of truth for everything. The `locus` section
 selects the genomic region; from that, `CHROM`, `REGION_START`, `REGION_END`,
-and `N_MONOMERS` (2,000 — one per kb) are derived automatically.
+and `N_MONOMERS` (2,000 — one per kb) are derived automatically by
+`configs/parameters.py` at import time.
 
 **CTCF auto-loading.** When any script imports `configs.parameters`, it
-immediately tries to open `data/ctcf_oriented_hg38_STRS_control_<locus>.bed`
-and the equivalent sorbitol file. It parses each line into
+immediately tries to open the oriented CTCF BED for each condition and locus
+(e.g. `data/ctcf_oriented_hg38_control_<locus>.bed`). It parses each line into
 `(monomer_position, orientation)` where `+1` means a forward-strand motif
 and `−1` means reverse. If the files don't exist yet, it falls back to
 placeholder dummy sites and prints a warning.
@@ -180,10 +182,10 @@ This is where polychrom (OpenMM on GPU) runs. For each block:
 - **`msd_two_point.py`** — tracks mean-squared displacement of specific
   monomer pairs over time (the in-silico analogue of live-cell imaging).
 
-### The cluster pipeline: `SimPipe.sh` + Snakemake
+### The cluster pipeline: `ChromSimPipe.sh` + Snakemake
 
-The pipeline is a Snakemake DAG (`workflows/STRSsim.snakefile`) launched by a
-single `sbatch SimPipe.sh`. Snakemake submits each rule as its own SLURM job
+The pipeline is a Snakemake DAG (`workflows/ChromSimPipe.snakefile`) launched by a
+single `sbatch ChromSimPipe.sh`. Snakemake submits each rule as its own SLURM job
 through `snakemake-executor-plugin-slurm`:
 
 ```
@@ -195,7 +197,7 @@ convert_hic (×2, CPU)
                     → analyze_all (×5, CPU — one per condition)
 ```
 
-To dry-run (see all jobs without submitting): `bash SimPipe.sh --dry-run`.
+To dry-run (see all jobs without submitting): `bash ChromSimPipe.sh --dry-run`.
 If a run fails and leaves a lock: `bash unlock.sh`.
 
 See [The Snakemake pipeline files](#the-snakemake-pipeline-files) below for a
@@ -209,17 +211,17 @@ These files were added to replace the legacy `cluster/submit_pipeline.sh`
 bash-script chain with a proper Snakemake DAG. Each downstream rule only
 runs after its inputs exist — no manual dependency bookkeeping required.
 
-### `SimPipe.sh` — sbatch entry point
+### `ChromSimPipe.sh` — sbatch entry point
 
-Submit with `sbatch SimPipe.sh`. It does three things:
+Submit with `sbatch ChromSimPipe.sh`. It does three things:
 
 1. Sets up a local Python venv in `.snakemake_venv/` (first run only; uses
    `module load python/3.12.4`).
 2. `pip install`s Snakemake 8.27.1 + `snakemake-executor-plugin-slurm`.
-3. Calls `snakemake --profile profiles/slurm --configfile config/SimConfig.yaml
+3. Calls `snakemake --profile profiles/slurm --configfile config/ChromSimConfig.yaml
    --jobs 100 --rerun-incomplete --latency-wait 500`.
 
-The venv is reused on subsequent runs. `bash SimPipe.sh --dry-run` prints
+The venv is reused on subsequent runs. `bash ChromSimPipe.sh --dry-run` prints
 every SLURM command without submitting.
 
 ### `unlock.sh` — release lock after failure
@@ -228,7 +230,7 @@ Snakemake writes a `.snakemake/locks/` directory while running. If the job
 dies without cleanup, the lock persists and the next run refuses to start.
 `bash unlock.sh` runs `snakemake --unlock` against the workflow to clear it.
 
-### `workflows/STRSsim.snakefile` — the DAG
+### `workflows/ChromSimPipe.snakefile` — the DAG
 
 Six rules, in order:
 
@@ -265,13 +267,13 @@ Key defaults:
 - `runtime: 4320` (72 h fallback for long-running jobs)
 - Log files: `logs_slurm/{rule}.{wildcards}.{jobid}.out/err`
 
-### `config/SimConfig.yaml` — path configuration
+### `config/ChromSimConfig.yaml` — path configuration
 
 Edit **once** before the first run. Key fields:
 
 | Field | What to change |
 |-------|---------------|
-| `hic_control` / `hic_sorbitol` | Absolute paths to your STRS `.hic` maps |
+| `hic_control` / `hic_sorbitol` | Absolute paths to your `.hic` maps |
 | `genome` | Path to hg38 FASTA (default: Longleaf shared reference) |
 | `samplesheet` | Path to `SimSamplesheet.txt` |
 | `n_replicates` | Independent simulation replicates (default: 3) |
@@ -280,18 +282,18 @@ Edit **once** before the first run. Key fields:
 All other parameters (locus, cohesin params, tiling) are read from
 `configs/parameters.py` and do NOT need to be duplicated here.
 
-### `SimSamplesheet.txt` — CTCF input file registry
+### `ChromSimSamplesheet.txt` — CTCF input file registry
 
 Tab-separated, two columns: `CTCF_Type` and `CTCF_Peaks_Path`.
 
 ```
 CTCF_Type   CTCF_Peaks_Path
-control     /path/to/STRS_HEK293_...CTCF_cont_0h_peaks.narrowPeak
-sorbitol    /path/to/STRS_HEK293_...CTCF_sorbitol_1h_peaks.narrowPeak
+control     /path/to/your_CTCF_condition_A_peaks.narrowPeak
+sorbitol    /path/to/your_CTCF_condition_B_peaks.narrowPeak
 ```
 
 The `extract_ctcf` rule reads this file via `pandas.read_table()` at runtime.
-If the STRS project moves, update the paths here (not in the Snakefile).
+If your data moves, update the paths here (not in the Snakefile).
 
 ---
 
@@ -299,7 +301,7 @@ If the STRS project moves, update the paths here (not in the Snakefile).
 
 Everything here is organised by pipeline stage, top-down:
 
-1. [The Snakemake pipeline files](#the-snakemake-pipeline-files) — **start here for the STRS pipeline**
+1. [The Snakemake pipeline files](#the-snakemake-pipeline-files) — **start here**
 2. [Project layout](#project-layout) — what each folder is for
 3. [Configuration](#1-configuration-configsparametersspy) — the single file that controls every simulation
 4. [Hi-C data preparation](#2-hi-c-data-preparation) — turning experimental data into comparison matrices
