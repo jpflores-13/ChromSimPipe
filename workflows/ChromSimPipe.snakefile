@@ -68,7 +68,7 @@ rule convert_hic:
     input:
         hic = lambda wc: config["hic_" + wc.hic_type]
     output:
-        mcool = "data/mcool/{hic_type}.mcool"
+        mcool = "data/mcool/{hic_type}.cool"
     resources:
         runtime        = 120,
         cpus_per_task  = 4,
@@ -141,15 +141,15 @@ rule validate_ctcf:
 rule simulate_shard:
     input:
         ctcf_done      = SENTINEL + "/ctcf_validated.done",
-        control_mcool  = "data/mcool/control.mcool",
-        sorbitol_mcool = "data/mcool/sorbitol.mcool",
+        control_mcool  = "data/mcool/control.cool",
+        sorbitol_mcool = "data/mcool/sorbitol.cool",
     output:
         done = SENTINEL + "/sims/{condition}_rep{rep}_shard{shard}.done"
     params:
         results_dir = RESULTS_DIR,
         n_shards    = N_SHARDS,
     resources:
-        runtime         = 480,
+        runtime         = 720,
         slurm_partition = "gpu",
         cpus_per_task   = 4,
         mem_mb          = 64000,
@@ -188,9 +188,9 @@ rule merge_shards:
         results_dir = RESULTS_DIR,
         n_shards    = N_SHARDS,
     resources:
-        runtime        = 60,
+        runtime        = 120,
         cpus_per_task  = 4,
-        mem_mb         = 32000,
+        mem_mb         = 64000,
     shell:
         """
         module load anaconda/2024.02 2>/dev/null || true
@@ -214,8 +214,8 @@ rule analyze_all:
             condition=wc.condition,
             rep=range(N_REP)
         ),
-        control_mcool  = "data/mcool/control.mcool",
-        sorbitol_mcool = "data/mcool/sorbitol.mcool",
+        control_mcool  = "data/mcool/control.cool",
+        sorbitol_mcool = "data/mcool/sorbitol.cool",
     output:
         done = SENTINEL + "/analyzed/{condition}.done"
     params:
@@ -224,9 +224,9 @@ rule analyze_all:
         hic_dir     = "data/mcool",
         n_jobs      = 4,
     resources:
-        runtime        = 180,
+        runtime        = 360,
         cpus_per_task  = 4,
-        mem_mb         = 32000,
+        mem_mb         = 64000,
     shell:
         """
         module load anaconda/2024.02 2>/dev/null || true

@@ -78,7 +78,7 @@ bash setup_data.sh
 1. **Step −1** — creates the two conda environments (`cohesin_sim` and
    `ctcf_extraction`) if they don't already exist.
 2. **Steps 1–3** — symlinks your `.hic` Hi-C files and converts them to
-   `.mcool` at 1 kb resolution (~10–15 min; run interactively:
+   `.cool` at 1 kb resolution (~10–15 min; run interactively:
    `srun --mem=32G --cpus-per-task=4 --pty bash`).
 3. **Step 4** — runs `extract_ctcf_sites_hg38.py` via `conda run -n
    ctcf_extraction`. Uses FIMO to find the JASPAR CTCF motif in each peak and
@@ -236,12 +236,12 @@ Six rules, in order:
 
 | Rule | SLURM resources | What it does |
 |------|----------------|--------------|
-| `convert_hic` | 4 CPU, 32 GB | `hic2cool convert` `.hic` → `.mcool` at 1 kb |
-| `extract_ctcf` | 2 CPU, 16 GB | `extract_ctcf_sites_hg38.py` via `ctcf_extraction` env |
-| `validate_ctcf` | 1 CPU, 4 GB | `validate_ctcf.py` — sanity-checks all BED files |
-| `simulate_shard` | 1 GPU, 4 CPU, 64 GB | `run_simulation_shard.py` — 60 jobs total (5 × 3 × 4) |
-| `merge_shards` | 4 CPU, 32 GB | `merge_shards.py` — concatenates shard HDF5 streams |
-| `analyze_all` | 4 CPU, 32 GB | `run_analysis_all.py` — contact maps, P(s), MSD, figures |
+| `convert_hic` | 4 CPU, 32 GB, 2 h | `hic2cool convert` `.hic` → `.cool` at 1 kb (single-resolution) |
+| `extract_ctcf` | 2 CPU, 16 GB, 1 h | `extract_ctcf_sites_hg38.py` via `ctcf_extraction` env |
+| `validate_ctcf` | 1 CPU, 4 GB, 15 min | `validate_ctcf.py` — sanity-checks all BED files |
+| `simulate_shard` | 1 GPU, 4 CPU, 64 GB, 12 h | `run_simulation_shard.py` — 60 jobs total (5 × 3 × 4) |
+| `merge_shards` | 4 CPU, 64 GB, 2 h | `merge_shards.py` — concatenates shard HDF5 streams |
+| `analyze_all` | 4 CPU, 64 GB, 6 h | `run_analysis_all.py` — contact maps, P(s), MSD, figures |
 
 Wildcard `{condition}` matches the 5 condition names from `SIMULATION_CONDITIONS`
 in `configs/parameters.py`. Wildcards `{rep}` and `{shard}` expand over

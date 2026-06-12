@@ -31,7 +31,7 @@ runs the same way.
     condition A + condition B              condition A + condition B
           │                                       │
           ▼                                       ▼
-  data/ctcf_beds/*.bed             data/mcool/*.mcool
+  data/ctcf_beds/*.bed             data/mcool/*.cool
    (oriented CTCF sites,            (1 kb contact maps; converted by hic2cool)
     from FIMO JASPAR MA0139.1)
           │                                       │
@@ -123,7 +123,7 @@ This script reads all paths from `config/ChromSimConfig.yaml` and
 `ChromSimSamplesheet.txt`, then:
 1. Creates `cohesin_sim` conda env (polychrom, cooler, hic2cool, numpy, scipy, matplotlib)
 2. Creates `ctcf_extraction` conda env (MEME/FIMO, bedtools, samtools)
-3. Converts input `.hic` files → `.mcool` at 1 kb resolution
+3. Converts input `.hic` files → `.cool` at 1 kb resolution (single-resolution cooler)
 4. Extracts and orients CTCF sites from CUT&Tag peaks via FIMO
 5. Validates the resulting BED files
 
@@ -187,8 +187,8 @@ sbatch ChromSimPipe.sh --rerun-incomplete   # (--rerun-incomplete is the default
 data/
 ├── hic/                          # symlinks to input .hic files
 ├── mcool/
-│   ├── condition_A.mcool         # converted by convert_hic rule
-│   └── condition_B.mcool
+│   ├── condition_A.cool          # converted by convert_hic rule (single-resolution)
+│   └── condition_B.cool
 └── ctcf_beds/
     ├── ctcf_oriented_hg38_condA_{chrom}_{start}_{end}.bed
     └── ctcf_oriented_hg38_condB_{chrom}_{start}_{end}.bed
