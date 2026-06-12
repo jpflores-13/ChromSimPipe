@@ -1,0 +1,33 @@
+name: cohesin_sim
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # --- Core ---
+  - python=3.10
+  - numpy
+  - scipy
+  - h5py
+  - pip
+
+  # --- OpenMM + CUDA
+  # Let conda-forge pick the openmm build that matches the system CUDA.
+  # Do NOT pin cudatoolkit here — Longleaf nodes run CUDA 12.x and the
+  # 11.8 pin is what killed the previous solves.
+  - openmm
+
+  # --- Hi-C data processing ---
+  - cooler        # reads .mcool reference files in analysis/experimental_compare.py and analysis/ps_curve.py
+  - hic2cool      # converts .hic → .mcool in setup_data.sh
+
+  # --- Analysis & visualization ---
+  - matplotlib
+  - pandas        # used in scripts/plot_hic_quicklook.py
+
+  # --- pip-only packages ---
+  - pyyaml       # required by configs/parameters.py to read SimConfig.yaml
+
+  # --- pip-only packages ---
+  - pip:
+    - git+https://github.com/mirnylab/polychrom.git

@@ -1,0 +1,14 @@
+executor: slurm
+jobs: 100
+latency-wait: 500
+
+default-resources:
+  name: "'{rule}.{wildcards}'"
+  slurm_account: rc_dphansti_pi
+  slurm_partition: general
+  runtime: 4320          # 72 h default wall time (minutes)
+  cpus_per_task: 1
+  mem_mb_per_cpu: 16G
+  nodes: 1
+  output: "'logs_slurm/{rule}.{wildcards}.{jobid}.out'"
+  error:  "'logs_slurm/{rule}.{wildcards}.{jobid}.err'"

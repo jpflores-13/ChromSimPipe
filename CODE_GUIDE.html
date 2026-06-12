@@ -1,0 +1,1191 @@
+<!DOCTYPE html><html><head>
+      <title>CODE_GUIDE</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\gabriele.michele\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.24\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      
+      
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-details{margin:0;padding:0;border:none}.markdown-preview .md-toc summary.md-toc-link-wrapper{cursor:pointer;list-style-position:outside}.markdown-preview .md-toc summary.md-toc-link-wrapper::marker{font-size:.85em}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='0']{margin-left:12px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='1']{margin-left:28px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='2']{margin-left:44px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='3']{margin-left:60px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='4']{margin-left:76px}.markdown-preview .md-toc .md-toc-link-wrapper[data-level='5']{margin-left:80px}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-details{margin:0;padding:0;border:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='0']{padding-left:0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='1']{padding-left:16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='2']{padding-left:32px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='3']{padding-left:48px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='4']{padding-left:64px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper[data-level='5']{padding-left:80px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script>
+    </head>
+    <body for="html-export">
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="code_guide-what-every-file-in-this-repo-actually-does">CODE_GUIDE: What Every File in This Repo Actually Does </h1>
+<p>This is a plain-language walkthrough of the whole codebase. It is written for<br>
+people who don't read Python and want to understand, end-to-end, what runs,<br>
+what each script produces, and how the files feed into each other.</p>
+<p>If you just want to run the pipeline, see <a href="README.md"><code>README.md</code></a>. Come<br>
+back here when you need to know <em>why</em> a step exists, what an output file<br>
+contains, or where a specific variable is set.</p>
+<h2 id="reading-order">Reading order </h2>
+<p>Everything here is organised by pipeline stage, top-down:</p>
+<ol>
+<li><a href="#project-layout">Project layout</a> — what each folder is for</li>
+<li><a href="#1-configuration-configsparametersspy">Configuration</a> — the single file that controls every simulation</li>
+<li><a href="#2-hi-c-data-preparation">Hi-C data preparation</a> — turning published experimental data into the matrices we compare to</li>
+<li><a href="#3-ctcf-annotation">CTCF annotation</a> — turning ChIP-seq peaks into oriented barrier lists</li>
+<li><a href="#4-the-lef-dynamics-engine">The LEF dynamics engine</a> — the loop-extrusion simulator</li>
+<li><a href="#5-running-simulations">Running simulations</a> — the one-shot, batch, and multi-GPU entry points</li>
+<li><a href="#6-post-simulation-analysis">Post-simulation analysis</a> — contact maps, P(s), APA, MSD, calibration</li>
+<li><a href="#cluster-submit-scripts">Cluster submit scripts</a> — which <code>sbatch</code> file to use when</li>
+<li><a href="#conventions-youll-see-everywhere">Conventions you'll see everywhere</a> — monomers, tiling, output directory names</li>
+<li><a href="#common-pitfalls">Common pitfalls</a> — what to check when something looks wrong</li>
+</ol>
+<p>Every script section follows the same format:</p>
+<ul>
+<li><strong>File</strong> — path in the repo</li>
+<li><strong>Purpose</strong> — one-sentence summary</li>
+<li><strong>Inputs</strong> — command-line flags and files read</li>
+<li><strong>Outputs</strong> — files written, with exact paths</li>
+<li><strong>How to run it</strong> — example command</li>
+<li><strong>What it does, step by step</strong> — plain-language walkthrough</li>
+</ul>
+<h2 id="project-layout">Project layout </h2>
+<pre data-role="codeBlock" data-info="" class="language-text"><code>cohesin_sim/
+├── configs/          — Python file with every tunable parameter
+├── data/             — experimental inputs (Hi-C matrices, CTCF beds, genomes)
+├── scripts/          — Python + shell scripts you run by hand or via SLURM
+│   ├── process_hic/  — bash + Python to turn FASTQ / valid-pairs into mcool
+│   └── ctcf_annotator/ — standalone module for CTCF motif orientation
+├── analysis/         — Python modules called by scripts/run_analysis_all.py
+├── cluster/          — SLURM submit scripts (`sbatch &lt;file&gt;.sh`)
+├── results/          — where simulations and analyses write to (git-ignored)
+└── logs/             — SLURM stdout/stderr (create with `mkdir -p logs`)
+</code></pre><p>The <code>old/</code> directory holds the previous version of each script for<br>
+reference; nothing there is wired into the current pipeline. Ignore it.</p>
+<h2 id="1-configuration-configsparameterspy">1. Configuration: <code>configs/parameters.py</code> </h2>
+<p><strong>Purpose.</strong> This single file is the source of truth for everything a<br>
+simulation needs to know: which genomic region to model, how long the<br>
+polymer chain is, how many cohesins to place on it, how fast they unbind,<br>
+where the CTCF roadblocks sit, which experimental datasets to compare<br>
+against, and which eight "conditions" to run. If you edit one number<br>
+here, every simulation and analysis picks it up automatically.</p>
+<p><strong>Key groups of settings:</strong></p>
+<ul>
+<li><strong>Genomic locus</strong> (<code>CHROM</code>, <code>REGION_START</code>, <code>REGION_END</code>, <code>RESOLUTION</code>,<br>
+<code>N_MONOMERS</code>). The window is chr3:34,000,000–36,000,000 on mm10, at<br>
+1 kb per monomer → 2,000 monomers for the base locus.</li>
+<li><strong>Polymer physics</strong> (<code>POLYMER</code> dict). Bond lengths, bending stiffness<br>
+(<code>angle_force</code>), confinement density, integration tolerance. You rarely<br>
+touch these unless you're re-tuning the physics.</li>
+<li><strong>LEF ↔ polymer bonds</strong> (<code>SMC_BOND</code>). How stiff the cohesin "ring" is in<br>
+3D — how strongly it pulls the two flanks of the loop together.</li>
+<li><strong>CTCF tracks</strong> (<code>CTCF_BED_MESC</code>, <code>CTCF_BED_NEURON</code>). Relative paths to<br>
+BED files under <code>data/</code>. At import time, <code>load_ctcf_from_bed()</code> reads<br>
+them and fills <code>CTCF_SITES_MESC</code> / <code>CTCF_SITES_NEURON</code> — two NumPy<br>
+arrays of monomer indices with <code>+1</code> / <code>−1</code> orientation labels. The<br>
+shipped defaults are:
+<ul>
+<li><strong>mESC</strong> → <code>data/ctcf_oriented_mm10_mESC_Bruce4_chr3_34000000_36000000.bed</code><br>
+(ENCODE Bruce4 mESC, ENCFF508CKL, mm10; 26 oriented sites in the<br>
+2 Mb window, 13 <code>+</code> / 13 <code>−</code>).</li>
+<li><strong>neuron</strong> → <code>data/ctcf_oriented_mm10_GSE96107_CN_chr3_34000000_36000000.bed</code><br>
+(Bonev 2017 cortical neuron ChIP-seq, GSE96107, mm10; 16 oriented<br>
+sites, 8 <code>+</code> / 8 <code>−</code>).</li>
+<li>11 sites are conserved between the two tracks with <strong>exact monomer<br>
+index + matching orientation</strong>. These are what the MSD probes<br>
+anchor on (see §<a href="#msd-pair-policy-conserved-sites-flanking-sox2">MSD pair policy</a>).</li>
+</ul>
+</li>
+<li><strong>Cohesin parameter sets</strong> (<code>ALL_PARAM_SETS</code>). One dict per cell-type<br>
+hypothesis (mESC baseline + six CN variants) with five numbers each:<br>
+<code>lifetime</code> (mean steps a cohesin lives before falling off), <code>separation</code><br>
+(average distance between cohesins, used to compute how many to place),<br>
+<code>ctcf_capture</code> (probability of stalling on contact), <code>ctcf_release</code><br>
+(probability per step a stalled cohesin escapes), plus a short <code>name</code>.</li>
+<li><strong>Condition list</strong> (<code>SIMULATION_CONDITIONS</code>). The 8 rows of the matrix<br>
+in the README — each pairs one parameter set with one CTCF track. This<br>
+is what the SLURM scripts iterate over.</li>
+<li><strong>Tiling</strong> (<code>TILING</code>). Instead of simulating the 2 Mb locus on its own<br>
+(which gives noisy statistics), we copy it 28 times end-to-end into one<br>
+long polymer so each simulation produces ~28× more data per wall-clock<br>
+second. <code>TILING["chrom_size"]</code> is the total length (~70,000 monomers);<br>
+<code>tile_size = 2500</code>, <code>padding = 250</code>, so every tile is 2,000 useful<br>
+monomers + 250 monomers of padding on each side to suppress boundary<br>
+artefacts.</li>
+<li><strong>Run parameters</strong> (<code>SIM_RUN</code>). How many total simulation blocks, how<br>
+many MD steps per block, how many LEF steps per block, how often to<br>
+save a conformation, how long to warm up before saving.</li>
+<li><strong>MSD pair selection</strong> (<code>MSD_PROBE</code>, <code>MSD_FIT</code>, plus the helper<br>
+<code>get_msd_pairs(cell_type)</code>). Which two monomers to track the<br>
+mean-squared distance between for the dynamics analysis, and how to<br>
+fit the resulting curve. The default policy (conserved CTCF anchors<br>
+flanking Sox2, identical indices in both cell types) is described in<br>
+detail in <a href="#msd-pair-policy-conserved-sites-flanking-sox2">§MSD pair policy</a>.</li>
+<li><strong>Calibration</strong> (<code>CALIBRATION</code>). Whether to anchor physical units<br>
+("how many nanometres is a monomer?", "how many seconds is a frame?")<br>
+against experimental Hi-C P(s) decay, against experimental MSD, or skip.</li>
+</ul>
+<p><strong>Two helper functions you'll see called elsewhere:</strong></p>
+<ul>
+<li><code>get_ctcf_arrays(cell_type)</code> — returns <code>(positions, orientations)</code><br>
+for the untiled 2 Mb locus.</li>
+<li><code>get_tiled_ctcf_arrays(cell_type)</code> — same but repeated across the tiled<br>
+chromosome (what the simulations actually use).</li>
+<li><code>get_condition(name)</code> — look up one row of <code>SIMULATION_CONDITIONS</code> by<br>
+name; used by every SLURM script.</li>
+</ul>
+<h2 id="2-hi-c-data-preparation">2. Hi-C data preparation </h2>
+<p>The goal of this stage is to end up with two NumPy matrices on disk —<br>
+<code>data/hic_mESC_Sox2.npy</code> and <code>data/hic_CN_Sox2.npy</code> — each a 2,000×2,000<br>
+balanced Hi-C matrix of the Sox2 locus at 1 kb resolution, ready to be<br>
+compared to simulated contact maps.</p>
+<p>You have two routes: fast (chr3-only, ~1 hour) or full (raw FASTQ →<br>
+mcool, 1–2 days).</p>
+<h3 id="2a-fast-path-scriptsdownload_bonev_hicsh">2a. Fast path: <code>scripts/download_bonev_hic.sh</code> </h3>
+<p><strong>Purpose.</strong> Download the Bonev 2017 Hi-C <strong>valid pairs</strong> for chr3<br>
+(already aligned and quality-controlled by lldelisle), index them, load<br>
+them into a balanced <code>.cool</code>, zoomify to a multi-resolution <code>.mcool</code>.</p>
+<p><strong>Inputs.</strong> No arguments (downloads both <code>ES</code> and <code>CN</code>). Pass <code>ES</code> or <code>CN</code><br>
+as the first argument to do just one.</p>
+<p><strong>Outputs.</strong> Under <code>data/mcool/</code>:</p>
+<ul>
+<li><code>ES_chr3_raw.1kb.cool</code> / <code>CN_chr3_raw.1kb.cool</code> — raw counts at 1 kb.</li>
+<li><code>ES_chr3.1kb.cool</code> / <code>CN_chr3.1kb.cool</code> — balanced, single-resolution.</li>
+<li><code>ES_chr3.mcool</code> / <code>CN_chr3.mcool</code> — multi-resolution (1, 5, 10, 25, 50, 100 kb), balanced.</li>
+</ul>
+<p><strong>How to run it.</strong> Three modes:</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># Local, both cell types in sequence</span>
+<span class="token function">bash</span> scripts/download_bonev_hic.sh
+
+<span class="token comment"># Local, both in parallel in the same shell</span>
+<span class="token function">bash</span> scripts/download_bonev_hic.sh ES <span class="token operator">&amp;</span>
+<span class="token function">bash</span> scripts/download_bonev_hic.sh CN <span class="token operator">&amp;</span>
+<span class="token function">wait</span>
+
+<span class="token comment"># Cluster (~30-60 min each on 40 cores)</span>
+sbatch <span class="token parameter variable">--export</span><span class="token operator">=</span>CELLTYPE<span class="token operator">=</span>ES scripts/sbatch_bonev_hic.sbatch
+sbatch <span class="token parameter variable">--export</span><span class="token operator">=</span>CELLTYPE<span class="token operator">=</span>CN scripts/sbatch_bonev_hic.sbatch
+</code></pre><p><strong>What it does, step by step.</strong></p>
+<ol>
+<li>Makes sure <code>data/mcool/</code> and <code>data/valid_pairs/</code> exist.</li>
+<li>Writes out mm10 chromosome sizes (hardcoded list) if they aren't<br>
+already there.</li>
+<li>For each cell type, <code>wget</code>s the matching <code>validPairs.csort.txt.gz</code><br>
+from the lldelisle FTP mirror of GSE161259, streaming to a <code>.part</code><br>
+file so an interrupted download doesn't leave something that looks<br>
+complete.</li>
+<li><code>tabix</code>-indexes the valid-pairs file so cooler can load it in chunks.</li>
+<li>Deletes any partial balanced/mcool outputs from a previous crashed<br>
+run (belt and braces — a header-only HDF5 would otherwise be treated<br>
+as "done" by the <code>if [ ! -f ... ]</code> guards).</li>
+<li><code>cooler cload tabix</code> loads pair counts into a raw 1 kb cool file. We<br>
+pass <code>"&lt;chromsizes&gt;:&lt;binsize&gt;"</code> directly because <code>cooler makebins</code> was<br>
+renamed to <code>cooler binnify</code> in cooler ≥ 0.10, and the old spelling<br>
+silently produces a 0-byte bins file that only blows up much later.</li>
+<li><code>cooler zoomify --balance</code> upscales to a multi-resolution <code>.mcool</code><br>
+and runs ICE balancing (<code>--cis-only</code>) at every level in one pass.</li>
+<li>Extracts the 1 kb balanced level into a standalone <code>.cool</code> with<br>
+<code>cooler cp</code> for people who want it for pyGenomeTracks.</li>
+</ol>
+<p><strong>Parallelism knobs.</strong> <code>NPROC</code> (default = <code>SLURM_CPUS_PER_TASK</code> or 8) is<br>
+passed to <code>cooler cload --nproc</code> and as <code>--max-split</code> so chr3 is carved<br>
+into as many chunks as there are workers. Tied together they keep every<br>
+core busy — this is the fix for the old "feels stuck" behaviour when<br>
+only two workers had anything to do.</p>
+<h3 id="2b-full-path-scriptsprocess_hic00_download_fastqsh--01_align_and_parsesh--02_make_mcoolsh">2b. Full path: <code>scripts/process_hic/00_download_fastq.sh</code> → <code>01_align_and_parse.sh</code> → <code>02_make_mcool.sh</code> </h3>
+<p><strong>Purpose.</strong> Rebuild Bonev's Hi-C from raw reads using a modern aligner<br>
+(<code>bwa-mem2</code>) and pair parser (<code>pairtools</code>). Use this for the final<br>
+paper-quality analysis; it takes ~1–2 days wall-clock and ~1 TB of disk.</p>
+<p><strong>Pipeline.</strong></p>
+<ol>
+<li><code>00_download_fastq.sh</code> — <code>fasterq-dump</code> every SRR run for mESC and CN<br>
+from SRA into <code>data/fastq/</code>.</li>
+<li><code>01_align_and_parse.sh</code> — for each <code>&lt;SRR&gt;_{1,2}.fastq</code>: align with<br>
+<code>bwa-mem2 mem -SP5M</code>, classify pair types with <code>pairtools parse</code>, sort<br>
+with <code>pairtools sort</code>, deduplicate with <code>pairtools dedup</code>. Output:<br>
+<code>data/pairs/&lt;SRR&gt;.pairs.gz</code>.</li>
+<li><code>02_make_mcool.sh</code> — merge all pairs per cell type, bin into a 1 kb<br>
+<code>.cool</code> with <code>cooler cload pairix</code>, zoomify + ICE-balance to <code>.mcool</code><br>
+at 1/5/10/25/50/100 kb.</li>
+</ol>
+<p>On a cluster, chain them with <code>--dependency=afterok:&lt;jobid&gt;</code> or submit<br>
+the wrapper <code>cluster/submit_hic_pipeline.sh</code> which handles the chain.</p>
+<h3 id="2c-locus-extraction-scriptsprocess_hic03_extract_sox2py">2c. Locus extraction: <code>scripts/process_hic/03_extract_sox2.py</code> </h3>
+<p><strong>Purpose.</strong> Pull the 2 Mb Sox2 window out of the whole-chromosome<br>
+<code>.mcool</code> and save it as a plain NumPy <code>.npy</code> matrix so the analysis code<br>
+doesn't have to know anything about cooler.</p>
+<p><strong>Inputs:</strong></p>
+<ul>
+<li><code>--mcool-es PATH</code> — mESC <code>.mcool</code> (e.g. <code>data/mcool/ES_chr3.mcool</code>).</li>
+<li><code>--mcool-cn PATH</code> — neuron <code>.mcool</code>.</li>
+<li><code>--output DIR</code> — where to write <code>.npy</code> files. Default <code>data</code>.</li>
+</ul>
+<p><strong>Outputs (written to <code>--output</code>).</strong></p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hic_mESC_Sox2.npy</code> / <code>hic_CN_Sox2.npy</code></td>
+<td>Balanced 2,000×2,000 Hi-C matrix of the locus — this is what every comparison reads.</td>
+</tr>
+<tr>
+<td><code>hic_mESC_Sox2_raw.npy</code> / <code>hic_CN_Sox2_raw.npy</code></td>
+<td>Raw (unbalanced) counts, kept for reference.</td>
+</tr>
+<tr>
+<td><code>hic_mESC_Sox2_OE.npy</code> / <code>hic_CN_Sox2_OE.npy</code></td>
+<td>Observed/Expected matrices — removes the distance-decay background so TADs and loops stand out.</td>
+</tr>
+<tr>
+<td><code>hic_mESC_Sox2_expected.npy</code> / <code>hic_CN_Sox2_expected.npy</code></td>
+<td>The expected-vs-distance curve that was divided out to make OE.</td>
+</tr>
+<tr>
+<td><code>hic_&lt;ct&gt;_ps_curve.npz</code></td>
+<td>Contact probability vs distance (P(s)) from the experimental matrix.</td>
+</tr>
+<tr>
+<td><code>insulation_&lt;ct&gt;.npy</code></td>
+<td>Insulation score along the locus (one value per monomer).</td>
+</tr>
+<tr>
+<td><code>insulation_&lt;ct&gt;_w&lt;window&gt;.npy</code></td>
+<td>Insulation at several window sizes for robustness.</td>
+</tr>
+<tr>
+<td><code>compartment_&lt;ct&gt;.npy</code></td>
+<td>First eigenvector of the corrected matrix (compartment call, A vs B).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="2d-quicklook-scriptsplot_hic_quicklookpy">2d. Quicklook: <code>scripts/plot_hic_quicklook.py</code> </h3>
+<p><strong>Purpose.</strong> Before kicking off a multi-hour analysis, eyeball the Hi-C<br>
+maps. This script draws a heatmap with a CTCF arrow strip, a gene track<br>
+(fetched live from UCSC), and Mb-labelled axes, and also writes a<br>
+split-triangle comparison with both cell types on one square.</p>
+<p><strong>Outputs.</strong> Under <code>data/</code>:</p>
+<ul>
+<li><code>hic_&lt;CT&gt;_Sox2_quicklook.png</code> / <code>.svg</code> — one panel per cell type.</li>
+<li><code>hic_dual_Sox2_quicklook.png</code> / <code>.svg</code> — upper-right triangle = first<br>
+cell type, lower-left = second, one shared log colour scale so redder<br>
+really means "more contact".</li>
+</ul>
+<p>Every SVG has <code>svg.fonttype='none'</code> so labels stay editable <code>&lt;text&gt;</code><br>
+elements in Illustrator, with fonts pinned to Arial.</p>
+<h2 id="3-ctcf-annotation">3. CTCF annotation </h2>
+<h3 id="3a-scriptsctcf_annotator--the-standalone-tool">3a. <code>scripts/ctcf_annotator/</code> — the standalone tool </h3>
+<p><strong>Purpose.</strong> Given a CTCF ChIP-seq peak BED and a genome FASTA, find the<br>
+best-scoring CTCF motif inside each peak with <code>FIMO</code>, use the motif's<br>
+strand as the site orientation (<code>+1</code> = forward, <code>−1</code> = reverse), and<br>
+write an oriented BED.</p>
+<p>This is a self-contained CLI with its own README inside the folder.</p>
+<p><strong>Entry points:</strong></p>
+<ul>
+<li><code>python -m scripts.ctcf_annotator &lt;args&gt;</code> — the CLI.</li>
+<li><code>scripts/ctcf_annotator/gui.py</code> — optional Tk GUI (skipped silently<br>
+without <code>tkinter</code>).</li>
+</ul>
+<p><strong>Key modules:</strong></p>
+<ul>
+<li><code>core.py</code> — the actual annotation pipeline (FIMO wrapper + BED writer).</li>
+<li><code>cli.py</code> — argparse interface.</li>
+<li><code>registry.py</code> — hardcoded URLs for common ENCODE datasets so you can<br>
+do <code>--dataset ENCODE:mESC_Bruce4_CTCF</code> instead of pasting a URL.</li>
+</ul>
+<p><strong>Inputs (typical):</strong> <code>--peaks &lt;bed&gt;</code>, <code>--genome &lt;fa&gt;</code>, <code>--output &lt;bed&gt;</code>,<br>
+<code>--motif &lt;meme-file&gt;</code> (default: JASPAR MA0139.1 CTCF at<br>
+<code>data/motifs/MA0139.1_CTCF.meme</code>).</p>
+<p><strong>Outputs:</strong> a BED file of oriented CTCF sites — one row per peak that<br>
+contained a usable motif, with strand in column 6.</p>
+<h3 id="3b-scriptsextract_ctcf_sitespy--extract_ctcf_sites_hg38py">3b. <code>scripts/extract_ctcf_sites.py</code> / <code>extract_ctcf_sites_hg38.py</code> </h3>
+<p><strong>Purpose.</strong> Convenience wrappers that download an ENCODE CTCF peak<br>
+bed, call the annotator, and produce <code>ctcf_oriented_*.bed</code> files ready<br>
+to be loaded by <code>configs/parameters.py</code>.</p>
+<p><code>extract_ctcf_sites.py</code> targets mm10; <code>extract_ctcf_sites_hg38.py</code><br>
+targets hg38. They duplicate a lot of code and should ideally be merged<br>
+into one with an <code>--assembly</code> flag (future work).</p>
+<h3 id="3c-scriptsvalidate_ctcfpy">3c. <code>scripts/validate_ctcf.py</code> </h3>
+<p><strong>Purpose.</strong> Pre-flight sanity check. Before running any simulations,<br>
+load the two CTCF BEDs, convert genomic coordinates into monomer indices<br>
+exactly the way the simulator will, and print a small report.</p>
+<p><strong>How to run it.</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># Defaults (reads paths from configs/parameters.py):</span>
+python scripts/validate_ctcf.py
+
+<span class="token comment"># Explicit file paths:</span>
+python scripts/validate_ctcf.py <span class="token punctuation">\</span>
+    <span class="token parameter variable">--mesc</span> data/ctcf_oriented_mm10_GSE96107_ES_chr3_34000000_36000000.bed <span class="token punctuation">\</span>
+    <span class="token parameter variable">--neuron</span> data/ctcf_oriented_mm10_GSE96107_CN_chr3_34000000_36000000.bed
+</code></pre><p><strong>What it checks.</strong></p>
+<ol>
+<li>Each BED parses without error and has strand info.</li>
+<li>Every site falls inside the simulation window.</li>
+<li>Coordinate → monomer-index conversion is monotone and loss-free.</li>
+<li>The <code>+1</code> / <code>−1</code> orientation array the simulator sees matches the<br>
+strand column in the BED.</li>
+<li>Prints counts per cell type (e.g. "mESC: 84 sites, neuron: 16 sites")<br>
+and highlights sites shared / lost / gained between conditions.</li>
+</ol>
+<p><strong>Exit status.</strong> Non-zero if any check fails, so you can use it as a<br>
+gate in a dependency chain.</p>
+<h3 id="3d-scriptsexport_conserved_ctcf_bedpy">3d. <code>scripts/export_conserved_ctcf_bed.py</code> </h3>
+<p><strong>Purpose.</strong> Intersect the mESC and neuron oriented BEDs, keep only<br>
+sites present in both (with matching orientation), optionally allowing<br>
+1-monomer drift. Writes <code>data/ctcf_oriented_CONSERVED_mESC_CN_chr3.bed</code>,<br>
+which you can load into a simulation to test the "CTCF didn't move,<br>
+only cohesin changed" scenario.</p>
+<h2 id="4-the-lef-dynamics-engine">4. The LEF dynamics engine </h2>
+<h3 id="scriptslef_dynamicspy"><code>scripts/lef_dynamics.py</code> </h3>
+<p><strong>Purpose.</strong> A lightweight 1D Python simulator for loop-extruding<br>
+factors (cohesins). No 3D physics — just: where are the cohesins on the<br>
+lattice, where are they stalled, where do they jump when they unbind.</p>
+<p><strong>Class: <code>LEFSimulator</code>.</strong> Constructor arguments:</p>
+<ul>
+<li><code>N</code> — lattice length in monomers.</li>
+<li><code>n_lefs</code> — how many cohesins to place.</li>
+<li><code>lifetime</code> — mean number of steps a cohesin stays bound before<br>
+unbinding (<code>unbind probability per step = 1/lifetime</code>).</li>
+<li><code>ctcf_positions</code>, <code>ctcf_orientations</code> — from <code>get_ctcf_arrays</code>.</li>
+<li><code>ctcf_capture</code> — probability of stalling when a cohesin arm moves<br>
+onto a CTCF site with the blocking orientation.</li>
+<li><code>ctcf_release</code> — probability per step that a stalled cohesin lets go.</li>
+<li><code>rng_seed</code> — for reproducibility.</li>
+</ul>
+<p><strong>What each <code>step()</code> call does.</strong></p>
+<ol>
+<li>Rebuild the occupancy grid from every cohesin's left / right arm<br>
+positions (so collisions are up-to-date if arms moved last step).</li>
+<li>For each cohesin (in a random permutation, so no directional bias):
+<ul>
+<li>Age by one step.</li>
+<li>With probability <code>1/lifetime</code>, unbind → clear occupancy, call<br>
+<code>_place_lef()</code> to re-seed at a random free pair of positions.</li>
+<li>Left arm (moves leftward): if the next position is free and not a<br>
+blocking CTCF site (or we rolled <code>&gt; ctcf_capture</code>), move there. If<br>
+it is blocking and we rolled <code>&lt; ctcf_capture</code>, flag as stalled.</li>
+<li>Right arm (moves rightward): mirror logic.</li>
+<li>If already stalled on CTCF, roll <code>&lt; ctcf_release</code> to escape.</li>
+</ul>
+</li>
+</ol>
+<p><strong>Public methods you'll see used.</strong></p>
+<ul>
+<li><code>get_bonds()</code> — list of <code>(left, right)</code> tuples of current cohesin-bridged<br>
+monomer pairs. Fed to polychrom as harmonic SMC bonds.</li>
+<li><code>get_bond_arrays()</code> — same but as two parallel NumPy arrays.</li>
+<li><code>get_loop_sizes()</code> — current loop lengths (in monomers).</li>
+<li><code>run(n_steps)</code> — convenience: step <code>n_steps</code> times, return the list<br>
+of per-step bond lists.</li>
+</ul>
+<p><strong>Output variables you should know.</strong> After a <code>step()</code>, these arrays<br>
+reflect the current state: <code>left_pos[i]</code>, <code>right_pos[i]</code>, <code>ages[i]</code>,<br>
+<code>left_stalled[i]</code>, <code>right_stalled[i]</code>, <code>occupied[pos]</code>.</p>
+<h2 id="5-running-simulations">5. Running simulations </h2>
+<h3 id="5a-scriptsrun_simulationpy--single-run-entry-point">5a. <code>scripts/run_simulation.py</code> — single-run entry point </h3>
+<p><strong>Purpose.</strong> Run one condition × one replicate → write a simulation<br>
+directory under <code>results/</code>. This is what every SLURM array job calls.</p>
+<p><strong>Inputs (arguments).</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--condition NAME</code></td>
+<td>Look up one row of <code>SIMULATION_CONDITIONS</code>. Sets both cohesin params and CTCF track. Preferred.</td>
+</tr>
+<tr>
+<td><code>--params NAME --ctcf-type {mESC,neuron}</code></td>
+<td>Legacy: pair any <code>ALL_PARAM_SETS</code> entry with any CTCF track.</td>
+</tr>
+<tr>
+<td><code>--replicate N</code></td>
+<td>Integer replicate index (drives the RNG seed <code>42 + 1000·N</code>).</td>
+</tr>
+<tr>
+<td><code>--gpu I</code></td>
+<td>CUDA device index for the 3D polymer (ignored in <code>lef_only</code>).</td>
+</tr>
+<tr>
+<td><code>--output DIR</code></td>
+<td>Where to write the run directory (default <code>results/</code>).</td>
+</tr>
+<tr>
+<td><code>--engine {auto,polychrom,openmm,lef_only}</code></td>
+<td>Which engine to use. <code>auto</code> tries polychrom, falls back to OpenMM, then LEF-only. <code>lef_only</code> skips the 3D polymer even if polychrom is installed.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Output directory.</strong> Always written as<br>
+<code>&lt;output&gt;/&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;replicate&gt;/</code>.<br>
+For example: <code>results/polychrom_3d/CN_long_residency_ctcf-neuron_rep0/</code>.</p>
+<p><strong>Files the run writes.</strong></p>
+<p>Regardless of engine:</p>
+<ul>
+<li><code>params.json</code> — every parameter used, including the CTCF type and<br>
+tiling block, so you can reproduce the run from the directory alone.</li>
+</ul>
+<p>Polychrom / OpenMM path:</p>
+<ul>
+<li><code>blocks_*.h5</code> (polychrom) or <code>conformations.h5</code> (OpenMM) — 3D monomer<br>
+coordinates at every saved frame.</li>
+</ul>
+<p>LEF-only path (either <code>--engine lef_only</code> or no polychrom/openmm<br>
+installed):</p>
+<ul>
+<li><code>lef_contact_map.npy</code> — 2D integer matrix: how many frames had a bond<br>
+between monomer <code>i</code> and monomer <code>j</code>.</li>
+<li><code>lef_trajectories.h5</code> — per-frame bond lists + loop sizes.</li>
+</ul>
+<p><strong>What it does, step by step.</strong></p>
+<ol>
+<li>Parse the condition → resolve to <code>(params_dict, ctcf_type)</code>.</li>
+<li>Build the tiled chromosome: <code>N = TILING["chrom_size"]</code>, fetch tiled<br>
+CTCF arrays, decide how many cohesins to place (<code>N / params.separation</code>).</li>
+<li>Instantiate <code>LEFSimulator</code> and step it for <code>warmup_blocks</code><br>
+(equilibration — throw away).</li>
+<li><strong>Pre-compute</strong> all LEF bond states for every block in advance. The<br>
+1D dynamics are independent of the 3D polymer, so doing them first<br>
+means the polychrom loop just replays bonds from a list.</li>
+<li>Collect every unique bond pair ever observed and register them all<br>
+into one <code>harmonic_bonds</code> force with the non-active ones at <code>k=0</code>.<br>
+Every block, flip the <code>k</code> of the bonds that became active / inactive —<br>
+this is ~10× faster than adding/removing bonds.</li>
+<li><code>sim.local_energy_minimization()</code> relaxes the starting configuration.</li>
+<li>Main loop: update bond toggles → <code>sim.do_block(md_steps)</code> → repeat<br>
+for <code>total_blocks</code>.</li>
+<li>polychrom's <code>HDF5Reporter</code> writes conformations every <code>save_every</code><br>
+blocks.</li>
+</ol>
+<p>If polychrom isn't installed or <code>--engine lef_only</code>, step 4 still happens<br>
+but steps 5–8 are replaced by an accumulating 2D contact map (how often<br>
+does each <code>(left, right)</code> pair appear across saved frames).</p>
+<h3 id="5b-scriptsrun_batchpy--batch-runner">5b. <code>scripts/run_batch.py</code> — batch runner </h3>
+<p><strong>Purpose.</strong> Run many conditions × many replicates without SLURM (useful<br>
+for local dev / testing), then immediately run the built-in analysis.</p>
+<p><strong>How to run it.</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># Everything, LEF-only, 3 replicates:</span>
+python scripts/run_batch.py <span class="token parameter variable">--engine</span> lef_only
+
+<span class="token comment"># Only two conditions:</span>
+python scripts/run_batch.py <span class="token parameter variable">--conditions</span> mESC_ctrl CN_long_residency_neuron_ctcf
+
+<span class="token comment"># Analyse existing results without re-running:</span>
+python scripts/run_batch.py --analyze-only <span class="token punctuation">\</span>
+    --exp-es data/hic_mESC_Sox2.npy --exp-cn data/hic_CN_Sox2.npy
+</code></pre><p><strong>What it does.</strong> Loops over <code>SIMULATION_CONDITIONS</code> (or the ones you<br>
+listed), calls <code>run_simulation_polychrom</code> for each, then for every run<br>
+directory it found: loads the contact map, computes P(s), computes an<br>
+insulation score, and compares to mESC + neuron Hi-C. Prints a summary<br>
+table at the end ordered by which condition each row compares best to.</p>
+<h3 id="5c-scriptsrun_simulation_shardpy--scriptsmerge_shardspy">5c. <code>scripts/run_simulation_shard.py</code> + <code>scripts/merge_shards.py</code> </h3>
+<p><strong>Purpose.</strong> Scale simulations to 4× V100 nodes. Instead of one long<br>
+simulation per replicate, each GPU runs a <em>shard</em> with a unique RNG seed,<br>
+and all shards are then merged into a single conformation file.</p>
+<p><strong><code>run_simulation_shard.py</code> arguments</strong> (called once per GPU):</p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--condition NAME</code></td>
+<td>Same as <code>run_simulation.py</code>.</td>
+</tr>
+<tr>
+<td><code>--replicate N</code></td>
+<td>Replicate index.</td>
+</tr>
+<tr>
+<td><code>--shard-index I</code></td>
+<td>Which shard in this launch (0…<code>n_shards-1</code>).</td>
+</tr>
+<tr>
+<td><code>--n-shards K</code></td>
+<td>Total shards for this replicate.</td>
+</tr>
+<tr>
+<td><code>--gpu I</code></td>
+<td>CUDA device.</td>
+</tr>
+<tr>
+<td><code>--output DIR</code></td>
+<td>Output base (default <code>results/</code>).</td>
+</tr>
+<tr>
+<td><code>--shard-index-offset M</code></td>
+<td>Add <code>M</code> to every shard index so this run doesn't clash with shards already on disk.</td>
+</tr>
+</tbody>
+</table>
+<p>Shard output goes to <code>&lt;output&gt;/&lt;cond&gt;_rep&lt;r&gt;_shard&lt;i&gt;/</code>. The total blocks<br>
+are divided evenly across shards, so merging them gives the same number<br>
+of frames as one long run would have, but wall-clock is divided by<br>
+<code>n_shards</code>.</p>
+<p><strong><code>merge_shards.py</code>.</strong> Walks <code>&lt;cond&gt;_rep&lt;r&gt;_shard*</code>, concatenates their<br>
+HDF5 files into <code>&lt;cond&gt;_rep&lt;r&gt;/blocks_*.h5</code> (the same layout the analysis<br>
+expects), and writes a <code>merge_metadata.json</code> with the shard IDs merged.<br>
+Arguments: <code>--condition</code>, <code>--replicate</code>, <code>--n-shards</code>, <code>--results-dir</code>,<br>
+<code>--cleanup</code> (delete shard dirs after merge), <code>--all</code> (merge every<br>
+condition / replicate in one go).</p>
+<h2 id="6-post-simulation-analysis">6. Post-simulation analysis </h2>
+<h3 id="6a-the-orchestrator-scriptsrun_analysis_allpy">6a. The orchestrator: <code>scripts/run_analysis_all.py</code> </h3>
+<p><strong>Purpose.</strong> One command that walks every <code>&lt;cond&gt;_rep&lt;N&gt;</code> directory<br>
+under <code>results/polychrom_3d/</code>, runs the full suite of analyses, pools<br>
+across replicates per condition, and writes a cross-condition overlay.</p>
+<p><strong>How to run it</strong> (directly or via <code>cluster/submit_analysis_cpu.sh</code>):</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>python scripts/run_analysis_all.py <span class="token punctuation">\</span>
+    --results-dir results/polychrom_3d <span class="token punctuation">\</span>
+    --mcool-mesc data/mcool/ES_chr3.mcool <span class="token punctuation">\</span>
+    --mcool-neuron data/mcool/CN_chr3.mcool
+</code></pre><p><strong>Selected flags.</strong></p>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--results-dir DIR</code></td>
+<td>Where to find the merged simulation directories. Required.</td>
+</tr>
+<tr>
+<td><code>--output-dir DIR</code></td>
+<td>Where to write pooled outputs. Default: <code>&lt;results-dir&gt;/../analysis</code>.</td>
+</tr>
+<tr>
+<td><code>--condition NAME</code></td>
+<td>Only analyse one condition — useful for iteration.</td>
+</tr>
+<tr>
+<td><code>--n-jobs N</code></td>
+<td>Parallel workers for contact detection inside each directory.</td>
+</tr>
+<tr>
+<td><code>--no-parallel</code></td>
+<td>Walk directories sequentially (debugging).</td>
+</tr>
+<tr>
+<td><code>--skip-existing</code></td>
+<td>Skip directories that already have <code>analysis/sim_contact_map.npy</code>.</td>
+</tr>
+<tr>
+<td><code>--reuse-heavy</code></td>
+<td>Re-use cached contact maps + MSD, redo only plots/APA/pooling. Use after editing plotting code.</td>
+</tr>
+<tr>
+<td><code>--no-pool</code> / <code>--no-apa</code> / <code>--no-ctcf-overlay</code> / <code>--no-msd</code> / <code>--no-polymer-dynamics</code></td>
+<td>Skip specific stages.</td>
+</tr>
+<tr>
+<td><code>--mcool-mesc PATH</code> / <code>--mcool-neuron PATH</code></td>
+<td>Experimental Hi-C for comparison (takes precedence over legacy <code>.npy</code>).</td>
+</tr>
+<tr>
+<td><code>--ctcf-bed-mesc PATH</code> / <code>--ctcf-bed-neuron PATH</code></td>
+<td>Override the CTCF BEDs used for the overlay figure.</td>
+</tr>
+<tr>
+<td><code>--elements-bed-mesc PATH</code> / <code>--elements-bed-neuron PATH</code></td>
+<td>Optional BEDs of enhancers/promoters to draw on the 1D track.</td>
+</tr>
+<tr>
+<td><code>--calibrate-with {hic,msd,none}</code></td>
+<td>How to map simulation units → physical units.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Per-replicate outputs</strong> (written to <code>&lt;sim_dir&gt;/analysis/</code>):</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sim_contact_map.npy</code></td>
+<td>2D contact matrix from 3D conformations.</td>
+</tr>
+<tr>
+<td><code>sim_ps_curve.npz</code></td>
+<td>Contact probability vs genomic distance.</td>
+</tr>
+<tr>
+<td><code>sim_insulation.npy</code></td>
+<td>Insulation score along the locus.</td>
+</tr>
+<tr>
+<td><code>ps_metrics.json</code></td>
+<td>Power-law fit of P(s) (slope, intercept, R²).</td>
+</tr>
+<tr>
+<td><code>apa_convergent.png</code> + <code>apa_loops_quant.json</code></td>
+<td>Aggregate Peak Analysis at convergent CTCF pairs.</td>
+</tr>
+<tr>
+<td><code>contact_map_with_ctcf.png</code></td>
+<td>Log heatmap with CTCF arrow strips + gene track.</td>
+</tr>
+<tr>
+<td><code>ctcf_sites_relative.bed</code></td>
+<td>CTCF sites in monomer-index coordinates.</td>
+</tr>
+<tr>
+<td><code>comparison_metrics.json</code></td>
+<td>Pearson + stratum-adjusted correlations with experimental Hi-C.</td>
+</tr>
+<tr>
+<td><code>sim_vs_exp_map.png</code></td>
+<td>Side-by-side heatmap of sim vs experimental Hi-C.</td>
+</tr>
+<tr>
+<td><code>msd_&lt;label&gt;.npz</code> + <code>.json</code></td>
+<td>Two-point MSD curves for each monomer pair.</td>
+</tr>
+<tr>
+<td><code>rg_timecourse.npz</code></td>
+<td>Radius of gyration over time.</td>
+</tr>
+<tr>
+<td><code>loop_fractions.json</code></td>
+<td>Fraction of time each pair was in contact.</td>
+</tr>
+<tr>
+<td><code>calibration.json</code></td>
+<td>Physical-unit mapping: <code>nm/monomer</code>, <code>sec/frame</code>, anchor used.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pooled-per-condition outputs</strong> (written to <code>&lt;output-dir&gt;</code>):</p>
+<p>Same family of files, prefixed with the condition name and the total<br>
+number of blocks, e.g. <code>CN_long_residency_ctcf-neuron_5000blk_pooled_contact_map.npy</code>.</p>
+<h3 id="6b-analysiscontact_mapspy">6b. <code>analysis/contact_maps.py</code> </h3>
+<p>Called from <code>run_analysis_all.py</code>. Given a list of conformations, builds<br>
+a contact matrix by finding every pair of monomers within<br>
+<code>SIM_RUN["contact_radius"]</code> using <code>scipy.spatial.cKDTree</code>. Supports<br>
+memory-efficient tile-based extraction so you never materialise a full<br>
+<code>(N, N)</code> intermediate.</p>
+<p>Also has:</p>
+<ul>
+<li><code>load_conformations_h5(sim_dir)</code> — read polychrom <code>blocks_*.h5</code> or<br>
+OpenMM <code>conformations.h5</code>.</li>
+<li><code>load_lef_contact_map(sim_dir)</code> — read the <code>.npy</code> written by the<br>
+LEF-only path.</li>
+<li><code>compute_ps_curve(contact_map, resolution)</code> — average contacts at each<br>
+genomic separation.</li>
+<li><code>compute_insulation_score(contact_map)</code> — classic Crane/Dekker-style<br>
+insulation.</li>
+<li><code>compare_contact_maps(sim, exp)</code> — Pearson + stratum-adjusted<br>
+correlations on matched-size matrices.</li>
+</ul>
+<h3 id="6c-analysisps_curvepy">6c. <code>analysis/ps_curve.py</code> </h3>
+<p>Power-law fitting for P(s). Returns <code>(slope, intercept, r_squared)</code> with<br>
+the fit range hardcoded to match Hansen-lab defaults (~10 kb – 1 Mb).</p>
+<h3 id="6d-analysisabsolute_quantpy">6d. <code>analysis/absolute_quant.py</code> </h3>
+<p>Aggregate Peak Analysis: pile every convergent CTCF pair on top of each<br>
+other and report the average contact enrichment. This is the go-to<br>
+summary statistic for loop strength.</p>
+<h3 id="6e-analysisctcf_plottingpy">6e. <code>analysis/ctcf_plotting.py</code> </h3>
+<p>Drawing the contact-map figures with CTCF arrows overlaid. Same visual<br>
+grammar as <code>plot_hic_quicklook.py</code> for the experimental panel.</p>
+<h3 id="6f-analysisexperimental_comparepy">6f. <code>analysis/experimental_compare.py</code> </h3>
+<p>Matches a simulated contact map to an experimental Hi-C matrix<br>
+(resolution-aware; handles both <code>.npy</code> and <code>.mcool</code>). Produces<br>
+<code>sim_vs_exp_map.png</code> and numeric comparison metrics.</p>
+<h3 id="6g-analysismsd_two_pointpy--polymer_dynamicspy">6g. <code>analysis/msd_two_point.py</code> + <code>polymer_dynamics.py</code> </h3>
+<p><strong><code>msd_two_point.py</code>.</strong> Computes the mean-squared displacement of the<br>
+<em>vector</em> between two monomers as a function of lag time. This is the<br>
+in-silico analogue of two-colour live-cell imaging (Gabriele 2022 on<br>
+Fbn2, Mach 2022 <em>Nat Genet</em>). Fits a power law to extract the sub-diffusive<br>
+exponent α and the plateau.</p>
+<h4 id="msd-pair-policy-conserved-sites-flanking-sox2">MSD pair policy: conserved sites flanking Sox2 </h4>
+<p>Which two monomers we track is not arbitrary. Picking a pair that is a<br>
+strong CTCF-stalled anchor in one cell type but a weak / absent anchor<br>
+in the other would produce an MSD difference that reflects<br>
+"different anchor" rather than "different cohesin dynamics". To avoid<br>
+that confound, the default policy in <code>MSD_PROBE["auto"]</code> (in<br>
+<code>configs/parameters.py</code>) enforces three rules simultaneously:</p>
+<ol>
+<li>
+<p><strong>Conservation</strong> (<code>require_conserved = True</code>). The candidate set is<br>
+the intersection of the mESC and neuron oriented BEDs: a site is<br>
+kept only if it appears in <em>both</em> tracks at the same monomer index<br>
+and the same orientation. With the shipped BEDs this yields <strong>11<br>
+conserved sites</strong> (strict, tolerance 0 monomers — bump<br>
+<code>conserved_tol_monomers</code> to 1–2 if you suspect off-by-one noise in<br>
+the site caller). Because the indices match across cell types, the<br>
+MSD curves from mESC and neuron simulations are comparable<br>
+pixel-for-pixel — no renormalisation needed.</p>
+</li>
+<li>
+<p><strong>Proximity to Sox2</strong> (<code>anchor_bp</code>, <code>prefer_flanking</code>). Pairs are<br>
+ranked by whether they flank the Sox2 midpoint (34,651,227 bp ≈<br>
+monomer 651) and then by how close their midpoint is to Sox2. With<br>
+<code>prefer_flanking = True</code>, flanking pairs always beat non-flanking<br>
+pairs even if the non-flanking midpoint is closer.</p>
+</li>
+<li>
+<p><strong>Convergent orientation</strong> (<code>require_convergent = True</code>). Keep only<br>
+pairs whose left site is <code>+</code> (forward) and whose right site is <code>−</code><br>
+(reverse) — the textbook signature of a stalled-cohesin loop<br>
+anchor.</p>
+</li>
+</ol>
+<p>Size window: <code>min_sep_monomers = 200</code> (≥ 200 kb at 1 kb/monomer;<br>
+below this, MSD is dominated by local relaxation rather than the<br>
+loop), <code>max_sep_monomers = 1500</code> (sanity upper bound).</p>
+<p>Picks <code>n_pairs = 2</code> non-overlapping pairs (<code>disjoint_anchors = True</code>)<br>
+so two pairs don't share an endpoint.</p>
+<p><strong>What this resolves to with the current BEDs</strong> (run<br>
+<code>python -c 'from configs.parameters import get_msd_pairs; print(get_msd_pairs("mESC"))'</code> to reproduce):</p>
+<table>
+<thead>
+<tr>
+<th>cell type</th>
+<th>pair (monomer, monomer)</th>
+<th>genomic separation</th>
+<th>flanks Sox2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mESC</td>
+<td>(601, 1103)</td>
+<td>502 kb</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>mESC</td>
+<td>(647, 1323)</td>
+<td>676 kb</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>neuron</td>
+<td>(601, 1103)</td>
+<td>502 kb</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>neuron</td>
+<td>(647, 1323)</td>
+<td>676 kb</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table>
+<p>The two cell types pick the <strong>same pairs</strong> (same monomer indices),<br>
+which is what makes the cross-condition MSD overlay meaningful.</p>
+<p><strong>If nothing satisfies the rules</strong>, <code>relax_if_missing = True</code> first<br>
+drops conservation, then drops convergence; if even that empties the<br>
+candidate list, <code>_auto_select_msd_pairs</code> raises with a message that<br>
+tells you to set <code>pairs_mesc</code> / <code>pairs_neuron</code> explicitly.</p>
+<p><strong>Override.</strong> Set <code>pairs_mesc = [(a, b), (c, d), ...]</code> and (optionally)<br>
+<code>pairs_neuron</code> in <code>MSD_PROBE</code> to supply pairs directly. The list can be<br>
+any monomer indices; the analysis just replays them without validation.<br>
+Use this when you want to test a specific hypothesis (e.g. a pair that<br>
+is mESC-only). For a conservation-preserving cross-type comparison<br>
+leave both lists as <code>None</code> and let the auto-selector drive.</p>
+<p><strong><code>polymer_dynamics.py</code>.</strong> Diagnostics that complement MSD: radius of<br>
+gyration over time (<code>compute_rg_timecourse</code>), looped-fraction scalar<br>
+per pair (<code>compute_looped_fraction</code>), dwell-time distribution in the<br>
+contact state (<code>compute_dwell_times</code>), pair-separation densities<br>
+(<code>compute_pair_distance_distribution</code>).</p>
+<h3 id="6h-analysiscalibrationpy">6h. <code>analysis/calibration.py</code> </h3>
+<p>Maps simulation units to physical units. Two anchor options:</p>
+<ul>
+<li><code>hic</code>: align simulation P(s) to experimental P(s) in log-log, read off<br>
+nm/monomer from the horizontal shift; read off sec/frame from how<br>
+many frames reach the Hi-C equilibrium plateau.</li>
+<li><code>msd</code>: requires an experimental MSD CSV (from live-cell imaging);<br>
+match simulated MSD(t) to experimental MSD(t_real).</li>
+</ul>
+<p>Outputs a <code>calibration.json</code> dataclass dump with every anchor constant.</p>
+<h3 id="6i-analysisbatch_analysispy-plot_resultspy-lef_lifetimespy-msd_statisticspy">6i. <code>analysis/batch_analysis.py</code>, <code>plot_results.py</code>, <code>lef_lifetimes.py</code>, <code>msd_statistics.py</code> </h3>
+<p>Helpers used elsewhere in the pipeline:</p>
+<ul>
+<li><code>batch_analysis.py</code> — standalone script that scans<br>
+<code>results/polychrom_3d/</code>, runs contact-map analysis on every completed<br>
+directory, and produces a single multi-panel comparison figure. Older<br>
+and simpler than <code>run_analysis_all.py</code>; use it for a quick visual pass<br>
+on a fresh batch.</li>
+<li><code>plot_results.py</code> — generates the cross-condition overlay figures<br>
+(P(s), insulation, APA) called from <code>cluster/submit_plots.sh</code>.</li>
+<li><code>lef_lifetimes.py</code> — statistics on LEF residence time distribution<br>
+from the LEF-only trajectory files.</li>
+<li><code>msd_statistics.py</code> — bootstraps MSD curves across replicates.</li>
+</ul>
+<h3 id="6j-scriptssummarize_analysispy">6j. <code>scripts/summarize_analysis.py</code> </h3>
+<p><strong>Purpose.</strong> Walk every condition's pooled analysis files, collect<br>
+scalar metrics (P(s) slope, APA enrichment, Pearson with Hi-C, MSD<br>
+exponent, calibration nm/monomer…) into one CSV / XLSX table.</p>
+<p><strong>How to run it.</strong></p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code>python scripts/summarize_analysis.py <span class="token punctuation">\</span>
+    --analysis-dir results/analysis <span class="token punctuation">\</span>
+    --reference-condition mESC_ctrl
+</code></pre><p><strong>Outputs.</strong> Under <code>--analysis-dir</code>:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>summary_analysis_table.csv</code> / <code>.xlsx</code> / <code>.json</code></td>
+<td>One row per condition × replicate, one column per metric.</td>
+</tr>
+<tr>
+<td><code>summary_stats_all_pairs.csv</code></td>
+<td>Pairwise bootstrap tests between every pair of conditions.</td>
+</tr>
+<tr>
+<td><code>summary_stats_vs_reference.csv</code></td>
+<td>Each condition vs the reference (default: first one discovered, or <code>--reference-condition</code>).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="6k-scriptscheck_resultspy">6k. <code>scripts/check_results.py</code> </h3>
+<p>Quick inventory script. Lists every directory under <code>--results-dir</code> (default<br>
+<code>results/polychrom_3d</code>), how many frames it has, whether the analysis<br>
+sub-directory is populated. Nothing fancy, meant to be run after a big SLURM<br>
+job to confirm nothing fell off the cluster.</p>
+<h2 id="cluster-submit-scripts">Cluster submit scripts </h2>
+<p>Every script in <code>cluster/</code> is a SLURM wrapper. They all share the same<br>
+environment setup (<code>mambaforge</code> → <code>conda activate polychrom</code>) and <code>cd "${SLURM_SUBMIT_DIR}"</code> so you can <code>sbatch</code> them from the repo root. Most<br>
+also create the <code>logs/</code> directory if missing.</p>
+<p>A small number of scripts are <strong>legacy</strong> — superseded by newer wrappers<br>
+but kept for one-off reruns, debugging, or backwards compatibility with<br>
+old recipes you might find in commit messages and side projects. They<br>
+are flagged below; do not delete them, but reach for the <strong>CURRENT</strong><br>
+wrappers when starting fresh.</p>
+<p>The condition names in the SLURM <code>CONDITIONS=(...)</code> arrays must match<br>
+<code>SIMULATION_CONDITIONS</code> in <code>configs/parameters.py</code>. The legacy<br>
+<code>submit_analysis.sh</code> once had its array out of sync — fixed in commit<br>
+80929a8 — but the others have always been correct.</p>
+<h3 id="one-command-launcher">One-command launcher </h3>
+<p><code>cluster/submit_pipeline.sh</code> (CURRENT) is the recommended entry point<br>
+for a fresh sweep. It submits the simulation -&gt; merge -&gt; analysis chain<br>
+as a single dependency tree, and the analysis stage is itself a chain<br>
+of resume-capable jobs linked by <code>--dependency=afterany</code>. So a wall-time<br>
+hit, an OOM, or a transient cluster fault on the analysis stage doesn't<br>
+break the pipeline — the next link wakes up automatically and reuses<br>
+whatever the previous link already produced (<code>--reuse-heavy</code>,<br>
+<code>--skip-existing</code>).</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token function">bash</span> cluster/submit_pipeline.sh                     <span class="token comment"># full chain, 3 resume links</span>
+<span class="token function">bash</span> cluster/submit_pipeline.sh --skip-sim          <span class="token comment"># pick up at merge</span>
+<span class="token function">bash</span> cluster/submit_pipeline.sh --skip-sim --skip-merge   <span class="token comment"># analysis only</span>
+<span class="token function">bash</span> cluster/submit_pipeline.sh --resume-links <span class="token number">5</span>    <span class="token comment"># 5-link analysis chain</span>
+<span class="token function">bash</span> cluster/submit_pipeline.sh <span class="token punctuation">\</span>
+    --analysis-script cluster/submit_analysis_all_16cpu.sh   <span class="token comment"># RAM-tight variant</span>
+<span class="token function">bash</span> cluster/submit_pipeline.sh --skip-sim <span class="token parameter variable">--after</span> <span class="token number">9457828</span>   <span class="token comment"># attach to existing JID</span>
+</code></pre><p>The launcher prints the JID of every submission so you can <code>tail -f logs/...</code> or <code>scontrol show job</code> them.</p>
+<h3 id="hi-c-reference-data-preparation">Hi-C reference data preparation </h3>
+<p>Run these once if you ever need to rebuild <code>data/mcool/*.mcool</code> from<br>
+raw Bonev 2017 sequencing data. They are <strong>CURRENT</strong> but rarely used in<br>
+day-to-day work — the mcool files persist between sweeps.</p>
+<ul>
+<li><code>cluster/submit_hic_pipeline.sh</code> — chains the full Option B pipeline<br>
+(align → mcool → extract). Use for paper-quality from-scratch Hi-C.</li>
+<li><code>cluster/submit_hic_mcool.sh</code> — just the <code>02_make_mcool.sh</code> step<br>
+(cooler-build).</li>
+<li><code>cluster/submit_hic_extract.sh</code> — just <code>03_extract_sox2.py</code><br>
+(locus extraction from a precomputed cooler).</li>
+<li><code>scripts/sbatch_bonev_hic.sbatch</code> — the fast Option A wrapper for the<br>
+Sox2 chr3 slice; submit with <code>--export=CELLTYPE=ES|CN</code>.</li>
+</ul>
+<h3 id="simulations-tier-1--tier-2">Simulations (Tier 1 + Tier 2) </h3>
+<h4 id="tier-1--1d-lef-dynamics">Tier 1 — 1D LEF dynamics </h4>
+<ul>
+<li><strong><code>cluster/submit_lef_sweep.sh</code></strong> — <strong>CURRENT</strong>. CPU array, 8 conditions<br>
+× 3 reps = 24 jobs, ~10–30 min each. Runs<br>
+<code>scripts/run_simulation.py --engine lef_only</code>. The 1D LEF trajectory<br>
+is the input to Tier 2; this stage is required.</li>
+</ul>
+<h4 id="tier-2--3d-polychrom">Tier 2 — 3D polychrom </h4>
+<ul>
+<li>
+<p><strong><code>cluster/submit_polychrom_multigpu.sh</code></strong> — <strong>CURRENT</strong>. The<br>
+canonical 3D entry point. 4-GPU array job: each array task takes one<br>
+condition, splits the total blocks across 4 V100s, runs them in<br>
+parallel as shards, then exits. The shard outputs land in<br>
+<code>results/polychrom_3d/&lt;cond&gt;_rep&lt;N&gt;_shard&lt;M&gt;/</code> and require a<br>
+subsequent <code>submit_merge_shards.sh</code> step. Reps start at offset 3<br>
+to avoid clashing with the legacy single-GPU reps 0–2 (which is<br>
+what made keeping <code>submit_polychrom.sh</code> around useful).</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_polychrom.sh</code></strong> — <strong>LEGACY</strong>. Pre-shard single-GPU<br>
+array (24 jobs, ~6–12 h each). Useful as a <strong>fallback</strong> when the<br>
+multi-GPU <code>cuda</code> partition is unavailable, and to populate reps 0–2<br>
+alongside the multi-GPU reps 3+. Output goes directly to<br>
+<code>results/polychrom_3d/&lt;cond&gt;_rep&lt;N&gt;/</code> (no <code>_shard&lt;M&gt;</code> suffix), so it<br>
+bypasses the merge step. Don't reach for this unless you specifically<br>
+need the no-shard layout.</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_single_condition.sh</code></strong> — <strong>LEGACY</strong>. Runs ONE<br>
+condition on 4× V100; takes the condition name as the first<br>
+positional arg. Useful for re-running a single condition that needs<br>
+more reps or a different parameter, without launching the full array.<br>
+Pre-shard era; still works on the current codebase.</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_all_4gpu.sh</code></strong> — <strong>LEGACY</strong>. Pre-shard top-level<br>
+orchestrator that chained Tier 2 simulations + analysis as a single<br>
+dependency tree (precursor to <code>submit_pipeline.sh</code>). Kept for<br>
+documentation continuity; superseded by <code>submit_pipeline.sh</code>.</p>
+</li>
+</ul>
+<h4 id="merge">Merge </h4>
+<ul>
+<li>
+<p><strong><code>cluster/submit_merge_shards.sh</code></strong> — <strong>CURRENT</strong>. Walks<br>
+<code>results/polychrom_3d/</code>, finds every group of <code>&lt;base&gt;_rep&lt;N&gt;_shard&lt;M&gt;/</code><br>
+directories, and merges them into one<br>
+<code>results/polychrom_3d/merged_&lt;base&gt;_rep&lt;N&gt;/</code>. 48 h walltime. Smart-skips<br>
+groups already merged (shard-count-based — see "File-output gotchas"<br>
+in <a href="http://CLAUDE.md">CLAUDE.md</a>). Required step between Tier 2 and analysis.</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_migrate_legacy.sh</code></strong> — <strong>ONE-TIME</strong>. Migrates the<br>
+pre-2026-04-27 layout (per-sim-dir <code>&lt;sim_dir&gt;/analysis/</code> outputs)<br>
+to the flat <code>results/analysis/</code> layout. Supports <code>DRY_RUN=1</code>,<br>
+<code>COPY=1</code> (copy instead of move), <code>NO_RENAME=1</code> (don't rename source<br>
+dirs to <code>merged_&lt;base&gt;</code>). Idempotent on already-migrated trees.<br>
+Once your tree is fully on the flat layout, this script idles —<br>
+keep it for paper-trail reproducibility.</p>
+</li>
+</ul>
+<h3 id="analysis">Analysis </h3>
+<ul>
+<li>
+<p><strong><code>cluster/submit_analysis_postmerge.sh</code></strong> — <strong>CURRENT</strong> (preferred).<br>
+Refuses to start if no <code>merged_*/</code> dirs exist (so you don't waste<br>
+cluster time on an empty input). Calls <code>run_analysis_all.py</code> with<br>
+all phases enabled (contact maps, P(s) + power-law, APA + AbLE,<br>
+CTCF overlay, MSD, polymer dynamics, pooling, summary table). 32-CPU<br>
+2× parallel per dir, 24 h walltime, 360 GB RAM. Runs<br>
+<code>plot_contact_map_panels.py</code> inline at the end. Picks up the current<br>
+<code>submit_pipeline.sh</code> resume convention via <code>RESUME=1</code> and<br>
+<code>SKIP_EXISTING=1</code>.</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_analysis_all_32cpu.sh</code></strong> — <strong>CURRENT</strong>. Older<br>
+wrapper that does the same work as <code>submit_analysis_postmerge.sh</code><br>
+minus the merged-dir sanity check. Functionally equivalent; kept<br>
+while older docs and muscle memory migrate over to the postmerge<br>
+wrapper. New scripts should call the postmerge variant; existing<br>
+recipes pointing at this one continue to work.</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_analysis_all_16cpu.sh</code></strong> — <strong>CURRENT</strong>. Sequential<br>
+per-dir variant (16 cores, ~17 h for 17 conditions). Use when the<br>
+cluster queue is full (smaller allocation, faster scheduling) or<br>
+when memory pressure is high. Same env-var toggles as the 32-CPU<br>
+variant.</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_analysis_resume_chain.sh</code></strong> — <strong>CURRENT</strong>.<br>
+Standalone analysis-only resume chain: submits N analysis jobs<br>
+linked by <code>--dependency=afterany</code>, all but the first run with<br>
+<code>RESUME=1</code> and <code>SKIP_EXISTING=1</code>. Use when you only need the<br>
+analysis stage chained (sim + merge already done) and the single<br>
+24/48 h walltime isn't enough. <code>submit_pipeline.sh</code> reuses this<br>
+pattern internally for its analysis stage.</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_analysis.sh</code></strong> — <strong>LEGACY</strong>. Pre-flat-folder,<br>
+per-<code>&lt;cond&gt;_rep&lt;N&gt;</code> analysis array. Runs <code>analysis/contact_maps.py</code><br>
+on one directory per SLURM array task. Useful for re-running one<br>
+bad replicate in isolation without touching the others. Output<br>
+goes to <code>&lt;sim_dir&gt;/analysis/</code>, which the new pipeline ignores —<br>
+see "File-output gotchas" / <code>&lt;sim_dir&gt;/analysis/</code> is dead.</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_analysis_cpu.sh</code></strong> — <strong>LEGACY</strong>. Pre-flat-folder<br>
+contact-map-only extractor. Superseded by the<br>
+<code>submit_analysis_all_*.sh</code> and <code>submit_analysis_postmerge.sh</code><br>
+wrappers, which call the orchestrator and produce the full<br>
+per-condition fingerprint instead of just the contact map.</p>
+</li>
+</ul>
+<h3 id="plots">Plots </h3>
+<ul>
+<li>
+<p><strong><code>cluster/submit_plot_panels.sh</code></strong> — <strong>CURRENT</strong>. Standalone<br>
+re-render of <code>results/figures/</code> panels from the existing<br>
+<code>results/analysis/</code> outputs. Cheap (~30 min). Already invoked at<br>
+the end of every analysis run; use this when only the figures need<br>
+refreshing (e.g. you want to tweak vmin/vmax in<br>
+<code>plot_contact_map_panels.py</code> without re-running analysis).</p>
+</li>
+<li>
+<p><strong><code>cluster/submit_plots.sh</code></strong> — <strong>LEGACY</strong>. Pre-shard cross-condition<br>
+overlay plotter, calls <code>analysis/plot_results.py</code>. Superseded by the<br>
+inline figure-panel rendering in the analysis wrappers. Kept so<br>
+links from old session notes don't 404.</p>
+</li>
+</ul>
+<h3 id="helpers">Helpers </h3>
+<ul>
+<li><strong><code>cluster/check_partitions.sh</code></strong> — <strong>UTILITY</strong>. Prints the<br>
+partitions, QOS limits, and GPU availability you have access to.<br>
+Run this first if you're on a new cluster or after a SLURM upgrade<br>
+and don't know which queue to target. Read-only diagnostic.</li>
+</ul>
+<h3 id="dependency-chain-recipes">Dependency-chain recipes </h3>
+<p>The single-command launcher (<code>submit_pipeline.sh</code>) covers the common<br>
+case. The recipes below are for one-off chains where the launcher's<br>
+defaults don't quite fit.</p>
+<pre data-role="codeBlock" data-info="bash" class="language-bash bash"><code><span class="token comment"># Two-step chain: merge -&gt; analysis</span>
+<span class="token assign-left variable">J_MERGE</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> cluster/submit_merge_shards.sh<span class="token variable">)</span></span>
+<span class="token assign-left variable">J_ANA</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:$<span class="token punctuation">{</span>J_MERGE<span class="token punctuation">}</span> <span class="token punctuation">\</span>
+        cluster/submit_analysis_postmerge.sh<span class="token variable">)</span></span>
+<span class="token builtin class-name">echo</span> <span class="token string">"Merge: <span class="token variable">${J_MERGE}</span>   Analysis: <span class="token variable">${J_ANA}</span>"</span>
+
+<span class="token comment"># Three-step chain (full sweep, manual): sim -&gt; merge -&gt; analysis</span>
+<span class="token assign-left variable">J_SIM</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> cluster/submit_polychrom_multigpu.sh<span class="token variable">)</span></span>
+<span class="token assign-left variable">J_MERGE</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:$<span class="token punctuation">{</span>J_SIM<span class="token punctuation">}</span>   cluster/submit_merge_shards.sh<span class="token variable">)</span></span>
+<span class="token assign-left variable">J_ANA</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:$<span class="token punctuation">{</span>J_MERGE<span class="token punctuation">}</span>   cluster/submit_analysis_postmerge.sh<span class="token variable">)</span></span>
+
+<span class="token comment"># Hi-C path (rebuild reference mcool, then sim+analysis):</span>
+<span class="token assign-left variable">J_HIC</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> cluster/submit_hic_pipeline.sh<span class="token variable">)</span></span>
+<span class="token assign-left variable">J_SIM</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:$<span class="token punctuation">{</span>J_HIC<span class="token punctuation">}</span> cluster/submit_polychrom_multigpu.sh<span class="token variable">)</span></span>
+<span class="token assign-left variable">J_MERGE</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:$<span class="token punctuation">{</span>J_SIM<span class="token punctuation">}</span>   cluster/submit_merge_shards.sh<span class="token variable">)</span></span>
+<span class="token assign-left variable">J_ANA</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--parsable</span> <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:$<span class="token punctuation">{</span>J_MERGE<span class="token punctuation">}</span>   cluster/submit_analysis_postmerge.sh<span class="token variable">)</span></span>
+
+<span class="token comment"># Resume-chain on the analysis stage only (sim + merge already done):</span>
+<span class="token function">bash</span> cluster/submit_analysis_resume_chain.sh <span class="token number">5</span>   <span class="token comment"># 5 chained links</span>
+<span class="token function">bash</span> cluster/submit_analysis_resume_chain.sh <span class="token number">3</span> <span class="token number">9457828</span>   <span class="token comment"># attach to JID 9457828</span>
+
+<span class="token comment"># Legacy multi-step recipe (kept for backwards compatibility with old</span>
+<span class="token comment"># session notes — prefer submit_pipeline.sh for new work):</span>
+<span class="token assign-left variable">JOB_ES</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--export</span><span class="token operator">=</span>CELLTYPE<span class="token operator">=</span>ES scripts/sbatch_bonev_hic.sbatch <span class="token operator">|</span> <span class="token function">awk</span> <span class="token string">'{print $NF}'</span><span class="token variable">)</span></span>
+<span class="token assign-left variable">JOB_CN</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--export</span><span class="token operator">=</span>CELLTYPE<span class="token operator">=</span>CN scripts/sbatch_bonev_hic.sbatch <span class="token operator">|</span> <span class="token function">awk</span> <span class="token string">'{print $NF}'</span><span class="token variable">)</span></span>
+<span class="token assign-left variable">JOB_EX</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:$<span class="token punctuation">{</span>JOB_ES<span class="token punctuation">}</span>:$<span class="token punctuation">{</span>JOB_CN<span class="token punctuation">}</span> <span class="token punctuation">\</span>
+                cluster/submit_hic_extract.sh <span class="token operator">|</span> <span class="token function">awk</span> <span class="token string">'{print $NF}'</span><span class="token variable">)</span></span>
+<span class="token assign-left variable">JOB_LEF</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch cluster/submit_lef_sweep.sh <span class="token operator">|</span> <span class="token function">awk</span> <span class="token string">'{print $NF}'</span><span class="token variable">)</span></span>
+<span class="token assign-left variable">JOB_SIM</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch cluster/submit_polychrom.sh <span class="token operator">|</span> <span class="token function">awk</span> <span class="token string">'{print $NF}'</span><span class="token variable">)</span></span>   <span class="token comment"># legacy single-GPU</span>
+<span class="token assign-left variable">JOB_ANA</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span>sbatch <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:$<span class="token punctuation">{</span>JOB_EX<span class="token punctuation">}</span>:$<span class="token punctuation">{</span>JOB_SIM<span class="token punctuation">}</span> <span class="token punctuation">\</span>
+                cluster/submit_analysis_cpu.sh <span class="token operator">|</span> <span class="token function">awk</span> <span class="token string">'{print $NF}'</span><span class="token variable">)</span></span>   <span class="token comment"># legacy</span>
+sbatch <span class="token parameter variable">--dependency</span><span class="token operator">=</span>afterok:<span class="token variable">${JOB_ANA}</span> cluster/submit_plots.sh        <span class="token comment"># legacy</span>
+</code></pre><h3 id="afterok-vs-afterany--which-one-to-use">afterok vs afterany — which one to use </h3>
+<ul>
+<li>
+<p><code>--dependency=afterok:&lt;JID&gt;</code> — fire only if the upstream job finished<br>
+with exit-status 0 (<code>COMPLETED</code> in SLURM-speak). Use this between<br>
+pipeline stages where the next stage is meaningless if the previous<br>
+one failed (sim -&gt; merge, merge -&gt; analysis-cold-link).</p>
+</li>
+<li>
+<p><code>--dependency=afterany:&lt;JID&gt;</code> — fire regardless of how the upstream<br>
+job ended (COMPLETED / FAILED / TIMEOUT / CANCELLED). Use this for<br>
+resume-chain links where the <em>whole point</em> is to recover from<br>
+wall-time TIMEOUTs. <code>submit_pipeline.sh</code> and<br>
+<code>submit_analysis_resume_chain.sh</code> use <code>afterany</code> between analysis<br>
+links for exactly this reason.</p>
+</li>
+<li>
+<p>Stop a chain by <code>scancel</code>ing every link (afterany ignores<br>
+cancellation of the upstream job, so cancelling just the first link<br>
+doesn't stop the chain).</p>
+</li>
+</ul>
+<h2 id="conventions-youll-see-everywhere">Conventions you'll see everywhere </h2>
+<ul>
+<li><strong>Monomer = 1 kb.</strong> One bead in the polymer corresponds to 1,000 bp<br>
+of real DNA. So monomer index <code>i</code> covers genomic coordinates<br>
+<code>REGION_START + i * RESOLUTION</code> to <code>REGION_START + (i+1) * RESOLUTION</code>.</li>
+<li><strong>Tiled chromosome.</strong> Simulations actually run on a chain of length<br>
+<code>TILING["chrom_size"]</code> (~70,000 monomers) = 28 tiled copies of the<br>
+2 Mb locus with padding. Contact maps are collapsed back down to<br>
+<code>N_MONOMERS</code> (2,000) for comparison. The tiling is an error-bar<br>
+trick — ~28× more data per wall-clock second without perturbing the<br>
+physics of any one locus.</li>
+<li><strong>Output directory names.</strong> Always<br>
+<code>&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;</code> for merged directories,<br>
+<code>&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;_shard&lt;S&gt;</code> for shards. The<br>
+<code>_ctcf-&lt;ctcf_type&gt;_</code> suffix is the single most important convention:<br>
+it keeps mESC-CTCF and neuron-CTCF runs of the same cohesin parameter<br>
+set separated on disk.</li>
+<li><strong>RNG seed.</strong> <code>42 + replicate * 1000</code> for one-shot runs,<br>
+<code>42 + replicate * 10000 + shard * 1000</code> for shards. Always derived<br>
+from the replicate / shard index, so reruns are reproducible.</li>
+<li><strong>Every run writes a <code>params.json</code></strong> with the full parameter dict +<br>
+cell type + tiling + replicate. If a result file ever looks wrong,<br>
+check <code>params.json</code> first — it is the single source of truth for<br>
+what actually ran.</li>
+<li><strong>Condition name vs params name.</strong> <code>SIMULATION_CONDITIONS</code> entries<br>
+have a <code>name</code> (e.g. <code>CN_long_residency_neuron_ctcf</code>) that is what<br>
+you pass to <code>--condition</code>, and a <code>params</code> dict whose <code>name</code> (e.g.<br>
+<code>CN_long_residency</code>) is what the output directory starts with. The<br>
+two differ because the same cohesin params can be paired with either<br>
+CTCF track.</li>
+</ul>
+<h2 id="common-pitfalls">Common pitfalls </h2>
+<p><strong>"No results found at …" from <code>submit_analysis.sh</code>.</strong> The legacy<br>
+single-directory analysis submit script asks <code>configs.parameters</code> to<br>
+resolve the condition name into <code>(params_name, ctcf_type)</code> and then<br>
+constructs <code>&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;</code>. If the directory<br>
+doesn't exist, it skips silently. Check that the sim finished<br>
+(<code>ls results/polychrom_3d/&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;</code>) — if<br>
+not, the simulation crashed earlier in the pipeline.</p>
+<p><strong><code>ModuleNotFoundError: configs</code> or <code>analysis</code>.</strong> Every script in<br>
+<code>scripts/</code> inserts the repo root onto <code>sys.path</code>. If you moved a script<br>
+somewhere else, or sourced it in an unusual way, this breaks. Fix: run<br>
+from the repo root, or add the repo root to <code>PYTHONPATH</code>.</p>
+<p><strong><code>KeyError: 'bin-size'</code> in Hi-C prep.</strong> Old cooler; see §2a note.<br>
+Solution: use <code>scripts/download_bonev_hic.sh</code>, which avoids<br>
+<code>cooler makebins</code> entirely.</p>
+<p><strong>Wrong Hi-C reference compared to the simulation.</strong> The routing in<br>
+<code>run_analysis_all.py::HIC_CONDITION_MAP</code> infers cell type from the<br>
+directory name. If a directory has an unusual name, the fallback rule<br>
+picks mESC; a warning is logged but the run continues with the wrong<br>
+reference. Either rename the directory to match the <code>ctcf-&lt;type&gt;</code><br>
+convention or add a new regex rule at the top of <code>HIC_CONDITION_MAP</code>.</p>
+<p><strong>Multi-GPU shards where only some succeeded.</strong> The merge step<br>
+(<code>merge_shards.py</code>) counts present shard directories. If only 2 of 4<br>
+merged, find which shard failed in <code>logs/*_shard&lt;i&gt;.err</code>, resubmit with<br>
+<code>--shard-index-offset</code> to avoid re-running the successful shards, then<br>
+re-merge. <code>merge_metadata.json</code> inside the merged directory records<br>
+which shards contributed.</p>
+<p><strong>A run finished but <code>analysis/sim_contact_map.npy</code> is missing.</strong> Check<br>
+the end of the SLURM log for an OOM (<code>Killed</code> signal) or import error.<br>
+Re-run with <code>--skip-existing</code> so already-processed directories aren't<br>
+redone.</p>
+
+      </div>
+      
+      
+    
+    
+    
+    
+    
+    
+  
+    </body></html>

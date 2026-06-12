@@ -1,0 +1,153 @@
+## =============================================================================
+## SimPipe configuration
+## Edit paths below before running SimPipe.sh.
+## Locus, conditions, and physics parameters are all defined here —
+## configs/parameters.py reads this file at import time.
+## =============================================================================
+
+## ── Sample sheet (CTCF peak file registry) ───────────────────────────────────
+samplesheet: 'SimSamplesheet.txt'
+
+## ── Hi-C input files ─────────────────────────────────────────────────────────
+hic_control:  '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic'
+hic_sorbitol: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic'
+
+## ── Genome FASTA ─────────────────────────────────────────────────────────────
+## Used by extract_ctcf_sites.py (FIMO motif orientation).
+genome: '/proj/phanstiel_lab/Reference/human/hg38/fasta/GRCh38.primary_assembly.genome.fa'
+genome_assembly: 'hg38'
+
+## ── Resolution ───────────────────────────────────────────────────────────────
+resolution: 1000   # bp per monomer
+
+## ── Job counts ───────────────────────────────────────────────────────────────
+n_replicates: 3    # independent GPU runs per condition
+n_shards: 4        # GPU shards per replicate (frames = n_replicates × n_shards × total_blocks/save_every)
+
+## ── Software ─────────────────────────────────────────────────────────────────
+pythonVers: '3.12.4'
+
+
+## =============================================================================
+## Locus
+## Change these to run a different genomic region.
+## region_start / region_end define the full simulation window (~2 Mb).
+## anchor_bp is the midpoint of the figure window — used for MSD probe selection.
+## =============================================================================
+locus:
+  name:         chr1_fig1
+  chrom:        chr1
+  region_start: 64210000   # full 2 Mb simulation window
+  region_end:   66170000
+  label:        "chr1 Fig1 gained+lost (JAK1/AK4/LEPR locus)"
+  anchor_bp:    65190000   # midpoint of figure window 64.71–65.67 Mb
+
+
+## =============================================================================
+## Simulation conditions
+## Each entry is one cohesin × CTCF combination.
+##
+## Fields:
+##   name         — unique identifier; used in output directory names
+##   params_name  — prefix for the shard directory (must be unique within a ctcf_type)
+##   lifetime     — mean cohesin lifetime in SMC steps (~kb processivity = lifetime × resolution)
+##   separation   — inter-cohesin spacing in monomers
+##   ctcf_capture — stalling probability per CTCF encounter (0–1)
+##   ctcf_release — escape probability per step while stalled (0–1)
+##   ctcf_type    — "control" or "sorbitol" (selects which CTCF peaks to load)
+##   ctcf_extra   — optional: "promoter" merges promoter stall sites with CTCF sites
+##   compare_hic  — "control" or "sorbitol" (which Hi-C map to compare against)
+## =============================================================================
+conditions:
+
+  ## 1. Baseline: reproduces untreated Hi-C?
+  - name:         control_ctcf-control
+    description:  "Control cohesin + control CTCF sites (untreated baseline)"
+    params_name:  control
+    lifetime:     75
+    separation:   240
+    ctcf_capture: 0.125
+    ctcf_release: 0.0033
+    ctcf_type:    control
+    compare_hic:  control
+
+  ## 2. CTCF loss only: does eviction alone explain sorbitol Hi-C?
+  - name:         control_ctcf-sorbitol
+    description:  "Control cohesin + sorbitol CTCF sites (CTCF-loss effect only)"
+    params_name:  sorbitol_null
+    lifetime:     75
+    separation:   240
+    ctcf_capture: 0.125
+    ctcf_release: 0.0033
+    ctcf_type:    sorbitol
+    compare_hic:  sorbitol
+
+  ## 3. Weaker stalling at retained CTCF sites (0.5× capture probability)
+  - name:         weak_ctcf-sorbitol
+    description:  "Control cohesin + sorbitol CTCF sites + reduced stalling (0.5x)"
+    params_name:  sorbitol_weak_ctcf
+    lifetime:     75
+    separation:   240
+    ctcf_capture: 0.0625
+    ctcf_release: 0.0033
+    ctcf_type:    sorbitol
+    compare_hic:  sorbitol
+
+  ## 4. Key mechanistic test: promoter-anchored cohesin stalling
+  - name:         sorbitol_promoter-stall
+    description:  "Sorbitol cohesin + promoter stall sites (SP/KLF anchoring)"
+    params_name:  sorbitol_promoter
+    lifetime:     75
+    separation:   240
+    ctcf_capture: 0.125
+    ctcf_release: 0.0033
+    ctcf_type:    sorbitol
+    ctcf_extra:   promoter
+    compare_hic:  sorbitol
+
+  ## 5. Sensitivity: longer processivity under sorbitol
+  - name:         sorbitol_promoter-stall_long
+    description:  "Sorbitol cohesin (2x processivity) + promoter stall sites"
+    params_name:  sorbitol_promoter_long
+    lifetime:     150
+    separation:   240
+    ctcf_capture: 0.125
+    ctcf_release: 0.0017
+    ctcf_type:    sorbitol
+    ctcf_extra:   promoter
+    compare_hic:  sorbitol
+
+
+## =============================================================================
+## Polymer physics  (advanced — Gabriele et al. 2022 defaults)
+## Most users should not need to change these.
+## =============================================================================
+polymer:
+  density:          0.2
+  bond_length:      1.0
+  bond_wiggle_dist: 0.05
+  angle_force:      1.5
+  collision_rate:   0.03
+  error_tol:        0.003
+  platform:         CUDA    # "CPU" for testing without a GPU
+
+smc_bond:
+  wiggle_dist: 0.2
+  bond_dist:   0.5
+
+## Tiling: 28 back-to-back copies of the locus on a 70 000-monomer chromosome.
+## Gives 28x more contact statistics per GPU run (Yang et al. 2023 Nat Commun).
+## tile_size must equal (region_end - region_start) / resolution + 2 * padding.
+tiling:
+  tile_size:  2500
+  chrom_size: 70000
+  padding:    250
+
+sim_run:
+  smc_steps_per_block:  1
+  md_steps_per_block:   250
+  total_blocks:         50000
+  warmup_blocks:        4000
+  save_every:           10
+  restart_milker_every: 100
+  contact_radius:       3.0

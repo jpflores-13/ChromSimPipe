@@ -1,0 +1,21 @@
+name: ctcf_extraction
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy>=1.24
+
+  # --- Genome sequence extraction ---
+  - bedtools>=2.31          # getfasta to extract sequences under peaks
+  - samtools>=1.17          # faidx for genome indexing
+
+  # --- Motif scanning ---
+  - meme>=5.5               # FIMO for CTCF motif orientation calling
+
+  # --- Peak calling (only if processing raw ChIP-seq BAMs) ---
+  # - macs2>=2.2            # uncomment if calling peaks from Bonev 2017 BAMs
+
+  # --- Utilities ---
+  - wget                    # downloading genome, motif files

@@ -1,0 +1,49 @@
+# Pinned conda environment for the Bonev 2017 Hi-C reprocessing pipeline.
+#
+# Used by scripts/process_hic/{00_download_fastq.sh, 01_align_and_parse.sh,
+# 02_make_mcool.sh, 03_extract_sox2.py}.
+#
+# Pins follow the scheme used by ahansenlab/MicroC_RCMC_analysis
+# (https://github.com/ahansenlab/MicroC_RCMC_analysis) for the tools they
+# share with us (bwa-mem2, pairtools, cooler, bedtools, bedops). Extra pins
+# below cover the SRA download and per-locus extraction steps that the
+# Hansen pipeline does not perform.
+#
+# Create with:
+#   conda env create -f envs/hic_bonev.yml
+#   conda activate hic-bonev
+#
+# Or with mamba (faster solver):
+#   mamba env create -f envs/hic_bonev.yml
+#   conda activate hic-bonev
+
+name: hic-bonev
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  # Core language
+  - python=3.12
+
+  # Read acquisition
+  - sra-tools=3.1.1
+  - pigz=2.8
+
+  # Alignment and SAM/BAM handling
+  - bwa-mem2=2.3
+  - samtools=1.21
+
+  # Hi-C contact processing (matches Hansen pins)
+  - pairtools=1.1.3
+  - pairix=0.3.7
+  - cooler=0.10.4
+
+  # Genome arithmetic (matches Hansen pins; used by helper scripts)
+  - bedtools=2.31
+  - bedops=2.4.42
+
+  # Per-locus analysis (used by 03_extract_sox2.py)
+  - cooltools=0.7.1
+  - numpy
+  - scipy
+  - pandas

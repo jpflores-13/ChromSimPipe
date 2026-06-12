@@ -1,0 +1,34 @@
+# Claude Code
+.claude/
+
+# Generated data and results (large files, not for version control)
+data/
+results/
+
+# Slurm logs
+logs/
+logs_slurm/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Conda
+.conda/
+*.conda
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Snakemake
+.snakemake/
+*.snakemake.log
+
+# Misc
+*.tmp
+*.swp
+.DS_Store
