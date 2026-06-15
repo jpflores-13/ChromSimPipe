@@ -258,9 +258,9 @@ The 2 Mb locus (~2000 monomers) is simulated as 28 tiled copies on a 70,000-mono
 | `CUDA not available` | Wrong SLURM partition | GPU jobs need `--partition=gpu --gpus=1` (set automatically by Snakemake) |
 | Snakemake lock error | Previous run crashed | Run `bash unlock.sh` then resubmit |
 | CTCF BED file not found | `setup_data.sh` not run or CTCF extraction failed | Check `logs/setup_data*.log` |
-| No peaks file in samplesheet | Wrong data path | Edit `SimSamplesheet.txt` with correct absolute paths |
+| No peaks file in samplesheet | Wrong data path | Edit `ChromSimSamplesheet.txt` with correct absolute paths |
 | `KeyError: 'CTCF_Type'` in samplesheet | TSV format issue | File must be tab-separated with headers `CTCF_Type` and `CTCF_Peaks_Path` |
-| `hic2cool` fails | `.hic` file not found | Check `config/SimConfig.yaml` paths for `hic_control`/`hic_sorbitol` |
+| `hic2cool` fails | `.hic` file not found | Check `config/ChromSimConfig.yaml` paths for `hic_control`/`hic_sorbitol` |
 | Analysis fails with "No results found" | Merge step incomplete | Check `results/polychrom_3d/` for `merged_*` directories |
 
 For the full codebase walkthrough, see [`CODE_GUIDE.md`](CODE_GUIDE.md).

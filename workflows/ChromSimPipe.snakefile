@@ -75,9 +75,9 @@ rule convert_hic:
         mem_mb         = 32000,
     shell:
         """
-        module load anaconda/2024.02 2>/dev/null || true
+        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
         mkdir -p data/mcool
-        conda run -n cohesin_sim hic2cool convert \\
+        conda run -p ~/.local/share/mamba/envs/cohesin_sim hic2cool convert \\
             {input.hic} {output.mcool} -r {config[resolution]}
         """
 
@@ -99,11 +99,11 @@ rule extract_ctcf:
         mem_mb         = 16000,
     shell:
         """
-        module load anaconda/2024.02 2>/dev/null || true
+        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
         mkdir -p data/ctcf_beds
         genome_arg=""
         [ -f "{params.genome}" ] && genome_arg="--genome {params.genome}"
-        conda run -n ctcf_extraction python scripts/extract_ctcf_sites_hg38.py \\
+        conda run -p ~/.local/share/mamba/envs/ctcf_extraction python scripts/extract_ctcf_sites_hg38.py \\
             --source bed \\
             --bed {input.peaks} \\
             --region {params.region} \\
@@ -127,9 +127,9 @@ rule validate_ctcf:
         mem_mb         = 4000,
     shell:
         """
-        module load anaconda/2024.02 2>/dev/null || true
+        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
         mkdir -p $(dirname {output.done})
-        conda run -n cohesin_sim python scripts/validate_ctcf.py
+        conda run -p ~/.local/share/mamba/envs/cohesin_sim python scripts/validate_ctcf.py
         touch {output.done}
         """
 
@@ -151,15 +151,17 @@ rule simulate_shard:
     resources:
         runtime         = 720,
         slurm_partition = "gpu",
+        qos             = "gpu_access",
         cpus_per_task   = 4,
-        mem_mb          = 64000,
-        slurm_extra     = "'--gpus=1'",
+        mem_mb          = 60000,
+        mem_mb_per_cpu  = 0,
+        gpu             = 1,
     shell:
         """
-        module load anaconda/2024.02 2>/dev/null || true
+        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
         mkdir -p {params.results_dir}
         mkdir -p $(dirname {output.done})
-        conda run -n cohesin_sim python scripts/run_simulation_shard.py \\
+        conda run -p ~/.local/share/mamba/envs/cohesin_sim python scripts/run_simulation_shard.py \\
             --condition {wildcards.condition} \\
             --replicate {wildcards.rep} \\
             --shard-index {wildcards.shard} \\
@@ -193,9 +195,9 @@ rule merge_shards:
         mem_mb         = 64000,
     shell:
         """
-        module load anaconda/2024.02 2>/dev/null || true
+        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
         mkdir -p $(dirname {output.done})
-        conda run -n cohesin_sim python scripts/merge_shards.py \\
+        conda run -p ~/.local/share/mamba/envs/cohesin_sim python scripts/merge_shards.py \\
             --condition {wildcards.condition} \\
             --replicate {wildcards.rep} \\
             --n-shards {params.n_shards} \\
@@ -229,10 +231,10 @@ rule analyze_all:
         mem_mb         = 64000,
     shell:
         """
-        module load anaconda/2024.02 2>/dev/null || true
+        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
         mkdir -p {params.output_dir}
         mkdir -p $(dirname {output.done})
-        conda run -n cohesin_sim python scripts/run_analysis_all.py \\
+        conda run -p ~/.local/share/mamba/envs/cohesin_sim python scripts/run_analysis_all.py \\
             --results-dir {params.results_dir} \\
             --output-dir {params.output_dir} \\
             --condition {wildcards.condition} \\

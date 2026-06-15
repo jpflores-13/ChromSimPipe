@@ -76,7 +76,7 @@ def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
         }, f, indent=2, default=str)
 
     # --- Initialize LEF simulator on the FULL tiled chromosome ---
-    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(cell_type=ctcf_type)
+    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(condition=ctcf_type)
     n_lefs = max(1, N // params["separation"])
 
     lef_sim = LEFSimulator(
