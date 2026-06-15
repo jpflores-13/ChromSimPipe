@@ -1,0 +1,98 @@
+# Overview {.unnumbered}
+
+**ChromSimPipe** is a physics-based polymer simulation framework for testing
+mechanistic hypotheses about 3D chromatin organisation. Given CTCF binding
+data (CUT&Tag or ChIP-seq peaks) and Hi-C maps as input, it simulates
+cohesin loop extrusion under different parameter conditions and compares the
+resulting contact maps to your experimental Hi-C.
+
+::: {.callout-note}
+**Included example.** The default configuration ships with a use case from
+the STRS project (Flores et al. 2026): HEK293T cells under hyperosmotic
+stress (sorbitol treatment), comparing control vs. sorbitol CTCF CUT&Tag
+peaks against matched Hi-C maps. Swap in your own data and the pipeline
+runs the same way.
+:::
+
+## How the pieces fit together
+
+```
+  CTCF peaks (CUT&Tag / ChIP-seq)      Experimental Hi-C (.hic maps)
+    condition A + condition B              condition A + condition B
+          │                                       │
+          ▼                                       ▼
+  data/ctcf_beds/*.bed             data/mcool/*.cool
+   (oriented CTCF sites,            (1 kb contact maps; converted by hic2cool)
+    from FIMO JASPAR MA0139.1)
+          │                                       │
+          └──────────────┬────────────────────────┘
+                         ▼
+                 configs/parameters.py
+           (N conditions × active locus)
+                         │
+                         ▼
+         GPU polymer simulation (polychrom / OpenMM)
+         SLURM jobs: N conditions × reps × shards
+                         │
+                         ▼
+              results/polychrom_3d/merged_*/
+                         │
+                         ▼
+              scripts/run_analysis_all.py
+           (contact map, P(s), APA, MSD,
+            experimental Hi-C comparison)
+                         │
+                         ▼
+                results/analysis/*.npy, *.png
+```
+
+## Example conditions (STRS use case)
+
+The default `configs/parameters.py` defines five conditions for the STRS
+hyperosmotic-stress example (HEK293T, hg38):
+
+| # | Condition | Cohesin params | CTCF sites | Question |
+|---|-----------|---------------|------------|----------|
+| 1 | `control_ctcf-control` | Gabriele 2022 | Control CUT&Tag | Can we reproduce untreated Hi-C? |
+| 2 | `control_ctcf-sorbitol` | Gabriele 2022 | Sorbitol CUT&Tag | Does CTCF loss alone explain sorbitol Hi-C? |
+| 3 | `weak_ctcf-sorbitol` | Gabriele 2022 (0.5× capture) | Sorbitol CUT&Tag | Weaker stalling at retained sites? |
+| 4 | `sorbitol_promoter-stall` | Gabriele 2022 | Sorbitol + promoter anchors | Promoter-anchored cohesin? |
+| 5 | `sorbitol_promoter-stall_long` | Gabriele 2022 (2× processivity) | Sorbitol + promoter | Same + longer processivity? |
+
+## Example loci (STRS use case, hg38, HEK293T)
+
+| Key | Chrom | Window | Genes |
+|-----|-------|--------|-------|
+| `chr1_fig1` | chr1 | 64.2 – 66.2 Mb | JAK1 / AK4 / LEPR |
+| `chr4_fig1` | chr4 | 1.7 – 3.7 Mb | RNF4 / ADD1 / HTT |
+| `chr6_fig1` | chr6 | 124.1 – 126.1 Mb | NKAIN2 / RNF217 |
+| `chr16_sox8` | chr16 | 0.4 – 2.3 Mb | SOX8 |
+
+## Cohesin model
+
+The simulation models cohesin loop extrusion: cohesin rings load onto
+chromatin and extrude DNA into growing loops, stalling when they encounter
+CTCF sites from the correct direction. The default parameter set is derived
+from **Gabriele et al. 2022** (*Science*) single-molecule imaging in mESCs.
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `lifetime` | 75 steps | ~150 kb processivity at 1 kb/monomer |
+| `separation` | 240 monomers | ~8 cohesin rings per 2 Mb locus |
+| `ctcf_capture` | 0.125 | 12.5% stalling probability per CTCF encounter |
+| `ctcf_release` | 0.0033 | Stalled cohesin lives ~4× longer than free cohesin |
+
+## The tiling trick
+
+The 2 Mb locus (~2,000 monomers) is simulated as 28 tiled copies on a
+70,000-monomer polymer. This gives **28× more contact statistics per GPU
+run** at no extra physics cost. Contact maps are folded back to 2,000×2,000
+for comparison. See Yang et al. 2023 *Nat Commun* for details.
+
+## References
+
+- Flores et al. 2026 — STRS paper. GEO: GSE310051 (Hi-C), GSE310047 (CUT&Tag).
+- Fudenberg et al., *Cell Reports* **15**:2038–2049 (2016). Canonical loop-extrusion model.
+- Banigan et al., *eLife* **9**:e53558 (2020). LEF dynamics and CTCF barriers.
+- Gabriele et al., *Science* **376**:496–501 (2022). Live-cell cohesin imaging (parameter source).
+- Yang et al., *Nat Commun* **14**:1913 (2023). Tiling trick for convergence.

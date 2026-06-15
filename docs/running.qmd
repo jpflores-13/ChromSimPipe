@@ -1,0 +1,123 @@
+# Running the Pipeline
+
+## Launch
+
+```bash
+sbatch ChromSimPipe.sh
+```
+
+That's it. `ChromSimPipe.sh` submits itself as a SLURM job, sets up a Python
+venv with Snakemake, and launches the full DAG via
+`snakemake-executor-plugin-slurm`. Each rule becomes its own SLURM job with
+the right resources.
+
+## What happens
+
+```
+convert_hic (×2, CPU)
+    → extract_ctcf (×2, CPU + FIMO)
+        → validate_ctcf (×1, CPU)
+            → simulate_shard (×60, GPU — 5 cond × 3 rep × 4 shards)
+                → merge_shards (×15, CPU — 5 cond × 3 rep)
+                    → analyze_all (×5, CPU — one per condition)
+```
+
+| Rule | Resources | What it does |
+|------|-----------|--------------|
+| `convert_hic` | 4 CPU, 32 GB, 2 h | `hic2cool convert` `.hic` → `.cool` at 1 kb |
+| `extract_ctcf` | 2 CPU, 16 GB, 1 h | FIMO motif scan → oriented CTCF BED |
+| `validate_ctcf` | 1 CPU, 4 GB, 15 min | Sanity-check all BED files |
+| `simulate_shard` | 1 GPU, 4 CPU, 60 GB, 12 h | polychrom 3D simulation |
+| `merge_shards` | 4 CPU, 64 GB, 2 h | Concatenate shard HDF5 streams |
+| `analyze_all` | 4 CPU, 64 GB, 6 h | Contact maps, P(s), APA, figures |
+
+::: {.callout-note}
+The 60 GPU jobs (`simulate_shard`) run in parallel, subject to cluster queue
+priority. Each shard takes ~8–10 hours of wall time. The main bottleneck is
+GPU availability, not simulation speed.
+:::
+
+## Useful options
+
+### Dry run
+
+```bash
+bash ChromSimPipe.sh --dry-run
+```
+
+Prints all rules and shell commands that would be submitted — nothing runs.
+
+### After a failed run
+
+```bash
+bash unlock.sh                    # release Snakemake lock
+sbatch ChromSimPipe.sh            # --rerun-incomplete is the default
+```
+
+### Changing locus
+
+```bash
+# Edit configs/parameters.py:
+ACTIVE_LOCUS = "chr4_fig1"   # or chr6_fig1, chr16_sox8
+
+# Re-run setup for the new CTCF beds, then relaunch:
+bash setup_data.sh --skip-envs
+sbatch ChromSimPipe.sh
+```
+
+## Output structure
+
+```
+data/
+├── mcool/
+│   ├── control.cool          # converted by convert_hic rule
+│   └── sorbitol.cool
+└── ctcf_beds/
+    └── ctcf_oriented_hg38_*.bed
+
+results/
+├── polychrom_3d/
+│   ├── {condition}_rep{N}_shard{M}/   # raw GPU output (per shard)
+│   │   ├── params.json
+│   │   └── blocks_*.h5
+│   └── merged_{condition}_rep{N}/    # merged by merge_shards rule
+│       ├── params.json
+│       └── blocks_*.h5
+│
+└── analysis/{condition}/
+    ├── *_contact_map.npy
+    ├── *_ps_curve.npz
+    ├── *_sim_vs_exp_map.png
+    └── ...
+
+results/.sentinels/             # Snakemake tracking files (safe to ignore)
+```
+
+## Monitoring
+
+Per-rule SLURM job logs go to:
+
+```
+.snakemake/slurm_logs/rule_{name}/{wildcards}/{jobid}.log
+```
+
+The top-level Snakemake process log (the main sbatch job) goes to:
+
+```
+logs/snakemake_{jobid}.err
+```
+
+Check job queue:
+
+```bash
+squeue -u $USER
+```
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Snakemake lock error | `bash unlock.sh` then resubmit |
+| CUDA architecture error on GPU nodes | Resubmit — a different node will be allocated |
+| Analysis fails with "No results found" | Check that `results/polychrom_3d/merged_*` dirs exist |
+| `ModuleNotFoundError: configs` | Run from the repo root, or set `PYTHONPATH=/path/to/ChromSimPipe` |

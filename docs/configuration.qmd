@@ -1,0 +1,165 @@
+# Configuration
+
+## How configuration works
+
+ChromSimPipe is fully YAML-driven. All paths, locus coordinates, simulation
+conditions, and cohesin parameters live in two files:
+
+| File | Purpose |
+|------|---------|
+| `config/ChromSimConfig.yaml` | Cluster paths, locus definitions, run settings |
+| `ChromSimSamplesheet.txt` | Per-condition CTCF peak files |
+
+`configs/parameters.py` reads `config/ChromSimConfig.yaml` at import time and
+exports named constants + helper functions that every script and Snakemake rule
+uses. Nothing is hardcoded in the scripts.
+
+## `config/ChromSimConfig.yaml` — full reference
+
+```yaml
+# --- Input data ---
+hic_control:    /path/to/control.hic       # raw Hi-C in .hic format (KR-normalized)
+hic_sorbitol:   /path/to/sorbitol.hic
+genome:         /path/to/hg38.fa           # for FIMO CTCF orientation
+samplesheet:    ChromSimSamplesheet.txt
+
+# --- Locus definitions (multiple; one is ACTIVE at a time) ---
+loci:
+  chr1_fig1:
+    chrom:  chr1
+    start:  64200000
+    end:    66200000
+  chr4_fig1:
+    chrom:  chr4
+    start:  1700000
+    end:    3700000
+  chr6_fig1:
+    chrom:  chr6
+    start:  124100000
+    end:    126100000
+  chr16_sox8:
+    chrom:  chr16
+    start:  400000
+    end:    2300000
+
+# --- Active locus (one key from loci above) ---
+active_locus: chr1_fig1
+
+# --- Simulation settings ---
+resolution:    1000     # bp per monomer
+n_replicates:  3
+n_shards:      4
+
+# --- Tiling ---
+tiling:
+  n_copies: 28          # polymer is 28× the locus (for statistics)
+
+# --- Cohesin model (Gabriele 2022 defaults) ---
+smc_bond:
+  lifetime:       75
+  separation:     240
+  ctcf_capture:   0.125
+  ctcf_release:   0.0033
+```
+
+::: {.callout-tip}
+Changing `active_locus` is all you need to switch analysis targets. Re-run
+`bash setup_data.sh --skip-envs` to regenerate CTCF BEDs for the new locus,
+then resubmit.
+:::
+
+## `configs/parameters.py` — exported API
+
+Importing this module gives you:
+
+```python
+from configs.parameters import (
+    ACTIVE_LOCUS,        # str: e.g. "chr1_fig1"
+    LOCI,                # dict: all locus defs
+    CHROM,               # str: e.g. "chr1"
+    REGION_START,        # int: genomic start (bp)
+    REGION_END,          # int: genomic end (bp)
+    RESOLUTION,          # int: bp/monomer
+    N_MONOMERS,          # int: (REGION_END - REGION_START) // RESOLUTION
+    POLYMER,             # int: N_MONOMERS × n_copies (tiled length)
+    SMC_BOND,            # dict: cohesin model params
+    TILING,              # dict: n_copies etc.
+    SIM_RUN,             # dict: n_replicates, n_shards
+    SIMULATION_CONDITIONS,   # list[str]: condition names
+    ALL_PARAM_SETS,          # list[dict]: full condition dicts
+)
+```
+
+### Helper functions
+
+```python
+# Get full parameter dict for a condition name
+params = get_condition("control_ctcf-control")
+
+# List all condition names
+names = list_conditions()
+
+# Get oriented CTCF site arrays for a condition
+ctcf_left, ctcf_right = get_ctcf_arrays(condition="control_ctcf-control")
+
+# Get arrays tiled for the full polymer
+ctcf_left_tiled, ctcf_right_tiled = get_tiled_ctcf_arrays(condition="control_ctcf-control")
+
+# Load directly from BED file (used during setup)
+ctcf_left, ctcf_right = load_ctcf_from_bed("data/ctcf_beds/ctcf_oriented_hg38_control.bed")
+```
+
+## Simulation conditions
+
+Each condition is defined as a dict in `configs/parameters.py`. The five
+defaults for the STRS use case:
+
+```python
+SIMULATION_CONDITIONS = [
+    {
+        "name":         "control_ctcf-control",
+        "ctcf_type":    "control",
+        "lifetime":     75,
+        "separation":   240,
+        "ctcf_capture": 0.125,
+        "ctcf_release": 0.0033,
+    },
+    {
+        "name":         "control_ctcf-sorbitol",
+        "ctcf_type":    "sorbitol",
+        "lifetime":     75,
+        "separation":   240,
+        "ctcf_capture": 0.125,
+        "ctcf_release": 0.0033,
+    },
+    {
+        "name":         "weak_ctcf-sorbitol",
+        "ctcf_type":    "sorbitol",
+        "lifetime":     75,
+        "separation":   240,
+        "ctcf_capture": 0.0625,   # 0.5× default
+        "ctcf_release": 0.0033,
+    },
+    # ... etc.
+]
+```
+
+To add a new condition, append a dict to `SIMULATION_CONDITIONS` with a unique
+`name` and the desired cohesin parameters. The Snakemake wildcards will
+automatically pick it up.
+
+## Profiles and SLURM settings
+
+`profiles/slurm/config.yaml` sets cluster-level defaults:
+
+```yaml
+executor:         slurm
+default-resources:
+  slurm_account:  rc_dphansti_pi
+  slurm_partition: general
+  runtime:         4320          # 72 h max; per-rule overrides this
+  mem_mb:          8000
+  cpus_per_task:   1
+```
+
+GPU jobs override these via per-rule `resources:` blocks in the Snakefile.

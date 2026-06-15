@@ -1,0 +1,67 @@
+# Analysis
+
+## Overview
+
+After all `merge_shards` jobs complete, one `analyze_all` job runs per
+condition via `scripts/run_analysis_all.py`. It reads the merged trajectory
+and the experimental Hi-C `.cool`, then writes contact maps, P(s) curves, APA
+scores, and comparison figures.
+
+## Entry point
+
+```bash
+python scripts/run_analysis_all.py \
+    --condition control_ctcf-control
+```
+
+Snakemake passes the condition name as a wildcard. Output goes to:
+
+```
+results/analysis/{condition}/
+├── *_contact_map.npy          # simulated contact probability matrix
+├── *_ps_curve.npz             # P(s): contact probability vs. genomic distance
+├── *_apa.npz                  # aggregate peak analysis (APA)
+├── *_sim_vs_exp_map.png       # simulated vs. experimental Hi-C comparison
+└── ...
+```
+
+## What gets computed
+
+### Contact maps
+
+The simulated contact map is computed by recording, for each trajectory
+snapshot, which monomer pairs are within a distance cutoff in 3D. The tiled
+copies are averaged and folded to the locus size. The result is a matrix of
+contact probabilities at the `resolution` (default 1 kb) set in
+`ChromSimConfig.yaml`.
+
+### P(s) curves
+
+P(s) is the contact probability as a function of genomic separation *s*. It is
+the single most diagnostic output: a well-tuned simulation matches the slope and
+magnitude of the experimental P(s) from Hi-C. A mismatch indicates cohesin
+parameters need adjustment.
+
+### APA (Aggregate Peak Analysis)
+
+APA averages the contact matrix around all convergent CTCF pairs — the loop
+anchors. A strong APA peak (bright center relative to corners) indicates
+successful loop extrusion between convergent CTCF sites.
+
+### Experimental comparison
+
+The experimental `.cool` file (at 10 kb resolution) is loaded with `cooler` and
+plotted alongside the simulated contact map at the same scale. Visual alignment
+at TAD boundaries and loop anchors validates the model.
+
+## Adding new analysis
+
+`scripts/run_analysis_all.py` is the single entry point. To add a metric:
+
+1. Add a function to `scripts/analysis/` (or to `run_analysis_all.py` directly
+   for simple cases)
+2. Call it inside the `analyze_condition()` function
+3. Write outputs to `results/analysis/{condition}/`
+
+Snakemake's `analyze_all` rule only checks that the output directory exists, so
+new output files are picked up automatically.

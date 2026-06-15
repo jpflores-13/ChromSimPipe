@@ -1,0 +1,49 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "ChromSimPipe"
+  subtitle: "Cohesin Loop-Extrusion Simulation Pipeline"
+  author: "JP Flores"
+  date: today
+  repo-url: https://github.com/jpflores-13/ChromSimPipe
+  repo-actions: [edit, issue]
+  favicon: images/favicon.png
+  site-url: https://jpflores-13.github.io/ChromSimPipe
+
+  chapters:
+    - index.qmd
+    - setup.qmd
+    - running.qmd
+    - part: "Under the Hood"
+      chapters:
+        - configuration.qmd
+        - simulation.qmd
+        - analysis.qmd
+        - cluster.qmd
+    - references.qmd
+
+  sidebar:
+    style: docked
+    background: light
+
+format:
+  html:
+    theme:
+      light: [cosmo, custom.scss]
+    code-background: true
+    code-copy: true
+    toc: true
+    toc-depth: 3
+    smooth-scroll: true
+    link-external-icon: true
+    link-external-newwindow: true
+
+  pdf:
+    documentclass: scrreprt
+    toc: true
+    number-sections: true
+    colorlinks: true
+    geometry: "margin=1in"
+    fontsize: 11pt

@@ -1,0 +1,98 @@
+# Simulation
+
+## Overview
+
+Each `simulate_shard` SLURM job runs `scripts/run_simulation_shard.py`, which:
+
+1. Reads cohesin parameters and CTCF sites from `configs/parameters.py`
+2. Builds a 70,000-monomer tiled polymer (28× copies of the 2 Mb locus)
+3. Runs the **loop-extrusion factor (LEF) dynamics engine** for a burn-in period
+4. Runs `polychrom` (OpenMM wrapper) to simulate 3D chromatin folding on a GPU
+5. Writes trajectory blocks to `results/polychrom_3d/{condition}_rep{N}_shard{M}/`
+
+## The cohesin (LEF) dynamics engine
+
+Loop extrusion factors (LEFs = cohesin rings) are simulated as pairs of one-
+dimensional walkers on the polymer lattice.
+
+```
+5'─────────────────────────────────────────────────────3'
+          ↑ cohesin loads randomly
+          ├──►  ◄──┤  (two feet walk outward)
+          │          │
+          ▼          ▼
+    ←CTCF◄          ►CTCF→  (stalling at oriented CTCF sites)
+```
+
+| Event | Rate | Notes |
+|-------|------|-------|
+| Load | 1 / `separation` monomers | Poisson process, random position |
+| Step | 1 monomer / LEF step | Both feet move simultaneously |
+| Unload (free) | 1 / `lifetime` | Geometric: ~75 steps = ~75 kb |
+| Capture at CTCF | `ctcf_capture` = 0.125 | 12.5% per encounter |
+| Release (stalled) | `ctcf_release` = 0.0033 | Stalled ring lives ~4× longer |
+
+### Oriented CTCF sites
+
+CTCF stalls cohesin only from the correct (convergent) direction. The BED files
+produced by `extract_ctcf_sites_hg38.py` encode orientation:
+
+- **Left-facing** CTCF (←): stalls a rightward-moving left foot
+- **Right-facing** CTCF (→): stalls a leftward-moving right foot
+
+Convergent CTCF pairs therefore trap cohesin between them, forming stable loops.
+
+## The 3D simulation (polychrom / OpenMM)
+
+Each monomer is a bead. Forces between beads:
+
+| Force | What it models |
+|-------|---------------|
+| Polymer chain bonds | Chromatin backbone (FENE spring) |
+| Excluded volume | Steric repulsion (soft sphere) |
+| Spherical confinement | Nuclear membrane |
+| **LEF bonds** | Cohesin-mediated loop (harmonic spring between extruded monomers) |
+
+LEF positions are updated every `block_size` MD steps; each saved block is one
+"snapshot" in the trajectory HDF5.
+
+::: {.callout-note}
+The OpenMM simulation runs on GPU. The SLURM job requests 1 GPU, 4 CPUs, and
+60 GB RAM (`qos: gpu_access`, Longleaf `gpu` partition). All 60 `simulate_shard`
+jobs run in parallel.
+:::
+
+## Tiling trick
+
+To get statistically robust contact maps from a short locus (~2,000 monomers),
+28 copies are placed end-to-end on a 70,000-monomer polymer. Each copy folds
+independently (boundary monomers are connected but distant in sequence), giving
+28× the contact statistics per GPU run. After the simulation, contact maps from
+all 28 copies are averaged and folded back to 2,000×2,000.
+
+See Yang et al. 2023 *Nat Commun* for details on why this is valid.
+
+## Entry point
+
+```bash
+python scripts/run_simulation_shard.py \
+    --condition control_ctcf-control \
+    --replicate 1 \
+    --shard 0
+```
+
+Arguments come from Snakemake wildcards. Each job writes to:
+
+```
+results/polychrom_3d/{condition}_rep{replicate}_shard{shard}/
+├── params.json        # all parameters, for reproducibility
+└── blocks_*.h5        # HDF5 trajectory blocks
+```
+
+After all shards finish, `merge_shards` concatenates them:
+
+```
+results/polychrom_3d/merged_{condition}_rep{replicate}/
+├── params.json
+└── blocks_*.h5        # full trajectory (4 shards combined)
+```

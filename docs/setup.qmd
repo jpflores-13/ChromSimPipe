@@ -1,0 +1,86 @@
+# Setup
+
+## Prerequisites
+
+- Longleaf HPC account with access to `rc_dphansti_pi` allocation
+- `.hic` Hi-C maps and CTCF peak `.narrowPeak` files for your experiment
+- GPU partition access (`general` + `gpu`)
+
+## Step 0 — Clone and configure
+
+```bash
+cd ~/projects/ChromSimPipe   # or wherever you cloned it
+
+# 1. Edit config/ChromSimConfig.yaml to point at your Hi-C and CTCF data
+nano config/ChromSimConfig.yaml
+
+# 2. Edit ChromSimSamplesheet.txt with your CTCF peak file paths
+nano ChromSimSamplesheet.txt
+
+# 3. Edit profiles/slurm/config.yaml to set your SLURM account
+nano profiles/slurm/config.yaml   # change slurm_account
+
+# 4. Optionally change the locus in ChromSimConfig.yaml (default: chr1_fig1)
+```
+
+## Step 1 — Build conda environments and prepare data
+
+```bash
+bash setup_data.sh
+```
+
+This script reads all paths from `config/ChromSimConfig.yaml` and
+`ChromSimSamplesheet.txt`, then:
+
+1. Creates the `cohesin_sim` conda env (polychrom, cooler, hic2cool, numpy, scipy, matplotlib)
+2. Creates the `ctcf_extraction` conda env (MEME/FIMO, bedtools)
+3. Converts input `.hic` files → `.cool` at 1 kb resolution
+4. Extracts and orients CTCF sites from CUT&Tag peaks via FIMO
+5. Validates the resulting BED files
+
+Takes ~20–30 minutes total (mostly conda build + FIMO).
+
+::: {.callout-tip}
+You can re-run `bash setup_data.sh --skip-envs` to skip conda environment
+creation when switching loci — it will only re-run the CTCF extraction
+and conversion steps.
+:::
+
+## Key config files
+
+### `config/ChromSimConfig.yaml`
+
+Edit **once** before the first run:
+
+| Field | What to change |
+|-------|---------------|
+| `hic_control` / `hic_sorbitol` | Absolute paths to your `.hic` maps |
+| `genome` | Path to genome FASTA (for FIMO CTCF orientation) |
+| `samplesheet` | Path to `ChromSimSamplesheet.txt` |
+| `locus > name` | Active locus key (e.g. `chr1_fig1`) |
+| `n_replicates` | Independent simulation replicates (default: 3) |
+| `n_shards` | GPU shards per replicate (default: 4) |
+
+### `ChromSimSamplesheet.txt`
+
+Tab-separated, two columns:
+
+```
+CTCF_Type   CTCF_Peaks_Path
+control     /path/to/control_CTCF_peaks.narrowPeak
+sorbitol    /path/to/sorbitol_CTCF_peaks.narrowPeak
+```
+
+### `profiles/slurm/config.yaml`
+
+Sets the SLURM account and default partition for all jobs. GPU jobs
+override the partition to `gpu` automatically via the Snakefile.
+
+## Troubleshooting setup
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| `ImportError: polychrom` | `cohesin_sim` env not built | Run `bash setup_data.sh` |
+| CTCF BED file not found | CTCF extraction failed | Check `logs/setup_data*.log` |
+| `KeyError: 'CTCF_Type'` | TSV format issue | `ChromSimSamplesheet.txt` must be tab-separated with exact headers |
+| `hic2cool` fails | `.hic` path wrong | Check `config/ChromSimConfig.yaml` paths |

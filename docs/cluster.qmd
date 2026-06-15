@@ -1,0 +1,80 @@
+# Cluster Reference
+
+## How jobs are submitted
+
+`ChromSimPipe.sh` submits itself as a SLURM job. Inside that job, Snakemake
+uses `snakemake-executor-plugin-slurm` to submit each rule as its own SLURM job.
+You only ever run `sbatch ChromSimPipe.sh` — everything else is automatic.
+
+## SLURM account and partition
+
+| Setting | Value | Where set |
+|---------|-------|-----------|
+| Account | `rc_dphansti_pi` | `profiles/slurm/config.yaml` |
+| Default partition | `general` | `profiles/slurm/config.yaml` |
+| GPU partition | `gpu` | `simulate_shard` rule in Snakefile |
+| GPU QOS | `gpu_access` | `simulate_shard` rule in Snakefile |
+
+## Per-rule resource requests
+
+| Rule | Partition | CPUs | RAM | Wall time | GPU |
+|------|-----------|------|-----|-----------|-----|
+| `convert_hic` | general | 4 | 32 GB | 2 h | — |
+| `extract_ctcf` | general | 2 | 16 GB | 1 h | — |
+| `validate_ctcf` | general | 1 | 4 GB | 15 min | — |
+| `simulate_shard` | **gpu** | 4 | 60 GB | 12 h | **1** |
+| `merge_shards` | general | 4 | 64 GB | 2 h | — |
+| `analyze_all` | general | 4 | 64 GB | 6 h | — |
+
+## Log file locations
+
+| Log | Path |
+|-----|------|
+| Top-level Snakemake log | `logs/snakemake_{jobid}.err` |
+| Per-rule job logs | `.snakemake/slurm_logs/rule_{rule}/{wildcards}/{jobid}.log` |
+| Setup script log | `logs/setup_data*.log` |
+
+::: {.callout-warning}
+Do not move or rename the `.snakemake/slurm_logs/` directory. Snakemake reads
+those paths to report per-job errors. Move them after the run if you want to
+archive them.
+:::
+
+## Conda environments in SLURM jobs
+
+GPU nodes on Longleaf require initializing conda via `source` rather than
+`module load`. The Snakefile does this:
+
+```bash
+source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
+conda run -p ~/.local/share/mamba/envs/cohesin_sim \
+    python scripts/run_simulation_shard.py ...
+```
+
+Using `conda run -p <full-path>` (not `-n <name>`) is essential for reliable
+environment activation in non-interactive SLURM jobs.
+
+## Checking queue status
+
+```bash
+squeue -u $USER                   # all your jobs
+squeue -u $USER -t R              # only running jobs
+squeue -j <jobid>                 # specific job
+sacct -j <jobid> --format=JobID,State,Elapsed,ExitCode
+```
+
+## Cancelling jobs
+
+```bash
+scancel <jobid>                   # one job
+scancel -u $USER                  # ALL your jobs (careful!)
+scancel -u $USER --name simulate_shard   # by job name
+```
+
+After cancelling, run `bash unlock.sh` before resubmitting.
+
+## `cluster/` scripts (legacy)
+
+The `cluster/` directory contains standalone SLURM batch scripts from before
+Snakemake was adopted. They are preserved for reference but should not be used.
+`sbatch ChromSimPipe.sh` is the current entry point for everything.

@@ -1,0 +1,53 @@
+# References {.unnumbered}
+
+## Primary literature
+
+**Flores et al. 2026** — STRS paper (ChromSimPipe use case).
+Data: GEO [GSE310051](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE310051)
+(Hi-C), [GSE310047](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE310047) (CUT&Tag).
+
+**Fudenberg G, Imakaev M, Lu C, Goloborodko A, Abdennur N, Mirny LA.**
+Formation of Chromosomal Domains by Loop Extrusion.
+*Cell Reports* **15**(9):2038–2049 (2016). <https://doi.org/10.1016/j.celrep.2016.04.085>
+
+**Banigan EJ, Tang L, van den Berg AA, Stocsits RR, Wutz G, Brandao HB,
+Busslinger GA, Peters J-M, Mirny LA.**
+Chromosome organization by one-sided and two-sided loop extrusion.
+*eLife* **9**:e53558 (2020). <https://doi.org/10.7554/eLife.53558>
+
+**Gabriele M, Brandão HB, Grosse-Holz S, Jha A, Dailey GM, Cattoglio C,
+Hsieh T-HS, Mirny L, Zechner C, Hansen AS.**
+Dynamics of CTCF- and cohesin-mediated chromatin looping revealed by live-cell
+imaging. *Science* **376**(6593):496–501 (2022).
+<https://doi.org/10.1126/science.abn6583>
+
+**Yang T, Zhang F, Yardımcı GG, Song F, Hardison RC, Noble WS, Yue F, Li Q.**
+HiCRep: assessing the reproducibility of Hi-C data using a stratum-adjusted
+correlation coefficient. *Genome Research* (2017).
+<https://doi.org/10.1101/gr.220640.117>
+
+**Yang M et al.**
+Polymer simulations reveal a robust chromatin compaction mechanism that
+enables rapid genome exploration by CTCF and cohesin.
+*Nature Communications* **14**:1913 (2023). <https://doi.org/10.1038/s41467-023-37530-3>
+*(Source of the tiling trick for contact statistics.)*
+
+## Software
+
+**polychrom** — GPU polymer simulation engine (OpenMM wrapper).
+<https://github.com/open2c/polychrom>
+
+**OpenMM** — molecular dynamics GPU engine.
+<https://openmm.org>
+
+**Cooler** — sparse storage format for Hi-C contact matrices.
+<https://github.com/open2c/cooler>
+
+**hic2cool** — `.hic` → `.cool` format conversion.
+<https://github.com/4dn-dcic/hic2cool>
+
+**FIMO (MEME Suite)** — motif scanning used for CTCF site extraction.
+<https://meme-suite.org/meme/tools/fimo>
+
+**Snakemake** — workflow management.
+<https://snakemake.readthedocs.io>
