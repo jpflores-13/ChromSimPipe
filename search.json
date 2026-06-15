@@ -1,0 +1,486 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "ChromSimPipe",
+    "section": "",
+    "text": "Overview\nChromSimPipe is a physics-based polymer simulation framework for testing mechanistic hypotheses about 3D chromatin organisation. Given CTCF binding data (CUT&Tag or ChIP-seq peaks) and Hi-C maps as input, it simulates cohesin loop extrusion under different parameter conditions and compares the resulting contact maps to your experimental Hi-C.",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#how-the-pieces-fit-together",
+    "href": "index.html#how-the-pieces-fit-together",
+    "title": "ChromSimPipe",
+    "section": "How the pieces fit together",
+    "text": "How the pieces fit together\n  CTCF peaks (CUT&Tag / ChIP-seq)      Experimental Hi-C (.hic maps)\n    condition A + condition B              condition A + condition B\n          │                                       │\n          ▼                                       ▼\n  data/ctcf_beds/*.bed             data/mcool/*.cool\n   (oriented CTCF sites,            (1 kb contact maps; converted by hic2cool)\n    from FIMO JASPAR MA0139.1)\n          │                                       │\n          └──────────────┬────────────────────────┘\n                         ▼\n                 configs/parameters.py\n           (N conditions × active locus)\n                         │\n                         ▼\n         GPU polymer simulation (polychrom / OpenMM)\n         SLURM jobs: N conditions × reps × shards\n                         │\n                         ▼\n              results/polychrom_3d/merged_*/\n                         │\n                         ▼\n              scripts/run_analysis_all.py\n           (contact map, P(s), APA, MSD,\n            experimental Hi-C comparison)\n                         │\n                         ▼\n                results/analysis/*.npy, *.png",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#example-conditions-strs-use-case",
+    "href": "index.html#example-conditions-strs-use-case",
+    "title": "ChromSimPipe",
+    "section": "Example conditions (STRS use case)",
+    "text": "Example conditions (STRS use case)\nThe default configs/parameters.py defines five conditions for the STRS hyperosmotic-stress example (HEK293T, hg38):\n\n\n\n\n\n\n\n\n\n\n#\nCondition\nCohesin params\nCTCF sites\nQuestion\n\n\n\n\n1\ncontrol_ctcf-control\nGabriele 2022\nControl CUT&Tag\nCan we reproduce untreated Hi-C?\n\n\n2\ncontrol_ctcf-sorbitol\nGabriele 2022\nSorbitol CUT&Tag\nDoes CTCF loss alone explain sorbitol Hi-C?\n\n\n3\nweak_ctcf-sorbitol\nGabriele 2022 (0.5× capture)\nSorbitol CUT&Tag\nWeaker stalling at retained sites?\n\n\n4\nsorbitol_promoter-stall\nGabriele 2022\nSorbitol + promoter anchors\nPromoter-anchored cohesin?\n\n\n5\nsorbitol_promoter-stall_long\nGabriele 2022 (2× processivity)\nSorbitol + promoter\nSame + longer processivity?",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#example-loci-strs-use-case-hg38-hek293t",
+    "href": "index.html#example-loci-strs-use-case-hg38-hek293t",
+    "title": "ChromSimPipe",
+    "section": "Example loci (STRS use case, hg38, HEK293T)",
+    "text": "Example loci (STRS use case, hg38, HEK293T)\n\n\n\nKey\nChrom\nWindow\nGenes\n\n\n\n\nchr1_fig1\nchr1\n64.2 – 66.2 Mb\nJAK1 / AK4 / LEPR\n\n\nchr4_fig1\nchr4\n1.7 – 3.7 Mb\nRNF4 / ADD1 / HTT\n\n\nchr6_fig1\nchr6\n124.1 – 126.1 Mb\nNKAIN2 / RNF217\n\n\nchr16_sox8\nchr16\n0.4 – 2.3 Mb\nSOX8",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#cohesin-model",
+    "href": "index.html#cohesin-model",
+    "title": "ChromSimPipe",
+    "section": "Cohesin model",
+    "text": "Cohesin model\nThe simulation models cohesin loop extrusion: cohesin rings load onto chromatin and extrude DNA into growing loops, stalling when they encounter CTCF sites from the correct direction. The default parameter set is derived from Gabriele et al. 2022 (Science) single-molecule imaging in mESCs.\n\n\n\n\n\n\n\n\nParameter\nDefault\nMeaning\n\n\n\n\nlifetime\n75 steps\n~150 kb processivity at 1 kb/monomer\n\n\nseparation\n240 monomers\n~8 cohesin rings per 2 Mb locus\n\n\nctcf_capture\n0.125\n12.5% stalling probability per CTCF encounter\n\n\nctcf_release\n0.0033\nStalled cohesin lives ~4× longer than free cohesin",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#the-tiling-trick",
+    "href": "index.html#the-tiling-trick",
+    "title": "ChromSimPipe",
+    "section": "The tiling trick",
+    "text": "The tiling trick\nThe 2 Mb locus (~2,000 monomers) is simulated as 28 tiled copies on a 70,000-monomer polymer. This gives 28× more contact statistics per GPU run at no extra physics cost. Contact maps are folded back to 2,000×2,000 for comparison. See Yang et al. 2023 Nat Commun for details.",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "index.html#references",
+    "href": "index.html#references",
+    "title": "ChromSimPipe",
+    "section": "References",
+    "text": "References\n\nFlores et al. 2026 — STRS paper. GEO: GSE310051 (Hi-C), GSE310047 (CUT&Tag).\nFudenberg et al., Cell Reports 15:2038–2049 (2016). Canonical loop-extrusion model.\nBanigan et al., eLife 9:e53558 (2020). LEF dynamics and CTCF barriers.\nGabriele et al., Science 376:496–501 (2022). Live-cell cohesin imaging (parameter source).\nYang et al., Nat Commun 14:1913 (2023). Tiling trick for convergence.",
+    "crumbs": [
+      "Overview"
+    ]
+  },
+  {
+    "objectID": "setup.html",
+    "href": "setup.html",
+    "title": "1  Setup",
+    "section": "",
+    "text": "1.1 Prerequisites",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Setup</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html#prerequisites",
+    "href": "setup.html#prerequisites",
+    "title": "1  Setup",
+    "section": "",
+    "text": "Longleaf HPC account with access to rc_dphansti_pi allocation\n.hic Hi-C maps and CTCF peak .narrowPeak files for your experiment\nGPU partition access (general + gpu)",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Setup</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html#step-0-clone-and-configure",
+    "href": "setup.html#step-0-clone-and-configure",
+    "title": "1  Setup",
+    "section": "1.2 Step 0 — Clone and configure",
+    "text": "1.2 Step 0 — Clone and configure\ncd ~/projects/ChromSimPipe   # or wherever you cloned it\n\n# 1. Edit config/ChromSimConfig.yaml to point at your Hi-C and CTCF data\nnano config/ChromSimConfig.yaml\n\n# 2. Edit ChromSimSamplesheet.txt with your CTCF peak file paths\nnano ChromSimSamplesheet.txt\n\n# 3. Edit profiles/slurm/config.yaml to set your SLURM account\nnano profiles/slurm/config.yaml   # change slurm_account\n\n# 4. Optionally change the locus in ChromSimConfig.yaml (default: chr1_fig1)",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Setup</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html#step-1-build-conda-environments-and-prepare-data",
+    "href": "setup.html#step-1-build-conda-environments-and-prepare-data",
+    "title": "1  Setup",
+    "section": "1.3 Step 1 — Build conda environments and prepare data",
+    "text": "1.3 Step 1 — Build conda environments and prepare data\nbash setup_data.sh\nThis script reads all paths from config/ChromSimConfig.yaml and ChromSimSamplesheet.txt, then:\n\nCreates the cohesin_sim conda env (polychrom, cooler, hic2cool, numpy, scipy, matplotlib)\nCreates the ctcf_extraction conda env (MEME/FIMO, bedtools)\nConverts input .hic files → .cool at 1 kb resolution\nExtracts and orients CTCF sites from CUT&Tag peaks via FIMO\nValidates the resulting BED files\n\nTakes ~20–30 minutes total (mostly conda build + FIMO).\n\n\n\n\n\n\nTip\n\n\n\nYou can re-run bash setup_data.sh --skip-envs to skip conda environment creation when switching loci — it will only re-run the CTCF extraction and conversion steps.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Setup</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html#key-config-files",
+    "href": "setup.html#key-config-files",
+    "title": "1  Setup",
+    "section": "1.4 Key config files",
+    "text": "1.4 Key config files\n\n1.4.1 config/ChromSimConfig.yaml\nEdit once before the first run:\n\n\n\nField\nWhat to change\n\n\n\n\nhic_control / hic_sorbitol\nAbsolute paths to your .hic maps\n\n\ngenome\nPath to genome FASTA (for FIMO CTCF orientation)\n\n\nsamplesheet\nPath to ChromSimSamplesheet.txt\n\n\nlocus &gt; name\nActive locus key (e.g. chr1_fig1)\n\n\nn_replicates\nIndependent simulation replicates (default: 3)\n\n\nn_shards\nGPU shards per replicate (default: 4)\n\n\n\n\n\n1.4.2 ChromSimSamplesheet.txt\nTab-separated, two columns:\nCTCF_Type   CTCF_Peaks_Path\ncontrol     /path/to/control_CTCF_peaks.narrowPeak\nsorbitol    /path/to/sorbitol_CTCF_peaks.narrowPeak\n\n\n1.4.3 profiles/slurm/config.yaml\nSets the SLURM account and default partition for all jobs. GPU jobs override the partition to gpu automatically via the Snakefile.",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Setup</span>"
+    ]
+  },
+  {
+    "objectID": "setup.html#troubleshooting-setup",
+    "href": "setup.html#troubleshooting-setup",
+    "title": "1  Setup",
+    "section": "1.5 Troubleshooting setup",
+    "text": "1.5 Troubleshooting setup\n\n\n\n\n\n\n\n\nSymptom\nLikely cause\nFix\n\n\n\n\nImportError: polychrom\ncohesin_sim env not built\nRun bash setup_data.sh\n\n\nCTCF BED file not found\nCTCF extraction failed\nCheck logs/setup_data*.log\n\n\nKeyError: 'CTCF_Type'\nTSV format issue\nChromSimSamplesheet.txt must be tab-separated with exact headers\n\n\nhic2cool fails\n.hic path wrong\nCheck config/ChromSimConfig.yaml paths",
+    "crumbs": [
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Setup</span>"
+    ]
+  },
+  {
+    "objectID": "running.html",
+    "href": "running.html",
+    "title": "2  Running the Pipeline",
+    "section": "",
+    "text": "2.1 Launch\nThat’s it. ChromSimPipe.sh submits itself as a SLURM job, sets up a Python venv with Snakemake, and launches the full DAG via snakemake-executor-plugin-slurm. Each rule becomes its own SLURM job with the right resources.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Running the Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "running.html#launch",
+    "href": "running.html#launch",
+    "title": "2  Running the Pipeline",
+    "section": "",
+    "text": "sbatch ChromSimPipe.sh",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Running the Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "running.html#what-happens",
+    "href": "running.html#what-happens",
+    "title": "2  Running the Pipeline",
+    "section": "2.2 What happens",
+    "text": "2.2 What happens\nconvert_hic (×2, CPU)\n    → extract_ctcf (×2, CPU + FIMO)\n        → validate_ctcf (×1, CPU)\n            → simulate_shard (×60, GPU — 5 cond × 3 rep × 4 shards)\n                → merge_shards (×15, CPU — 5 cond × 3 rep)\n                    → analyze_all (×5, CPU — one per condition)\n\n\n\n\n\n\n\n\nRule\nResources\nWhat it does\n\n\n\n\nconvert_hic\n4 CPU, 32 GB, 2 h\nhic2cool convert .hic → .cool at 1 kb\n\n\nextract_ctcf\n2 CPU, 16 GB, 1 h\nFIMO motif scan → oriented CTCF BED\n\n\nvalidate_ctcf\n1 CPU, 4 GB, 15 min\nSanity-check all BED files\n\n\nsimulate_shard\n1 GPU, 4 CPU, 60 GB, 12 h\npolychrom 3D simulation\n\n\nmerge_shards\n4 CPU, 64 GB, 2 h\nConcatenate shard HDF5 streams\n\n\nanalyze_all\n4 CPU, 64 GB, 6 h\nContact maps, P(s), APA, figures\n\n\n\n\n\n\n\n\n\nNote\n\n\n\nThe 60 GPU jobs (simulate_shard) run in parallel, subject to cluster queue priority. Each shard takes ~8–10 hours of wall time. The main bottleneck is GPU availability, not simulation speed.",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Running the Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "running.html#useful-options",
+    "href": "running.html#useful-options",
+    "title": "2  Running the Pipeline",
+    "section": "2.3 Useful options",
+    "text": "2.3 Useful options\n\n2.3.1 Dry run\nbash ChromSimPipe.sh --dry-run\nPrints all rules and shell commands that would be submitted — nothing runs.\n\n\n2.3.2 After a failed run\nbash unlock.sh                    # release Snakemake lock\nsbatch ChromSimPipe.sh            # --rerun-incomplete is the default\n\n\n2.3.3 Changing locus\n# Edit configs/parameters.py:\nACTIVE_LOCUS = \"chr4_fig1\"   # or chr6_fig1, chr16_sox8\n\n# Re-run setup for the new CTCF beds, then relaunch:\nbash setup_data.sh --skip-envs\nsbatch ChromSimPipe.sh",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Running the Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "running.html#output-structure",
+    "href": "running.html#output-structure",
+    "title": "2  Running the Pipeline",
+    "section": "2.4 Output structure",
+    "text": "2.4 Output structure\ndata/\n├── mcool/\n│   ├── control.cool          # converted by convert_hic rule\n│   └── sorbitol.cool\n└── ctcf_beds/\n    └── ctcf_oriented_hg38_*.bed\n\nresults/\n├── polychrom_3d/\n│   ├── {condition}_rep{N}_shard{M}/   # raw GPU output (per shard)\n│   │   ├── params.json\n│   │   └── blocks_*.h5\n│   └── merged_{condition}_rep{N}/    # merged by merge_shards rule\n│       ├── params.json\n│       └── blocks_*.h5\n│\n└── analysis/{condition}/\n    ├── *_contact_map.npy\n    ├── *_ps_curve.npz\n    ├── *_sim_vs_exp_map.png\n    └── ...\n\nresults/.sentinels/             # Snakemake tracking files (safe to ignore)",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Running the Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "running.html#monitoring",
+    "href": "running.html#monitoring",
+    "title": "2  Running the Pipeline",
+    "section": "2.5 Monitoring",
+    "text": "2.5 Monitoring\nPer-rule SLURM job logs go to:\n.snakemake/slurm_logs/rule_{name}/{wildcards}/{jobid}.log\nThe top-level Snakemake process log (the main sbatch job) goes to:\nlogs/snakemake_{jobid}.err\nCheck job queue:\nsqueue -u $USER",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Running the Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "running.html#troubleshooting",
+    "href": "running.html#troubleshooting",
+    "title": "2  Running the Pipeline",
+    "section": "2.6 Troubleshooting",
+    "text": "2.6 Troubleshooting\n\n\n\n\n\n\n\nSymptom\nFix\n\n\n\n\nSnakemake lock error\nbash unlock.sh then resubmit\n\n\nCUDA architecture error on GPU nodes\nResubmit — a different node will be allocated\n\n\nAnalysis fails with “No results found”\nCheck that results/polychrom_3d/merged_* dirs exist\n\n\nModuleNotFoundError: configs\nRun from the repo root, or set PYTHONPATH=/path/to/ChromSimPipe",
+    "crumbs": [
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Running the Pipeline</span>"
+    ]
+  },
+  {
+    "objectID": "configuration.html",
+    "href": "configuration.html",
+    "title": "3  Configuration",
+    "section": "",
+    "text": "3.1 How configuration works\nChromSimPipe is fully YAML-driven. All paths, locus coordinates, simulation conditions, and cohesin parameters live in two files:\nconfigs/parameters.py reads config/ChromSimConfig.yaml at import time and exports named constants + helper functions that every script and Snakemake rule uses. Nothing is hardcoded in the scripts.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Configuration</span>"
+    ]
+  },
+  {
+    "objectID": "configuration.html#how-configuration-works",
+    "href": "configuration.html#how-configuration-works",
+    "title": "3  Configuration",
+    "section": "",
+    "text": "File\nPurpose\n\n\n\n\nconfig/ChromSimConfig.yaml\nCluster paths, locus definitions, run settings\n\n\nChromSimSamplesheet.txt\nPer-condition CTCF peak files",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Configuration</span>"
+    ]
+  },
+  {
+    "objectID": "configuration.html#configchromsimconfig.yaml-full-reference",
+    "href": "configuration.html#configchromsimconfig.yaml-full-reference",
+    "title": "3  Configuration",
+    "section": "3.2 config/ChromSimConfig.yaml — full reference",
+    "text": "3.2 config/ChromSimConfig.yaml — full reference\n# --- Input data ---\nhic_control:    /path/to/control.hic       # raw Hi-C in .hic format (KR-normalized)\nhic_sorbitol:   /path/to/sorbitol.hic\ngenome:         /path/to/hg38.fa           # for FIMO CTCF orientation\nsamplesheet:    ChromSimSamplesheet.txt\n\n# --- Locus definitions (multiple; one is ACTIVE at a time) ---\nloci:\n  chr1_fig1:\n    chrom:  chr1\n    start:  64200000\n    end:    66200000\n  chr4_fig1:\n    chrom:  chr4\n    start:  1700000\n    end:    3700000\n  chr6_fig1:\n    chrom:  chr6\n    start:  124100000\n    end:    126100000\n  chr16_sox8:\n    chrom:  chr16\n    start:  400000\n    end:    2300000\n\n# --- Active locus (one key from loci above) ---\nactive_locus: chr1_fig1\n\n# --- Simulation settings ---\nresolution:    1000     # bp per monomer\nn_replicates:  3\nn_shards:      4\n\n# --- Tiling ---\ntiling:\n  n_copies: 28          # polymer is 28× the locus (for statistics)\n\n# --- Cohesin model (Gabriele 2022 defaults) ---\nsmc_bond:\n  lifetime:       75\n  separation:     240\n  ctcf_capture:   0.125\n  ctcf_release:   0.0033\n\n\n\n\n\n\nTip\n\n\n\nChanging active_locus is all you need to switch analysis targets. Re-run bash setup_data.sh --skip-envs to regenerate CTCF BEDs for the new locus, then resubmit.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Configuration</span>"
+    ]
+  },
+  {
+    "objectID": "configuration.html#configsparameters.py-exported-api",
+    "href": "configuration.html#configsparameters.py-exported-api",
+    "title": "3  Configuration",
+    "section": "3.3 configs/parameters.py — exported API",
+    "text": "3.3 configs/parameters.py — exported API\nImporting this module gives you:\nfrom configs.parameters import (\n    ACTIVE_LOCUS,        # str: e.g. \"chr1_fig1\"\n    LOCI,                # dict: all locus defs\n    CHROM,               # str: e.g. \"chr1\"\n    REGION_START,        # int: genomic start (bp)\n    REGION_END,          # int: genomic end (bp)\n    RESOLUTION,          # int: bp/monomer\n    N_MONOMERS,          # int: (REGION_END - REGION_START) // RESOLUTION\n    POLYMER,             # int: N_MONOMERS × n_copies (tiled length)\n    SMC_BOND,            # dict: cohesin model params\n    TILING,              # dict: n_copies etc.\n    SIM_RUN,             # dict: n_replicates, n_shards\n    SIMULATION_CONDITIONS,   # list[str]: condition names\n    ALL_PARAM_SETS,          # list[dict]: full condition dicts\n)\n\n3.3.1 Helper functions\n# Get full parameter dict for a condition name\nparams = get_condition(\"control_ctcf-control\")\n\n# List all condition names\nnames = list_conditions()\n\n# Get oriented CTCF site arrays for a condition\nctcf_left, ctcf_right = get_ctcf_arrays(condition=\"control_ctcf-control\")\n\n# Get arrays tiled for the full polymer\nctcf_left_tiled, ctcf_right_tiled = get_tiled_ctcf_arrays(condition=\"control_ctcf-control\")\n\n# Load directly from BED file (used during setup)\nctcf_left, ctcf_right = load_ctcf_from_bed(\"data/ctcf_beds/ctcf_oriented_hg38_control.bed\")",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Configuration</span>"
+    ]
+  },
+  {
+    "objectID": "configuration.html#simulation-conditions",
+    "href": "configuration.html#simulation-conditions",
+    "title": "3  Configuration",
+    "section": "3.4 Simulation conditions",
+    "text": "3.4 Simulation conditions\nEach condition is defined as a dict in configs/parameters.py. The five defaults for the STRS use case:\nSIMULATION_CONDITIONS = [\n    {\n        \"name\":         \"control_ctcf-control\",\n        \"ctcf_type\":    \"control\",\n        \"lifetime\":     75,\n        \"separation\":   240,\n        \"ctcf_capture\": 0.125,\n        \"ctcf_release\": 0.0033,\n    },\n    {\n        \"name\":         \"control_ctcf-sorbitol\",\n        \"ctcf_type\":    \"sorbitol\",\n        \"lifetime\":     75,\n        \"separation\":   240,\n        \"ctcf_capture\": 0.125,\n        \"ctcf_release\": 0.0033,\n    },\n    {\n        \"name\":         \"weak_ctcf-sorbitol\",\n        \"ctcf_type\":    \"sorbitol\",\n        \"lifetime\":     75,\n        \"separation\":   240,\n        \"ctcf_capture\": 0.0625,   # 0.5× default\n        \"ctcf_release\": 0.0033,\n    },\n    # ... etc.\n]\nTo add a new condition, append a dict to SIMULATION_CONDITIONS with a unique name and the desired cohesin parameters. The Snakemake wildcards will automatically pick it up.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Configuration</span>"
+    ]
+  },
+  {
+    "objectID": "configuration.html#profiles-and-slurm-settings",
+    "href": "configuration.html#profiles-and-slurm-settings",
+    "title": "3  Configuration",
+    "section": "3.5 Profiles and SLURM settings",
+    "text": "3.5 Profiles and SLURM settings\nprofiles/slurm/config.yaml sets cluster-level defaults:\nexecutor:         slurm\ndefault-resources:\n  slurm_account:  rc_dphansti_pi\n  slurm_partition: general\n  runtime:         4320          # 72 h max; per-rule overrides this\n  mem_mb:          8000\n  cpus_per_task:   1\nGPU jobs override these via per-rule resources: blocks in the Snakefile.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Configuration</span>"
+    ]
+  },
+  {
+    "objectID": "simulation.html",
+    "href": "simulation.html",
+    "title": "4  Simulation",
+    "section": "",
+    "text": "4.1 Overview\nEach simulate_shard SLURM job runs scripts/run_simulation_shard.py, which:",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Simulation</span>"
+    ]
+  },
+  {
+    "objectID": "simulation.html#overview",
+    "href": "simulation.html#overview",
+    "title": "4  Simulation",
+    "section": "",
+    "text": "Reads cohesin parameters and CTCF sites from configs/parameters.py\nBuilds a 70,000-monomer tiled polymer (28× copies of the 2 Mb locus)\nRuns the loop-extrusion factor (LEF) dynamics engine for a burn-in period\nRuns polychrom (OpenMM wrapper) to simulate 3D chromatin folding on a GPU\nWrites trajectory blocks to results/polychrom_3d/{condition}_rep{N}_shard{M}/",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Simulation</span>"
+    ]
+  },
+  {
+    "objectID": "simulation.html#the-cohesin-lef-dynamics-engine",
+    "href": "simulation.html#the-cohesin-lef-dynamics-engine",
+    "title": "4  Simulation",
+    "section": "4.2 The cohesin (LEF) dynamics engine",
+    "text": "4.2 The cohesin (LEF) dynamics engine\nLoop extrusion factors (LEFs = cohesin rings) are simulated as pairs of one- dimensional walkers on the polymer lattice.\n5'─────────────────────────────────────────────────────3'\n          ↑ cohesin loads randomly\n          ├──►  ◄──┤  (two feet walk outward)\n          │          │\n          ▼          ▼\n    ←CTCF◄          ►CTCF→  (stalling at oriented CTCF sites)\n\n\n\n\n\n\n\n\nEvent\nRate\nNotes\n\n\n\n\nLoad\n1 / separation monomers\nPoisson process, random position\n\n\nStep\n1 monomer / LEF step\nBoth feet move simultaneously\n\n\nUnload (free)\n1 / lifetime\nGeometric: ~75 steps = ~75 kb\n\n\nCapture at CTCF\nctcf_capture = 0.125\n12.5% per encounter\n\n\nRelease (stalled)\nctcf_release = 0.0033\nStalled ring lives ~4× longer\n\n\n\n\n4.2.1 Oriented CTCF sites\nCTCF stalls cohesin only from the correct (convergent) direction. The BED files produced by extract_ctcf_sites_hg38.py encode orientation:\n\nLeft-facing CTCF (←): stalls a rightward-moving left foot\nRight-facing CTCF (→): stalls a leftward-moving right foot\n\nConvergent CTCF pairs therefore trap cohesin between them, forming stable loops.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Simulation</span>"
+    ]
+  },
+  {
+    "objectID": "simulation.html#the-3d-simulation-polychrom-openmm",
+    "href": "simulation.html#the-3d-simulation-polychrom-openmm",
+    "title": "4  Simulation",
+    "section": "4.3 The 3D simulation (polychrom / OpenMM)",
+    "text": "4.3 The 3D simulation (polychrom / OpenMM)\nEach monomer is a bead. Forces between beads:\n\n\n\n\n\n\n\nForce\nWhat it models\n\n\n\n\nPolymer chain bonds\nChromatin backbone (FENE spring)\n\n\nExcluded volume\nSteric repulsion (soft sphere)\n\n\nSpherical confinement\nNuclear membrane\n\n\nLEF bonds\nCohesin-mediated loop (harmonic spring between extruded monomers)\n\n\n\nLEF positions are updated every block_size MD steps; each saved block is one “snapshot” in the trajectory HDF5.\n\n\n\n\n\n\nNote\n\n\n\nThe OpenMM simulation runs on GPU. The SLURM job requests 1 GPU, 4 CPUs, and 60 GB RAM (qos: gpu_access, Longleaf gpu partition). All 60 simulate_shard jobs run in parallel.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Simulation</span>"
+    ]
+  },
+  {
+    "objectID": "simulation.html#tiling-trick",
+    "href": "simulation.html#tiling-trick",
+    "title": "4  Simulation",
+    "section": "4.4 Tiling trick",
+    "text": "4.4 Tiling trick\nTo get statistically robust contact maps from a short locus (~2,000 monomers), 28 copies are placed end-to-end on a 70,000-monomer polymer. Each copy folds independently (boundary monomers are connected but distant in sequence), giving 28× the contact statistics per GPU run. After the simulation, contact maps from all 28 copies are averaged and folded back to 2,000×2,000.\nSee Yang et al. 2023 Nat Commun for details on why this is valid.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Simulation</span>"
+    ]
+  },
+  {
+    "objectID": "simulation.html#entry-point",
+    "href": "simulation.html#entry-point",
+    "title": "4  Simulation",
+    "section": "4.5 Entry point",
+    "text": "4.5 Entry point\npython scripts/run_simulation_shard.py \\\n    --condition control_ctcf-control \\\n    --replicate 1 \\\n    --shard 0\nArguments come from Snakemake wildcards. Each job writes to:\nresults/polychrom_3d/{condition}_rep{replicate}_shard{shard}/\n├── params.json        # all parameters, for reproducibility\n└── blocks_*.h5        # HDF5 trajectory blocks\nAfter all shards finish, merge_shards concatenates them:\nresults/polychrom_3d/merged_{condition}_rep{replicate}/\n├── params.json\n└── blocks_*.h5        # full trajectory (4 shards combined)",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>Simulation</span>"
+    ]
+  },
+  {
+    "objectID": "analysis.html",
+    "href": "analysis.html",
+    "title": "5  Analysis",
+    "section": "",
+    "text": "5.1 Overview\nAfter all merge_shards jobs complete, one analyze_all job runs per condition via scripts/run_analysis_all.py. It reads the merged trajectory and the experimental Hi-C .cool, then writes contact maps, P(s) curves, APA scores, and comparison figures.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Analysis</span>"
+    ]
+  },
+  {
+    "objectID": "analysis.html#entry-point",
+    "href": "analysis.html#entry-point",
+    "title": "5  Analysis",
+    "section": "5.2 Entry point",
+    "text": "5.2 Entry point\npython scripts/run_analysis_all.py \\\n    --condition control_ctcf-control\nSnakemake passes the condition name as a wildcard. Output goes to:\nresults/analysis/{condition}/\n├── *_contact_map.npy          # simulated contact probability matrix\n├── *_ps_curve.npz             # P(s): contact probability vs. genomic distance\n├── *_apa.npz                  # aggregate peak analysis (APA)\n├── *_sim_vs_exp_map.png       # simulated vs. experimental Hi-C comparison\n└── ...",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Analysis</span>"
+    ]
+  },
+  {
+    "objectID": "analysis.html#what-gets-computed",
+    "href": "analysis.html#what-gets-computed",
+    "title": "5  Analysis",
+    "section": "5.3 What gets computed",
+    "text": "5.3 What gets computed\n\n5.3.1 Contact maps\nThe simulated contact map is computed by recording, for each trajectory snapshot, which monomer pairs are within a distance cutoff in 3D. The tiled copies are averaged and folded to the locus size. The result is a matrix of contact probabilities at the resolution (default 1 kb) set in ChromSimConfig.yaml.\n\n\n5.3.2 P(s) curves\nP(s) is the contact probability as a function of genomic separation s. It is the single most diagnostic output: a well-tuned simulation matches the slope and magnitude of the experimental P(s) from Hi-C. A mismatch indicates cohesin parameters need adjustment.\n\n\n5.3.3 APA (Aggregate Peak Analysis)\nAPA averages the contact matrix around all convergent CTCF pairs — the loop anchors. A strong APA peak (bright center relative to corners) indicates successful loop extrusion between convergent CTCF sites.\n\n\n5.3.4 Experimental comparison\nThe experimental .cool file (at 10 kb resolution) is loaded with cooler and plotted alongside the simulated contact map at the same scale. Visual alignment at TAD boundaries and loop anchors validates the model.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Analysis</span>"
+    ]
+  },
+  {
+    "objectID": "analysis.html#adding-new-analysis",
+    "href": "analysis.html#adding-new-analysis",
+    "title": "5  Analysis",
+    "section": "5.4 Adding new analysis",
+    "text": "5.4 Adding new analysis\nscripts/run_analysis_all.py is the single entry point. To add a metric:\n\nAdd a function to scripts/analysis/ (or to run_analysis_all.py directly for simple cases)\nCall it inside the analyze_condition() function\nWrite outputs to results/analysis/{condition}/\n\nSnakemake’s analyze_all rule only checks that the output directory exists, so new output files are picked up automatically.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Analysis</span>"
+    ]
+  },
+  {
+    "objectID": "cluster.html",
+    "href": "cluster.html",
+    "title": "6  Cluster Reference",
+    "section": "",
+    "text": "6.1 How jobs are submitted\nChromSimPipe.sh submits itself as a SLURM job. Inside that job, Snakemake uses snakemake-executor-plugin-slurm to submit each rule as its own SLURM job. You only ever run sbatch ChromSimPipe.sh — everything else is automatic.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Cluster Reference</span>"
+    ]
+  },
+  {
+    "objectID": "cluster.html#slurm-account-and-partition",
+    "href": "cluster.html#slurm-account-and-partition",
+    "title": "6  Cluster Reference",
+    "section": "6.2 SLURM account and partition",
+    "text": "6.2 SLURM account and partition\n\n\n\nSetting\nValue\nWhere set\n\n\n\n\nAccount\nrc_dphansti_pi\nprofiles/slurm/config.yaml\n\n\nDefault partition\ngeneral\nprofiles/slurm/config.yaml\n\n\nGPU partition\ngpu\nsimulate_shard rule in Snakefile\n\n\nGPU QOS\ngpu_access\nsimulate_shard rule in Snakefile",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Cluster Reference</span>"
+    ]
+  },
+  {
+    "objectID": "cluster.html#per-rule-resource-requests",
+    "href": "cluster.html#per-rule-resource-requests",
+    "title": "6  Cluster Reference",
+    "section": "6.3 Per-rule resource requests",
+    "text": "6.3 Per-rule resource requests\n\n\n\nRule\nPartition\nCPUs\nRAM\nWall time\nGPU\n\n\n\n\nconvert_hic\ngeneral\n4\n32 GB\n2 h\n—\n\n\nextract_ctcf\ngeneral\n2\n16 GB\n1 h\n—\n\n\nvalidate_ctcf\ngeneral\n1\n4 GB\n15 min\n—\n\n\nsimulate_shard\ngpu\n4\n60 GB\n12 h\n1\n\n\nmerge_shards\ngeneral\n4\n64 GB\n2 h\n—\n\n\nanalyze_all\ngeneral\n4\n64 GB\n6 h\n—",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Cluster Reference</span>"
+    ]
+  },
+  {
+    "objectID": "cluster.html#log-file-locations",
+    "href": "cluster.html#log-file-locations",
+    "title": "6  Cluster Reference",
+    "section": "6.4 Log file locations",
+    "text": "6.4 Log file locations\n\n\n\n\n\n\n\nLog\nPath\n\n\n\n\nTop-level Snakemake log\nlogs/snakemake_{jobid}.err\n\n\nPer-rule job logs\n.snakemake/slurm_logs/rule_{rule}/{wildcards}/{jobid}.log\n\n\nSetup script log\nlogs/setup_data*.log\n\n\n\n\n\n\n\n\n\nWarning\n\n\n\nDo not move or rename the .snakemake/slurm_logs/ directory. Snakemake reads those paths to report per-job errors. Move them after the run if you want to archive them.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Cluster Reference</span>"
+    ]
+  },
+  {
+    "objectID": "cluster.html#conda-environments-in-slurm-jobs",
+    "href": "cluster.html#conda-environments-in-slurm-jobs",
+    "title": "6  Cluster Reference",
+    "section": "6.5 Conda environments in SLURM jobs",
+    "text": "6.5 Conda environments in SLURM jobs\nGPU nodes on Longleaf require initializing conda via source rather than module load. The Snakefile does this:\nsource /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh\nconda run -p ~/.local/share/mamba/envs/cohesin_sim \\\n    python scripts/run_simulation_shard.py ...\nUsing conda run -p &lt;full-path&gt; (not -n &lt;name&gt;) is essential for reliable environment activation in non-interactive SLURM jobs.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Cluster Reference</span>"
+    ]
+  },
+  {
+    "objectID": "cluster.html#checking-queue-status",
+    "href": "cluster.html#checking-queue-status",
+    "title": "6  Cluster Reference",
+    "section": "6.6 Checking queue status",
+    "text": "6.6 Checking queue status\nsqueue -u $USER                   # all your jobs\nsqueue -u $USER -t R              # only running jobs\nsqueue -j &lt;jobid&gt;                 # specific job\nsacct -j &lt;jobid&gt; --format=JobID,State,Elapsed,ExitCode",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Cluster Reference</span>"
+    ]
+  },
+  {
+    "objectID": "cluster.html#cancelling-jobs",
+    "href": "cluster.html#cancelling-jobs",
+    "title": "6  Cluster Reference",
+    "section": "6.7 Cancelling jobs",
+    "text": "6.7 Cancelling jobs\nscancel &lt;jobid&gt;                   # one job\nscancel -u $USER                  # ALL your jobs (careful!)\nscancel -u $USER --name simulate_shard   # by job name\nAfter cancelling, run bash unlock.sh before resubmitting.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Cluster Reference</span>"
+    ]
+  },
+  {
+    "objectID": "cluster.html#cluster-scripts-legacy",
+    "href": "cluster.html#cluster-scripts-legacy",
+    "title": "6  Cluster Reference",
+    "section": "6.8 cluster/ scripts (legacy)",
+    "text": "6.8 cluster/ scripts (legacy)\nThe cluster/ directory contains standalone SLURM batch scripts from before Snakemake was adopted. They are preserved for reference but should not be used. sbatch ChromSimPipe.sh is the current entry point for everything.",
+    "crumbs": [
+      "Under the Hood",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Cluster Reference</span>"
+    ]
+  },
+  {
+    "objectID": "references.html",
+    "href": "references.html",
+    "title": "References",
+    "section": "",
+    "text": "Primary literature\nFlores et al. 2026 — STRS paper (ChromSimPipe use case). Data: GEO GSE310051 (Hi-C), GSE310047 (CUT&Tag).\nFudenberg G, Imakaev M, Lu C, Goloborodko A, Abdennur N, Mirny LA. Formation of Chromosomal Domains by Loop Extrusion. Cell Reports 15(9):2038–2049 (2016). https://doi.org/10.1016/j.celrep.2016.04.085\nBanigan EJ, Tang L, van den Berg AA, Stocsits RR, Wutz G, Brandao HB, Busslinger GA, Peters J-M, Mirny LA. Chromosome organization by one-sided and two-sided loop extrusion. eLife 9:e53558 (2020). https://doi.org/10.7554/eLife.53558\nGabriele M, Brandão HB, Grosse-Holz S, Jha A, Dailey GM, Cattoglio C, Hsieh T-HS, Mirny L, Zechner C, Hansen AS. Dynamics of CTCF- and cohesin-mediated chromatin looping revealed by live-cell imaging. Science 376(6593):496–501 (2022). https://doi.org/10.1126/science.abn6583\nYang T, Zhang F, Yardımcı GG, Song F, Hardison RC, Noble WS, Yue F, Li Q. HiCRep: assessing the reproducibility of Hi-C data using a stratum-adjusted correlation coefficient. Genome Research (2017). https://doi.org/10.1101/gr.220640.117\nYang M et al. Polymer simulations reveal a robust chromatin compaction mechanism that enables rapid genome exploration by CTCF and cohesin. Nature Communications 14:1913 (2023). https://doi.org/10.1038/s41467-023-37530-3 (Source of the tiling trick for contact statistics.)",
+    "crumbs": [
+      "References"
+    ]
+  },
+  {
+    "objectID": "references.html#software",
+    "href": "references.html#software",
+    "title": "References",
+    "section": "Software",
+    "text": "Software\npolychrom — GPU polymer simulation engine (OpenMM wrapper). https://github.com/open2c/polychrom\nOpenMM — molecular dynamics GPU engine. https://openmm.org\nCooler — sparse storage format for Hi-C contact matrices. https://github.com/open2c/cooler\nhic2cool — .hic → .cool format conversion. https://github.com/4dn-dcic/hic2cool\nFIMO (MEME Suite) — motif scanning used for CTCF site extraction. https://meme-suite.org/meme/tools/fimo\nSnakemake — workflow management. https://snakemake.readthedocs.io",
+    "crumbs": [
+      "References"
+    ]
+  }
+]
