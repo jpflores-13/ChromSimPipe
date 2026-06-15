@@ -9,7 +9,6 @@ book:
   date: today
   repo-url: https://github.com/jpflores-13/ChromSimPipe
   repo-actions: [edit, issue]
-  favicon: images/favicon.png
   site-url: https://jpflores-13.github.io/ChromSimPipe
 
   chapters:
@@ -39,11 +38,3 @@ format:
     smooth-scroll: true
     link-external-icon: true
     link-external-newwindow: true
-
-  pdf:
-    documentclass: scrreprt
-    toc: true
-    number-sections: true
-    colorlinks: true
-    geometry: "margin=1in"
-    fontsize: 11pt
