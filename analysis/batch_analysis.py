@@ -20,10 +20,10 @@ import argparse
 import logging
 import json
 
-if os.environ.get("CONDA_DEFAULT_ENV", "") != "polychrom":
+if os.environ.get("CONDA_DEFAULT_ENV", "") != "cohesin_sim":
     sys.stderr.write(
         f"[env] active conda env is '{os.environ.get('CONDA_DEFAULT_ENV') or 'none'}', "
-        "expected 'polychrom'. run: conda activate polychrom\n"
+        "expected 'cohesin_sim'. run: conda activate cohesin_sim\n"
     )
     sys.exit(1)
 

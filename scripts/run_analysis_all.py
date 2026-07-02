@@ -1529,11 +1529,25 @@ def main():
 
     # Discover directories
     if args.condition:
-        target = os.path.join(args.results_dir, args.condition)
-        if not is_merged_dir(target):
-            logger.error(f"Not a valid merged dir: {target}")
+        from configs.parameters import get_condition, SIMULATION_CONDITIONS
+        try:
+            cond = get_condition(args.condition)
+        except ValueError:
+            logger.error(f"Unknown condition '{args.condition}'. "
+                         f"Available: {[c['name'] for c in SIMULATION_CONDITIONS]}")
             sys.exit(1)
-        dirs_to_analyse = [target]
+        params_name = cond["params"]["name"]
+        ctcf_type   = cond["ctcf_type"]
+        prefix = f"merged_{params_name}_ctcf-{ctcf_type}_rep"
+        all_merged = discover_merged_dirs(args.results_dir)
+        dirs_to_analyse = [d for d in all_merged
+                           if os.path.basename(d).startswith(prefix)]
+        if not dirs_to_analyse:
+            logger.error(
+                f"No merged dirs found for condition '{args.condition}' "
+                f"(expected prefix '{prefix}' in {args.results_dir})"
+            )
+            sys.exit(1)
     else:
         dirs_to_analyse = discover_merged_dirs(args.results_dir)
         if not dirs_to_analyse:
