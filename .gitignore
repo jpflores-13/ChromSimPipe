@@ -32,3 +32,4 @@ build/
 *.tmp
 *.swp
 .DS_Store
+.snakemake_venv/
