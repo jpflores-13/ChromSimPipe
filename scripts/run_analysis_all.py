@@ -243,7 +243,7 @@ MERGED_PREFIX = "merged_"
 
 
 def parse_condition_rep(base_name: str) -> tuple[str, int]:
-    """Parse 'sorbitol_null_ctcf-sorbitol_rep3' → ('sorbitol_null_ctcf-sorbitol', 3).
+    """Parse 'ctcf_only_ctcf-condition2_rep3' → ('ctcf_only_ctcf-condition2', 3).
 
     A leading 'merged_' (the prefix written by scripts/merge_shards.py for
     merged simulation directories) is stripped before parsing so condition
@@ -388,8 +388,8 @@ def _run_msd_and_dynamics(
     common_dir : str
         Flat output folder (results/analysis/) where every artefact lands.
     file_prefix : str
-        Stem prepended to every filename (e.g. ``control_ctcf-control_2400blk_rep0`` or
-        ``control_ctcf-control_7200blk_pooled``).
+        Stem prepended to every filename (e.g. ``cond1_baseline_2400blk_rep0`` or
+        ``cond1_baseline_7200blk_pooled``).
     display_name : str, optional
         Short human label used only in plot titles and log lines.
     calibrate_with : {"hic", "msd", "none"}

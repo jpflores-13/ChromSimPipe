@@ -76,7 +76,7 @@ See Yang et al. 2023 *Nat Commun* for details on why this is valid.
 
 ```bash
 python scripts/run_simulation_shard.py \
-    --condition control_ctcf-control \
+    --condition cond1_baseline \
     --replicate 1 \
     --shard 0
 ```

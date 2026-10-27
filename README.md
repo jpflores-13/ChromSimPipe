@@ -58,17 +58,17 @@ runs the same way.
 
 ### Example conditions (STRS use case)
 
-The default `configs/parameters.py` defines five conditions for the STRS
-hyperosmotic-stress example (HEK293T cells, hg38). To define your own
-conditions, edit `SIMULATION_CONDITIONS` in `configs/parameters.py`.
+`config/ChromSimConfig.yaml` ships five example conditions comparing two
+experimental states, `condition1` and `condition2` (each with its own CTCF
+peak set and Hi-C map). To define your own, edit the `conditions:` list there.
 
 | # | Name | Cohesin params | CTCF sites | Compare vs | Question |
 |---|------|---------------|------------|------------|----------|
-| 1 | `control_ctcf-control`          | Gabriele 2022 | Control CUT&Tag  | Control Hi-C  | Baseline: can we reproduce untreated Hi-C? |
-| 2 | `control_ctcf-sorbitol`         | Gabriele 2022 | Sorbitol CUT&Tag | Sorbitol Hi-C | Does CTCF loss alone explain sorbitol Hi-C? |
-| 3 | `weak_ctcf-sorbitol`            | Gabriele 2022 (0.5× CTCF capture) | Sorbitol CUT&Tag | Sorbitol Hi-C | Weaker CTCF stalling at retained sites? |
-| 4 | `sorbitol_promoter-stall`       | Gabriele 2022 | Sorbitol + promoter (SP/KLF) | Sorbitol Hi-C | Key test: promoter-anchored cohesin? |
-| 5 | `sorbitol_promoter-stall_long`  | Gabriele 2022 (2× processivity) | Sorbitol + promoter | Sorbitol Hi-C | Same + longer processivity? |
+| 1 | `cond1_baseline`             | Gabriele 2022 | Condition 1 | Condition 1 Hi-C | Baseline: can we reproduce condition 1 Hi-C? |
+| 2 | `cond2_ctcf-only`            | Gabriele 2022 | Condition 2 | Condition 2 Hi-C | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
+| 3 | `cond2_weak-ctcf`            | Gabriele 2022 (0.5× CTCF capture) | Condition 2 | Condition 2 Hi-C | Weaker CTCF stalling at retained sites? |
+| 4 | `cond2_promoter-stall`       | Gabriele 2022 | Condition 2 + promoter anchors | Condition 2 Hi-C | Promoter-anchored cohesin? (needs `promoter_stall_bed`) |
+| 5 | `cond2_promoter-stall_long`  | Gabriele 2022 (2× processivity) | Condition 2 + promoter anchors | Condition 2 Hi-C | Same + longer processivity? |
 
 ### Example loci (STRS use case, hg38, HEK293T)
 
@@ -187,8 +187,8 @@ sbatch ChromSimPipe.sh --rerun-incomplete   # (--rerun-incomplete is the default
 data/
 ├── hic/                          # symlinks to input .hic files
 ├── mcool/
-│   ├── condition_A.cool          # converted by convert_hic rule (single-resolution)
-│   └── condition_B.cool
+│   ├── condition1.cool           # converted by convert_hic rule (single-resolution)
+│   └── condition2.cool
 └── ctcf_beds/
     ├── ctcf_oriented_hg38_condA_{chrom}_{start}_{end}.bed
     └── ctcf_oriented_hg38_condB_{chrom}_{start}_{end}.bed

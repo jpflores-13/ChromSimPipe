@@ -41,15 +41,15 @@ sites oriented the right way. Where cohesins stall and how long they live
 determines the 3D contact map. By varying which CTCF sites are present
 and cohesin dynamics parameters, the simulation tests user-defined hypotheses.
 
-**Example conditions (STRS use case):**
+**Example conditions (shipped in `config/ChromSimConfig.yaml`):**
 
 | Condition | Cohesin | CTCF sites | Tests |
 |-----------|---------|-----------|-------|
-| `control_ctcf-control` | Control | Control | Does the model reproduce untreated Hi-C? |
-| `control_ctcf-sorbitol` | Control | Sorbitol | Does CTCF loss alone explain sorbitol Hi-C? |
-| `weak_ctcf-sorbitol` | Control | Sorbitol (0.5× stall) | Does weaker stalling at remaining CTCF sites help? |
-| `sorbitol_promoter-stall` | Sorbitol | Promoter anchors | Can promoter-anchored stalling reproduce the new loops? |
-| `sorbitol_promoter-stall_long` | Sorbitol (2× processivity) | Promoter anchors | Promoter stalling + longer cohesin runs |
+| `cond1_baseline` | Baseline | Condition 1 | Does the model reproduce condition 1 Hi-C? |
+| `cond2_ctcf-only` | Baseline | Condition 2 | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
+| `cond2_weak-ctcf` | Baseline | Condition 2 (0.5× stall) | Does weaker stalling at remaining CTCF sites help? |
+| `cond2_promoter-stall` | Baseline | Condition 2 + promoter anchors | Can promoter-anchored stalling reproduce the new loops? |
+| `cond2_promoter-stall_long` | 2× processivity | Condition 2 + promoter anchors | Promoter stalling + longer cohesin runs |
 
 ### Data flow
 
@@ -273,7 +273,7 @@ Edit **once** before the first run. Key fields:
 
 | Field | What to change |
 |-------|---------------|
-| `hic` | One `<hic_type>: /abs/path.hic` entry per Hi-C map (e.g. `control`, `sorbitol`); each condition's `compare_hic` names one |
+| `hic` | One `<hic_type>: /abs/path.hic` entry per Hi-C map (e.g. `condition1`, `condition2`); each condition's `compare_hic` names one |
 | `promoter_stall_bed` | BED of promoter anchors, needed only by conditions with `ctcf_extra: promoter` |
 | `genome` | Path to hg38 FASTA (default: Longleaf shared reference) |
 | `samplesheet` | Path to `SimSamplesheet.txt` |
@@ -289,8 +289,8 @@ Tab-separated, two columns: `CTCF_Type` and `CTCF_Peaks_Path`.
 
 ```
 CTCF_Type   CTCF_Peaks_Path
-control     /path/to/your_CTCF_condition_A_peaks.narrowPeak
-sorbitol    /path/to/your_CTCF_condition_B_peaks.narrowPeak
+condition1  /path/to/condition1_CTCF_peaks.narrowPeak
+condition2  /path/to/condition2_CTCF_peaks.narrowPeak
 ```
 
 The `extract_ctcf` rule reads this file via `pandas.read_table()` at runtime.
@@ -384,7 +384,7 @@ config values change.
 
 - **Condition list** (`SIMULATION_CONDITIONS`). The rows the Snakemake
   pipeline iterates over. Each entry pairs a cohesin parameter set with a
-  CTCF track and has a `name` (e.g. `control_ctcf-control`).
+  CTCF track and has a `name` (e.g. `cond1_baseline`).
 
 - **Tiling** (`TILING`). The 2 Mb locus is copied 28× into one long polymer
   for 28× better contact statistics at no extra physics cost.
@@ -564,7 +564,7 @@ sanity checks:
 ```bash
 conda run -p ~/.local/share/mamba/envs/cohesin_sim \
     python scripts/run_simulation.py \
-    --condition control_ctcf-control --replicate 0 --gpu 0 --output results/
+    --condition cond1_baseline --replicate 0 --gpu 0 --output results/
 ```
 
 `--engine lef_only` skips the 3D polymer entirely and writes only a 2D
@@ -584,8 +584,8 @@ the full analysis suite, and writes per-condition outputs. Called by the
 conda run -p ~/.local/share/mamba/envs/cohesin_sim \
     python scripts/run_analysis_all.py \
     --results-dir results/polychrom_3d \
-    --output-dir results/analysis/control_ctcf-control \
-    --condition control_ctcf-control \
+    --output-dir results/analysis/cond1_baseline \
+    --condition cond1_baseline \
     --hic-dir data/mcool \
     --n-jobs 4 --skip-existing --no-msd
 ```
@@ -638,7 +638,7 @@ Collects scalar metrics from all conditions into one CSV/XLSX table:
 ```bash
 python scripts/summarize_analysis.py \
     --analysis-dir results/analysis \
-    --reference-condition control_ctcf-control
+    --reference-condition cond1_baseline
 ```
 
 ### 6d. `scripts/check_results.py`
@@ -673,7 +673,7 @@ Longleaf.
   extra physics cost.
 - **Output directory names.** Shards: `<condition>_rep<N>_shard<S>/`.
   Merged: `merged_<condition>_rep<N>/`. The `_ctcf-<type>` in the condition
-  name (e.g. `control_ctcf-control`) is the key separator between runs with
+  name (e.g. `cond1_baseline`) is the key separator between runs with
   the same cohesin params but different CTCF tracks.
 - **RNG seed.** `42 + replicate * 10000 + shard * 1000`. Always derived
   from indices so reruns are reproducible.

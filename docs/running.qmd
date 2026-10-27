@@ -70,8 +70,8 @@ sbatch ChromSimPipe.sh
 ```
 data/
 ├── mcool/
-│   ├── control.cool          # one <hic_type>.cool per entry under hic:
-│   └── sorbitol.cool
+│   ├── condition1.cool       # one <hic_type>.cool per entry under hic:
+│   └── condition2.cool
 └── ctcf_beds/
     └── ctcf_oriented_hg38_*.bed
 

@@ -19,8 +19,8 @@ uses. Nothing is hardcoded in the scripts.
 ```yaml
 # --- Input data ---
 hic:                                       # one entry per Hi-C map; names are your choice
-  control:      /path/to/control.hic       # raw Hi-C in .hic format (KR-normalized)
-  sorbitol:     /path/to/sorbitol.hic
+  condition1:   /path/to/condition1.hic    # raw Hi-C in .hic format (KR-normalized)
+  condition2:   /path/to/condition2.hic
 promoter_stall_bed: ''                     # only for conditions with ctcf_extra: promoter
 genome:         /path/to/hg38.fa           # for FIMO CTCF orientation
 samplesheet:    ChromSimSamplesheet.txt
@@ -96,16 +96,16 @@ from configs.parameters import (
 
 ```python
 # Get full parameter dict for a condition name
-params = get_condition("control_ctcf-control")
+params = get_condition("cond1_baseline")
 
 # List all condition names
 names = list_conditions()
 
 # Get oriented CTCF site arrays for a condition
-ctcf_left, ctcf_right = get_ctcf_arrays(condition="control_ctcf-control")
+ctcf_left, ctcf_right = get_ctcf_arrays(condition="cond1_baseline")
 
 # Get arrays tiled for the full polymer
-ctcf_left_tiled, ctcf_right_tiled = get_tiled_ctcf_arrays(condition="control_ctcf-control")
+ctcf_left_tiled, ctcf_right_tiled = get_tiled_ctcf_arrays(condition="cond1_baseline")
 
 # Load directly from BED file (used during setup)
 ctcf_left, ctcf_right = load_ctcf_from_bed("data/ctcf_beds/ctcf_oriented_hg38_control.bed")
@@ -114,29 +114,29 @@ ctcf_left, ctcf_right = load_ctcf_from_bed("data/ctcf_beds/ctcf_oriented_hg38_co
 ## Simulation conditions
 
 Each condition is defined as a dict in `configs/parameters.py`. The five
-defaults for the STRS use case:
+example conditions:
 
 ```python
 SIMULATION_CONDITIONS = [
     {
-        "name":         "control_ctcf-control",
-        "ctcf_type":    "control",
+        "name":         "cond1_baseline",
+        "ctcf_type":    "condition1",
         "lifetime":     75,
         "separation":   240,
         "ctcf_capture": 0.125,
         "ctcf_release": 0.0033,
     },
     {
-        "name":         "control_ctcf-sorbitol",
-        "ctcf_type":    "sorbitol",
+        "name":         "cond2_ctcf-only",
+        "ctcf_type":    "condition2",
         "lifetime":     75,
         "separation":   240,
         "ctcf_capture": 0.125,
         "ctcf_release": 0.0033,
     },
     {
-        "name":         "weak_ctcf-sorbitol",
-        "ctcf_type":    "sorbitol",
+        "name":         "cond2_weak-ctcf",
+        "ctcf_type":    "condition2",
         "lifetime":     75,
         "separation":   240,
         "ctcf_capture": 0.0625,   # 0.5× default

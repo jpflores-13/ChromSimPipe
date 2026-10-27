@@ -9,7 +9,7 @@ This script:
   4. Saves conformations for downstream contact map analysis
 
 Usage:
-    python run_simulation.py --condition control_ctcf-control --replicate 0 --gpu 0
+    python run_simulation.py --condition cond1_baseline --replicate 0 --gpu 0
 
 Requirements:
     pip install polychrom openmm h5py
@@ -702,9 +702,9 @@ def main():
         description="Run cohesin loop extrusion simulation",
         epilog="Examples:\n"
                "  # Using a predefined condition (recommended):\n"
-               "  python run_simulation.py --condition control_ctcf-control --replicate 0 --gpu 0\n\n"
+               "  python run_simulation.py --condition cond1_baseline --replicate 0 --gpu 0\n\n"
                "  # Manual pairing of a params_name + CTCF type:\n"
-               "  python run_simulation.py --params control --ctcf-type sorbitol --replicate 0\n",
+               "  python run_simulation.py --params baseline --ctcf-type condition2 --replicate 0\n",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 

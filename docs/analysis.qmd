@@ -11,7 +11,7 @@ scores, and comparison figures.
 
 ```bash
 python scripts/run_analysis_all.py \
-    --condition control_ctcf-control
+    --condition cond1_baseline
 ```
 
 Snakemake passes the condition name as a wildcard. Output goes to:

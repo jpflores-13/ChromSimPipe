@@ -10,7 +10,7 @@ After all shards finish, use merge_shards.py to combine conformations.
 
 Usage:
     python run_simulation_shard.py \
-        --condition control_ctcf-control --replicate 0 \
+        --condition cond1_baseline --replicate 0 \
         --shard-index 0 --n-shards 4 --gpu 0
 
 This is called by the simulate_shard rule in workflows/ChromSimPipe.snakefile.

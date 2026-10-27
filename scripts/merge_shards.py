@@ -12,7 +12,7 @@ For LEF contact maps: sums the matrices (more samples = better statistics).
 
 Usage:
     python merge_shards.py \
-        --condition control_ctcf-control --replicate 3 --n-shards 4 \
+        --condition cond1_baseline --replicate 3 --n-shards 4 \
         --results-dir results/polychrom_3d
 """
 
@@ -199,7 +199,7 @@ def merge_one(results_dir, base_name, shard_dirs, cleanup=False):
     results_dir : str
         Root results directory.
     base_name : str
-        Condition/replicate base name (e.g. control_ctcf-control_rep0). The
+        Condition/replicate base name (e.g. cond1_baseline_rep0). The
         merged output directory is named ``merged_<base_name>`` so it is
         immediately distinguishable from individual shard directories.
     shard_dirs : list of str
@@ -342,7 +342,7 @@ def main():
                "  # Merge ALL conditions/replicates found in results dir:\n"
                "  python merge_shards.py --all --results-dir results/polychrom_3d\n\n"
                "  # Merge a specific condition/replicate:\n"
-               "  python merge_shards.py --condition control_ctcf-control --replicate 3 "
+               "  python merge_shards.py --condition cond1_baseline --replicate 3 "
                "--n-shards 2 --results-dir results/polychrom_3d\n",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

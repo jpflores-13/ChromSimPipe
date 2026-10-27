@@ -10,11 +10,11 @@ samplesheet: 'ChromSimSamplesheet.txt'
 
 ## ── Hi-C input files ─────────────────────────────────────────────────────────
 ## One entry per Hi-C map: <hic_type>: <absolute path to .hic>.
-## The hic_type names are your choice; each condition's compare_hic must be
+## The hic_type names are your choice (here condition1 / condition2); each condition's compare_hic must be
 ## one of them. Each map is converted to data/mcool/<hic_type>.cool.
 hic:
-  control:  '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic'
-  sorbitol: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic'
+  condition1: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic'
+  condition2: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic'
 
 ## ── Promoter stall sites (optional) ──────────────────────────────────────────
 ## BED of promoter anchors used by conditions with `ctcf_extra: promoter`.
@@ -72,62 +72,62 @@ locus:
 ## =============================================================================
 conditions:
 
-  ## 1. Baseline: reproduces untreated Hi-C?
-  - name:         control_ctcf-control
-    description:  "Control cohesin + control CTCF sites (untreated baseline)"
-    params_name:  control
+  ## 1. Baseline: does the model reproduce condition 1 Hi-C?
+  - name:         cond1_baseline
+    description:  "Baseline cohesin + condition 1 CTCF sites"
+    params_name:  baseline
     lifetime:     75
     separation:   240
     ctcf_capture: 0.125
     ctcf_release: 0.0033
-    ctcf_type:    control
-    compare_hic:  control
+    ctcf_type:    condition1
+    compare_hic:  condition1
 
-  ## 2. CTCF loss only: does eviction alone explain sorbitol Hi-C?
-  - name:         control_ctcf-sorbitol
-    description:  "Control cohesin + sorbitol CTCF sites (CTCF-loss effect only)"
-    params_name:  sorbitol_null
+  ## 2. CTCF change only: do condition 2 CTCF sites alone explain condition 2 Hi-C?
+  - name:         cond2_ctcf-only
+    description:  "Baseline cohesin + condition 2 CTCF sites (CTCF effect only)"
+    params_name:  ctcf_only
     lifetime:     75
     separation:   240
     ctcf_capture: 0.125
     ctcf_release: 0.0033
-    ctcf_type:    sorbitol
-    compare_hic:  sorbitol
+    ctcf_type:    condition2
+    compare_hic:  condition2
 
-  ## 3. Weaker stalling at retained CTCF sites (0.5× capture probability)
-  - name:         weak_ctcf-sorbitol
-    description:  "Control cohesin + sorbitol CTCF sites + reduced stalling (0.5x)"
-    params_name:  sorbitol_weak_ctcf
+  ## 3. Weaker stalling at condition 2 CTCF sites (0.5x capture probability)
+  - name:         cond2_weak-ctcf
+    description:  "Baseline cohesin + condition 2 CTCF sites + reduced stalling (0.5x)"
+    params_name:  weak_ctcf
     lifetime:     75
     separation:   240
     ctcf_capture: 0.0625
     ctcf_release: 0.0033
-    ctcf_type:    sorbitol
-    compare_hic:  sorbitol
+    ctcf_type:    condition2
+    compare_hic:  condition2
 
-  ## 4. Key mechanistic test: promoter-anchored cohesin stalling
-  - name:         sorbitol_promoter-stall
-    description:  "Sorbitol cohesin + promoter stall sites (SP/KLF anchoring)"
-    params_name:  sorbitol_promoter
+  ## 4. Promoter-anchored cohesin stalling (needs promoter_stall_bed)
+  - name:         cond2_promoter-stall
+    description:  "Condition 2 CTCF sites + promoter stall sites"
+    params_name:  promoter
     lifetime:     75
     separation:   240
     ctcf_capture: 0.125
     ctcf_release: 0.0033
-    ctcf_type:    sorbitol
+    ctcf_type:    condition2
     ctcf_extra:   promoter
-    compare_hic:  sorbitol
+    compare_hic:  condition2
 
-  ## 5. Sensitivity: longer processivity under sorbitol
-  - name:         sorbitol_promoter-stall_long
-    description:  "Sorbitol cohesin (2x processivity) + promoter stall sites"
-    params_name:  sorbitol_promoter_long
+  ## 5. Sensitivity: promoter stalling + 2x processivity
+  - name:         cond2_promoter-stall_long
+    description:  "Condition 2 CTCF sites + promoter stall sites, 2x processivity"
+    params_name:  promoter_long
     lifetime:     150
     separation:   240
     ctcf_capture: 0.125
     ctcf_release: 0.0017
-    ctcf_type:    sorbitol
+    ctcf_type:    condition2
     ctcf_extra:   promoter
-    compare_hic:  sorbitol
+    compare_hic:  condition2
 
 
 ## =============================================================================

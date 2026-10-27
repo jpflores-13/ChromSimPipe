@@ -54,7 +54,7 @@ Edit **once** before the first run:
 
 | Field | What to change |
 |-------|---------------|
-| `hic` | One `<hic_type>: /abs/path.hic` entry per Hi-C map (e.g. `control`, `sorbitol`); each condition's `compare_hic` names one |
+| `hic` | One `<hic_type>: /abs/path.hic` entry per Hi-C map (e.g. `condition1`, `condition2`); each condition's `compare_hic` names one |
 | `promoter_stall_bed` | BED of promoter anchors, needed only by conditions with `ctcf_extra: promoter` |
 | `genome` | Path to genome FASTA (for FIMO CTCF orientation) |
 | `samplesheet` | Path to `ChromSimSamplesheet.txt` |
@@ -68,8 +68,8 @@ Tab-separated, two columns:
 
 ```
 CTCF_Type   CTCF_Peaks_Path
-control     /path/to/control_CTCF_peaks.narrowPeak
-sorbitol    /path/to/sorbitol_CTCF_peaks.narrowPeak
+condition1  /path/to/condition1_CTCF_peaks.narrowPeak
+condition2  /path/to/condition2_CTCF_peaks.narrowPeak
 ```
 
 ### `profiles/slurm/config.yaml`

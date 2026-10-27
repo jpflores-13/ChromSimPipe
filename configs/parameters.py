@@ -15,7 +15,7 @@ downstream scripts work without modification:
     get_tiled_ctcf_arrays(), get_msd_pairs()
     DATA, MSD_PROBE, MSD_FIT, CALIBRATION
 
-CTCF types (e.g. "control", "sorbitol") and Hi-C types are whatever names the
+CTCF types (e.g. "condition1", "condition2") and Hi-C types are whatever names the
 config uses — nothing here assumes a particular pair of conditions.
 """
 
