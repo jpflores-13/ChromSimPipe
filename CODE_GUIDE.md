@@ -105,13 +105,13 @@ and `N_MONOMERS` (2,000 — one per kb) are derived automatically by
 `configs/parameters.py` at import time.
 
 **CTCF auto-loading.** When any script imports `configs.parameters`, it
-immediately tries to open the oriented CTCF BED for each condition and locus
-(e.g. `data/ctcf_oriented_hg38_control_<locus>.bed`). It parses each line into
+immediately tries to open the oriented CTCF BED for each CTCF set and locus
+(e.g. `data/ctcf_beds/ctcf_oriented_hg38_condition1_<locus>.bed`). It parses each line into
 `(monomer_position, orientation)` where `+1` means a forward-strand motif
 and `−1` means reverse. If the files don't exist yet, it falls back to
 placeholder dummy sites and prints a warning.
 
-**Cohesin parameters.** Five parameter sets are defined, each a dict with
+**Cohesin parameters.** Each condition has a parameter set, a dict with
 `lifetime` (mean steps before cohesin falls off), `separation` (spacing
 between cohesins), `ctcf_capture` (probability of stalling per CTCF
 encounter), and `ctcf_release` (escape probability per step while stalled).
@@ -301,13 +301,13 @@ Everything here is organised by pipeline stage, top-down:
 
 1. [The Snakemake pipeline files](#the-snakemake-pipeline-files) — **start here**
 2. [Project layout](#project-layout) — what each folder is for
-3. [Configuration](#1-configuration-configsparametersspy) — the single file that controls every simulation
+3. [Configuration](#1-configuration-configsparameterspy) — the single file that controls every simulation
 4. [Hi-C data preparation](#2-hi-c-data-preparation) — turning experimental data into comparison matrices
 5. [CTCF annotation](#3-ctcf-annotation) — turning CUT&Tag peaks into oriented barrier lists
 6. [The LEF dynamics engine](#4-the-lef-dynamics-engine) — the loop-extrusion simulator
-7. [Running simulations](#5-running-simulations) — the one-shot, batch, and multi-GPU entry points
+7. [Running simulations](#5-running-simulations) — the shard, merge, and single-run entry points
 8. [Post-simulation analysis](#6-post-simulation-analysis) — contact maps, P(s), APA, MSD, calibration
-9. [Cluster submit scripts](#cluster-submit-scripts) — legacy sbatch wrappers (superseded by ChromSimPipe.sh)
+9. [Legacy cluster scripts](#legacy-cluster-scripts-legacycluster) — old sbatch wrappers (superseded by ChromSimPipe.sh)
 10. [Conventions you'll see everywhere](#conventions-youll-see-everywhere) — monomers, tiling, output directory names
 11. [Common pitfalls](#common-pitfalls) — what to check when something looks wrong
 
@@ -425,7 +425,7 @@ conda run -p ~/.local/share/mamba/envs/ctcf_extraction \
     --bed /path/to/peaks.narrowPeak \
     --region chr1:64210000-66170000 \
     --genome /path/to/hg38.fa \
-    --output data/ctcf_beds/ctcf_oriented_hg38_control_chr1_64210000_66170000.bed
+    --output data/ctcf_beds/ctcf_oriented_hg38_condition1_chr1_64210000_66170000.bed
 ```
 
 **Output:** BED6 — one row per peak with a usable FIMO hit; column 6 (`+`/`−`)

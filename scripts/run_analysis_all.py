@@ -905,7 +905,8 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                     calibrate_with: str = "hic",
                     expt_msd_overrides: dict[str, str] | None = None,
                     repo_root: str | None = None,
-                    reuse_heavy: bool = False):
+                    reuse_heavy: bool = False,
+                    merged_dirs: list[str] | None = None):
     """
     Pool conformations across all replicates for each condition, then compute
     a single contact map from the combined ensemble and run the full modular
@@ -914,6 +915,9 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
 
     Also writes ``ps_overlay_all_conditions.png`` summarising every pooled
     condition on one log-log axis.
+
+    ``merged_dirs`` limits pooling to those merged directories (used by
+    ``--condition``); by default every merged dir in ``results_dir`` is pooled.
     """
     import numpy as np
     from contact_maps import (
@@ -934,7 +938,7 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
     pooled_maps: dict[str, np.ndarray] = {}
 
     # Group directories by condition (strip _rep<N>)
-    all_dirs = discover_merged_dirs(results_dir)
+    all_dirs = merged_dirs if merged_dirs is not None else discover_merged_dirs(results_dir)
     condition_groups = defaultdict(list)
     for d in all_dirs:
         base = os.path.basename(d)
@@ -1546,7 +1550,7 @@ def main():
     logger.info(f"Phase 1 complete: {n_ok} succeeded, {n_fail} failed.")
 
     # ── Phase 2: pool replicates per condition ───────────────────────────
-    if not args.no_pool and not args.condition:
+    if not args.no_pool:
         logger.info("")
         logger.info("=" * 60)
         logger.info("PHASE 2: Pooling replicates per condition (Hansen lab style)")
@@ -1565,12 +1569,11 @@ def main():
             calibrate_with=args.calibrate_with,
             expt_msd_overrides=expt_msd_overrides,
             reuse_heavy=args.reuse_heavy,
+            merged_dirs=dirs_to_analyse if args.condition else None,
         )
         logger.info("Phase 2 complete.")
-    elif args.no_pool:
+    else:
         logger.info("Skipping Phase 2 (--no-pool)")
-    elif args.condition:
-        logger.info("Skipping Phase 2 (single-condition mode)")
 
     # ── Phase 3: between-condition MSD statistics ───────────────────────
     # Aggregates per-replicate alpha and K_alpha values across conditions
