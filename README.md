@@ -230,8 +230,8 @@ results/
 ## Cohesin parameters
 
 The default parameter set is derived from **Gabriele et al. 2022** (*Science*)
-single-molecule imaging in mESCs. Adjust `SIMULATION_CONDITIONS` in
-`configs/parameters.py` for your biological context.
+single-molecule imaging in mESCs. Adjust the `conditions:` list in
+`config/ChromSimConfig.yaml` for your biological context.
 
 | Parameter | Default value | Meaning |
 |-----------|--------------|---------|
