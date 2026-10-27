@@ -54,7 +54,8 @@ Edit **once** before the first run:
 
 | Field | What to change |
 |-------|---------------|
-| `hic_control` / `hic_sorbitol` | Absolute paths to your `.hic` maps |
+| `hic` | One `<hic_type>: /abs/path.hic` entry per Hi-C map (e.g. `control`, `sorbitol`); each condition's `compare_hic` names one |
+| `promoter_stall_bed` | BED of promoter anchors, needed only by conditions with `ctcf_extra: promoter` |
 | `genome` | Path to genome FASTA (for FIMO CTCF orientation) |
 | `samplesheet` | Path to `ChromSimSamplesheet.txt` |
 | `locus > name` | Active locus key (e.g. `chr1_fig1`) |

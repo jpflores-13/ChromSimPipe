@@ -47,12 +47,11 @@ Usage
 # Analyse everything found under results/polychrom_3d/:
     python scripts/run_analysis_all.py --results-dir results/polychrom_3d
 
-# Compare with experimental Hi-C (either legacy .npy OR .mcool):
+# Each condition is compared with its compare_hic map from the config,
+# looked up as <hic-dir>/<hic_type>.cool (or .npy), else data/mcool/:
     python scripts/run_analysis_all.py \\
         --results-dir results/polychrom_3d \\
-        --hic-dir data/hic_matrices \\
-        --mcool-mesc data/hic/bonev_mESC.mcool \\
-        --mcool-neuron data/hic/bonev_CN.mcool
+        --hic-dir data/mcool
 
 Options
 -------
@@ -63,13 +62,11 @@ Options
 --no-pool            Skip the pooled-replicate step
 --no-apa             Skip absolute-loop-quant APA pileups
 --no-ctcf-overlay    Skip the CTCF-aligned figure and relative BED
---mcool-mesc PATH    mcool file for mESC (overrides .npy match)
---mcool-neuron PATH  mcool file for neurons (overrides .npy match)
---ctcf-bed-mesc PATH Override CTCF BED for mESC (else uses data/ctcf_oriented_*ES*.bed)
---ctcf-bed-neuron P  Override CTCF BED for neurons (else data/ctcf_oriented_*CN*.bed)
---elements-bed-mesc PATH   Optional BED of non-CTCF sticky elements (enhancers / promoters)
-                           to overlay on the mESC contact-map 1D track.
---elements-bed-neuron PATH Same as --elements-bed-mesc but for neuron conditions.
+--mcool HIC_TYPE=PATH      Override the mcool used for a compare_hic type (repeatable)
+--ctcf-bed CTCF_TYPE=PATH  Override the oriented CTCF BED for a ctcf_type (repeatable)
+--elements-bed CTCF_TYPE=PATH
+                           Optional BED of non-CTCF sticky elements (enhancers /
+                           promoters) to overlay for that ctcf_type (repeatable).
 --elements-label TEXT      Legend label for the sticky-element overlay.
                            Default: 'enhancers/promoters'.
 """
@@ -122,194 +119,119 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Hi-C reference lookup
+# Condition → CTCF type / Hi-C reference lookup (from config/ChromSimConfig.yaml)
 # ---------------------------------------------------------------------------
+# Merged directories are named merged_{params_name}_ctcf-{ctcf_type}_rep{N}
+# (see scripts/merge_shards.py). The matching condition in the config says
+# which CTCF set was simulated and which Hi-C map (compare_hic) to compare to.
 
-# Map condition name patterns → Hi-C .npy filename (looked up in --hic-dir).
-# Keys are regex patterns matched against the merged directory base name.
-# Edit this table when you add new Hi-C matrices.
-# Order matters: the first pattern that matches wins.  The rules below
-# are deliberately generous so they cover both the "verbose" sweep
-# names (e.g. "mESC_ctcf-mESC_blk0.5") and the "short" hand-rolled
-# names we use for smoke tests and one-off runs (e.g. "test_mESC",
-# "CN_long_residency").  Case-insensitive matching.
-#
-# NEURON patterns come first, so a dir named like "mESC_vs_CN_compare"
-# or "test_CN_long_residency" is not accidentally matched by the mESC
-# rule (which would silently compare the neuron sim to mESC Hi-C; the
-# wrong reference).
-HIC_CONDITION_MAP = [
-    # --- neuron / cortical-neuron flavours ---
-    (r"(?i)ctcf-neuron",                   "hic_CN_Sox2.npy"),
-    (r"(?i)(^|[_\-])(cn|neuron|neurons|cortical)([_\-]|$)",
-                                           "hic_CN_Sox2.npy"),
-    # --- mESC / embryonic-stem flavours ---
-    (r"(?i)ctcf-mesc",                     "hic_mESC_Sox2.npy"),
-    (r"(?i)(^|[_\-])(mesc|es|esc)([_\-]|$)",
-                                           "hic_mESC_Sox2.npy"),
-    # --- fallback: mESC Hi-C, but log a warning so it's visible ---
-    (r".*",                                "hic_mESC_Sox2.npy"),
-]
+from configs.parameters import (  # noqa: E402
+    SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_BEDS, MCOOL_FILES,
+)
 
-
-def find_hic_path(base_name: str, hic_dir: str) -> str | None:
-    """
-    Return path to experimental Hi-C .npy for this condition, or None.
-
-    Logs which rule in HIC_CONDITION_MAP matched, and warns loudly if
-    the match was the catch-all fallback; that usually means a sim
-    directory got named in a way the routing didn't anticipate, and
-    getting a wrong comparison silently is worse than no comparison.
-    """
-    if not hic_dir or not os.path.isdir(hic_dir):
-        return None
-    for i, (pattern, filename) in enumerate(HIC_CONDITION_MAP):
-        if re.search(pattern, base_name):
-            candidate = os.path.join(hic_dir, filename)
-            if os.path.exists(candidate):
-                is_fallback = (i == len(HIC_CONDITION_MAP) - 1)
-                if is_fallback:
-                    logger.warning(
-                        f"    [HiC routing] {base_name!r} matched only "
-                        f"the fallback rule → {filename}.  Double-check "
-                        f"this is the reference you want; if the sim "
-                        f"is a neuron condition, rename the directory "
-                        f"or add a rule in HIC_CONDITION_MAP."
-                    )
-                else:
-                    logger.info(
-                        f"    [HiC routing] {base_name!r} → {filename}  "
-                        f"(rule: {pattern!r})"
-                    )
-                return candidate
-    return None
-
-
-# ---------------------------------------------------------------------------
-# Cell-type inference + CTCF BED lookup
-# ---------------------------------------------------------------------------
-
-def infer_cell_type(base_name: str) -> str:
-    """
-    Returns 'mESC' for mESC conditions, 'neuron' for CN / neuron conditions.
-    Uses the same 'ctcf-<type>' convention as the HIC_CONDITION_MAP, plus a
-    loose substring match on "CN_" / "neuron" / "_CN" so test directories
-    like 'test_CN_long_residency' are classified correctly.
-    """
-    b = base_name
-    neuron_markers = ("ctcf-neuron", "neuron", "_CN_", "_CN", "CN_")
-    if any(m in b or b.startswith(m) for m in neuron_markers):
-        return "neuron"
-    return "mESC"
-
-
-# ---------------------------------------------------------------------------
-# Default CTCF BED candidates (SINGLE POINT OF TRUTH)
-# ---------------------------------------------------------------------------
-# The preferred path for each cell type comes from configs.parameters so
-# that a user who edits CTCF_BED_MESC / CTCF_BED_NEURON in that file once
-# gets the new track picked up here too, without having to touch this
-# script.  Historical filenames below are kept as fallbacks so runs on
-# legacy checkouts continue to work if the config import is unavailable.
-# ---------------------------------------------------------------------------
-_CTCF_BED_FALLBACKS = {
-    # Bruce4 (ENCFF508CKL) is the canonical mESC reference used by
-    # CTCF_BED_MESC in configs/parameters.py; it must come first so that
-    # if the parameters.py import fails we still land on the file that
-    # actually ships with the repo. The GSE96107 ES spelling is kept as
-    # a secondary fallback for historical checkouts.
-    "mESC": [
-        "ctcf_oriented_mm10_mESC_Bruce4_chr3_34000000_36000000.bed",
-        "ctcf_oriented_mm10_GSE96107_ES_chr3_34000000_36000000.bed",
-    ],
-    "neuron": [
-        "ctcf_oriented_mm10_GSE96107_CN_chr3_34000000_36000000.bed",
-        "ctcf_oriented_mm10_GSE96107_NPC_chr3_34000000_36000000.bed",
-    ],
+_CONDITION_BY_KEY = {
+    f"{c['params']['name']}_ctcf-{c['ctcf_type']}": c for c in SIMULATION_CONDITIONS
 }
-
-try:
-    from configs.parameters import (
-        CTCF_BED_MESC   as _CFG_CTCF_MESC,
-        CTCF_BED_NEURON as _CFG_CTCF_NEURON,
-    )
-    _CTCF_BED_FROM_CONFIG = {"mESC": _CFG_CTCF_MESC, "neuron": _CFG_CTCF_NEURON}
-except Exception as _exc:  # noqa: BLE001
-    logger.warning(
-        "could not import CTCF paths from configs.parameters (%r); "
-        "falling back to historical defaults.", _exc)
-    _CTCF_BED_FROM_CONFIG = {"mESC": None, "neuron": None}
+_CTCF_TYPE_RE = re.compile(r"_ctcf-([^_]+)")
 
 
-def default_ctcf_bed(cell_type: str, repo_root: str) -> str | None:
-    """
-    Return the default oriented CTCF BED path for a given cell type.
+def parse_type_overrides(values: list[str] | None, flag: str) -> dict[str, str]:
+    """Parse repeated TYPE=PATH command-line values into a dict."""
+    out: dict[str, str] = {}
+    for v in values or []:
+        if "=" not in v:
+            raise SystemExit(f"{flag} expects TYPE=PATH, got {v!r}")
+        k, path = v.split("=", 1)
+        out[k] = path
+    return out
 
-    Resolution order:
-      1. ``configs.parameters.CTCF_BED_{MESC,NEURON}`` if importable and
-         non-None; this is the user-editable single-point-of-truth.
-         Relative paths are resolved against ``repo_root``.
-      2. Historical fallback filenames in ``_CTCF_BED_FALLBACKS`` (all
-         looked up under ``<repo_root>/data/``), for checkouts that
-         haven't populated the config variables yet.
 
-    Returns the first path that exists on disk, or ``None`` if nothing
-    matches (in which case the caller should either supply an explicit
-    ``--ctcf-bed-*`` override or skip the CTCF-overlay step).
-    """
-    key = "neuron" if cell_type == "neuron" else "mESC"
-
-    candidates: list[str] = []
-    cfg = _CTCF_BED_FROM_CONFIG.get(key)
-    if cfg:
-        candidates.append(cfg if os.path.isabs(cfg)
-                          else os.path.join(repo_root, cfg))
-    data_dir = os.path.join(repo_root, "data")
-    for name in _CTCF_BED_FALLBACKS[key]:
-        candidates.append(os.path.join(data_dir, name))
-
-    for p in candidates:
-        if os.path.exists(p):
-            return p
+def lookup_condition(base_name: str) -> dict | None:
+    """Return the config condition for a merged/pooled dir or condition name."""
+    b = base_name[len("merged_"):] if base_name.startswith("merged_") else base_name
+    b = re.sub(r"_rep\d+$", "", b)
+    if b in _CONDITION_BY_KEY:
+        return _CONDITION_BY_KEY[b]
+    for key in sorted(_CONDITION_BY_KEY, key=len, reverse=True):
+        if b.startswith(key):
+            return _CONDITION_BY_KEY[key]
     return None
+
+
+def infer_cell_type(base_name: str) -> str | None:
+    """Return the ctcf_type a directory was simulated with, or None."""
+    cond = lookup_condition(base_name)
+    if cond:
+        return cond["ctcf_type"]
+    m = _CTCF_TYPE_RE.search(base_name)
+    return m.group(1) if m else None
+
+
+def find_hic_path(base_name: str, hic_dir: str | None) -> str | None:
+    """Return an experimental Hi-C .npy (<hic_dir>/<compare_hic>.npy), or None."""
+    cond = lookup_condition(base_name)
+    if not hic_dir or not cond or not cond.get("compare_hic"):
+        return None
+    candidate = os.path.join(hic_dir, f"{cond['compare_hic']}.npy")
+    return candidate if os.path.exists(candidate) else None
+
+
+def default_ctcf_bed(cell_type: str | None, repo_root: str) -> str | None:
+    """Return the oriented CTCF BED for a ctcf_type if it exists on disk."""
+    rel = CTCF_BEDS.get(cell_type) if cell_type else None
+    if not rel:
+        return None
+    path = rel if os.path.isabs(rel) else os.path.join(repo_root, rel)
+    return path if os.path.exists(path) else None
 
 
 def resolve_ctcf_bed(
     base_name: str,
-    override_mesc: str | None,
-    override_neuron: str | None,
+    overrides: dict[str, str],
     repo_root: str,
-) -> tuple[str, str | None]:
-    """(cell_type, bed_path); returns None for bed_path if no file was found."""
+) -> tuple[str | None, str | None]:
+    """(ctcf_type, bed_path); bed_path is None if no file was found."""
     ct = infer_cell_type(base_name)
-    if ct == "neuron" and override_neuron:
-        return ct, override_neuron
-    if ct == "mESC" and override_mesc:
-        return ct, override_mesc
+    if ct in overrides:
+        return ct, overrides[ct]
     return ct, default_ctcf_bed(ct, repo_root)
+
+
+def find_mcool(hic_type: str, hic_dir: str | None,
+               overrides: dict[str, str]) -> str | None:
+    """Return the first existing mcool for a Hi-C type: override, hic_dir, data/mcool."""
+    candidates = [overrides.get(hic_type)]
+    if hic_dir:
+        candidates.append(os.path.join(hic_dir, f"{hic_type}.cool"))
+    candidates.append(os.path.join(_REPO_ROOT, MCOOL_FILES[hic_type]))
+    return next((c for c in candidates if c and os.path.exists(c)), None)
 
 
 def resolve_mcool(
     base_name: str,
-    mcool_mesc: str | None,
-    mcool_neuron: str | None,
+    hic_dir: str | None,
+    overrides: dict[str, str],
 ) -> str | None:
-    ct = infer_cell_type(base_name)
-    return mcool_neuron if ct == "neuron" else mcool_mesc
+    """Return the mcool for the condition's compare_hic map, or None."""
+    cond = lookup_condition(base_name)
+    hic = cond.get("compare_hic") if cond else None
+    if not hic:
+        logger.info(f"    [HiC routing] {base_name!r}: no compare_hic in config")
+        return None
+    path = find_mcool(hic, hic_dir, overrides)
+    if path:
+        logger.info(f"    [HiC routing] {base_name!r} → {hic} ({path})")
+    else:
+        logger.warning(f"    [HiC routing] {base_name!r}: mcool for '{hic}' not found")
+    return path
 
 
-def resolve_elements_bed(
-    base_name: str,
-    elements_mesc: str | None,
-    elements_neuron: str | None,
-) -> str | None:
+def resolve_elements_bed(base_name: str, overrides: dict[str, str]) -> str | None:
     """
     Return the "sticky-element" BED (enhancers / promoters / other) for the
-    condition, or None if the user didn't supply one. Unlike CTCF BEDs, we
-    don't ship defaults; sticky elements are study-specific.
+    condition's ctcf_type, or None if the user didn't supply one.
     """
-    ct = infer_cell_type(base_name)
-    return elements_neuron if ct == "neuron" else elements_mesc
+    return overrides.get(infer_cell_type(base_name))
 
 
 # ---------------------------------------------------------------------------
@@ -321,7 +243,7 @@ MERGED_PREFIX = "merged_"
 
 
 def parse_condition_rep(base_name: str) -> tuple[str, int]:
-    """Parse 'CN_long_residency_ctcf-neuron_rep3' → ('CN_long_residency_ctcf-neuron', 3).
+    """Parse 'sorbitol_null_ctcf-sorbitol_rep3' → ('sorbitol_null_ctcf-sorbitol', 3).
 
     A leading 'merged_' (the prefix written by scripts/merge_shards.py for
     merged simulation directories) is stripped before parsing so condition
@@ -466,8 +388,8 @@ def _run_msd_and_dynamics(
     common_dir : str
         Flat output folder (results/analysis/) where every artefact lands.
     file_prefix : str
-        Stem prepended to every filename (e.g. ``mESC_2400blk_rep0`` or
-        ``mESC_7200blk_pooled``).
+        Stem prepended to every filename (e.g. ``control_ctcf-control_2400blk_rep0`` or
+        ``control_ctcf-control_7200blk_pooled``).
     display_name : str, optional
         Short human label used only in plot titles and log lines.
     calibrate_with : {"hic", "msd", "none"}
@@ -938,7 +860,7 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                             logger.info(f"    [calib hic] could not compute expt P(s): {e}")
 
                     _run_msd_and_dynamics(
-                        conformations, cell_type=cell_type or "mESC",
+                        conformations, cell_type=cell_type or CTCF_TYPES[0],
                         common_dir=common_dir, file_prefix=file_prefix,
                         display_name=base_name,
                         do_msd=do_msd,
@@ -972,20 +894,16 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
 
 def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                     n_jobs: int,
-                    ctcf_bed_mesc: str | None = None,
-                    ctcf_bed_neuron: str | None = None,
-                    mcool_mesc: str | None = None,
-                    mcool_neuron: str | None = None,
-                    elements_bed_mesc: str | None = None,
-                    elements_bed_neuron: str | None = None,
+                    ctcf_bed_overrides: dict[str, str] | None = None,
+                    mcool_overrides: dict[str, str] | None = None,
+                    elements_bed_overrides: dict[str, str] | None = None,
                     elements_label: str = "enhancers/promoters",
                     do_apa: bool = True,
                     do_ctcf_overlay: bool = True,
                     do_msd: bool = True,
                     do_polymer_dynamics: bool = True,
                     calibrate_with: str = "hic",
-                    expt_msd_mesc: str | None = None,
-                    expt_msd_neuron: str | None = None,
+                    expt_msd_overrides: dict[str, str] | None = None,
                     repo_root: str | None = None,
                     reuse_heavy: bool = False):
     """
@@ -1146,10 +1064,10 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
 
             # --- CTCF relative BED + overlay on the pooled map ---
             cell_type, bed_path = resolve_ctcf_bed(
-                condition, ctcf_bed_mesc, ctcf_bed_neuron, repo_root,
+                condition, ctcf_bed_overrides or {}, repo_root,
             )
             elements_path = resolve_elements_bed(
-                condition, elements_bed_mesc, elements_bed_neuron,
+                condition, elements_bed_overrides or {},
             )
             positions: list[int] = []
             orientations: list[int] = []
@@ -1204,7 +1122,7 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
 
             # --- Experimental comparison: .npy first, then mcool ---
             hic_path = find_hic_path(condition, hic_dir)
-            mcool_path = resolve_mcool(condition, mcool_mesc, mcool_neuron)
+            mcool_path = resolve_mcool(condition, hic_dir, mcool_overrides or {})
 
             if hic_path and os.path.exists(hic_path):
                 exp_map = np.load(hic_path)
@@ -1257,8 +1175,7 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                         except Exception as e:
                             logger.info(f"    [calib hic] expt P(s) unavailable: {e}")
 
-                    expt_msd_csv = (expt_msd_neuron if cell_type == "neuron"
-                                    else expt_msd_mesc)
+                    expt_msd_csv = (expt_msd_overrides or {}).get(cell_type)
 
                     _run_msd_and_dynamics(
                         all_conformations, cell_type=cell_type,
@@ -1305,11 +1222,11 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
             deriv_json = os.path.join(
                 common_dir, "ps_derivative_table.json")
 
-            # Pull experimental P(s) from the cell-type mcool(s) once.
+            # Pull experimental P(s) from each Hi-C map once.
             exp_curves: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-            for ct_key, mc_path in (("mESC", mcool_mesc),
-                                     ("neuron", mcool_neuron)):
-                if mc_path and os.path.exists(mc_path):
+            for ct_key in MCOOL_FILES:
+                mc_path = find_mcool(ct_key, hic_dir, mcool_overrides or {})
+                if mc_path:
                     try:
                         e_d, e_p = ps_mod.compute_ps_from_cooler(
                             mc_path,
@@ -1348,10 +1265,9 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
     if pooled_maps:
         try:
             from configs.parameters import get_msd_pairs
-            # Use the mESC pair list by default. With require_conserved=True
-            # the pairs are identical across cell types, so the specific
-            # choice of "mESC" vs "neuron" does not matter.
-            msd_pairs = get_msd_pairs("mESC")
+            # With require_conserved=True the pairs are identical across
+            # ctcf_types, so using the first type is enough.
+            msd_pairs, _ = get_msd_pairs(CTCF_TYPES[0])
         except Exception as e:
             logger.warning(f"  AbLE: could not resolve MSD pairs ({e}); "
                            f"skipping AbLE-on-conserved-pairs table.")
@@ -1398,10 +1314,11 @@ def main():
                              "Default: results/analysis/ (sibling of --results-dir)")
     parser.add_argument("--condition", type=str, default=None,
                         help="Analyse only this specific merged dir name "
-                             "(e.g. mESC_ctcf-mESC_rep0). Default: all.")
+                             "(a condition name from the config). Default: all.")
     parser.add_argument("--hic-dir", type=str, default=None,
-                        help="Directory containing experimental Hi-C .npy matrices. "
-                             "If not provided, comparison metrics are skipped.")
+                        help="Directory with experimental Hi-C named after the "
+                             "config's compare_hic types (<type>.cool or <type>.npy). "
+                             "Falls back to data/mcool/<type>.cool.")
     parser.add_argument("--n-jobs", type=int, default=4,
                         help="Parallel workers for contact detection within each dir "
                              "(default 4). Each directory analysis uses this many cores.")
@@ -1438,21 +1355,16 @@ def main():
                         help="Skip the APA / absolute loop quantification step.")
     parser.add_argument("--no-ctcf-overlay", action="store_true",
                         help="Skip the CTCF relative BED + aligned figure step.")
-    parser.add_argument("--mcool-mesc", type=str, default=None,
-                        help="Path to experimental mESC mcool for comparison.")
-    parser.add_argument("--mcool-neuron", type=str, default=None,
-                        help="Path to experimental neuron mcool for comparison.")
-    parser.add_argument("--ctcf-bed-mesc", type=str, default=None,
-                        help="Override oriented CTCF BED for mESC conditions.")
-    parser.add_argument("--ctcf-bed-neuron", type=str, default=None,
-                        help="Override oriented CTCF BED for neuron conditions.")
-    parser.add_argument("--elements-bed-mesc", type=str, default=None,
+    parser.add_argument("--mcool", action="append", metavar="HIC_TYPE=PATH",
+                        help="Override the experimental mcool for a compare_hic "
+                             "type from the config. Repeatable.")
+    parser.add_argument("--ctcf-bed", action="append", metavar="CTCF_TYPE=PATH",
+                        help="Override the oriented CTCF BED for a ctcf_type. Repeatable.")
+    parser.add_argument("--elements-bed", action="append", metavar="CTCF_TYPE=PATH",
                         help="Optional BED of non-CTCF sticky elements "
-                             "(enhancers/promoters/boundaries) for mESC "
-                             "conditions. Drawn as '■' markers on the 1D "
-                             "tracks above and left of the contact map.")
-    parser.add_argument("--elements-bed-neuron", type=str, default=None,
-                        help="Same as --elements-bed-mesc but for neurons.")
+                             "(enhancers/promoters/boundaries) for conditions "
+                             "with that ctcf_type. Drawn as '■' markers on the "
+                             "1D tracks above and left of the contact map. Repeatable.")
     parser.add_argument("--elements-label", type=str, default="enhancers/promoters",
                         help="Legend label for the sticky-element overlay "
                              "(default: 'enhancers/promoters').")
@@ -1470,15 +1382,13 @@ def main():
                              "'hic': match sim P(s) to experimental Hi-C P(s) "
                              "at a reference separation (default; uses the "
                              "mcool files already provided above). "
-                             "'msd': Fbn2-style MSD match, needs "
-                             "--expt-msd-mesc / --expt-msd-neuron. "
+                             "'msd': Fbn2-style MSD match, needs --expt-msd. "
                              "'none': skip calibration.")
-    parser.add_argument("--expt-msd-mesc", type=str, default=None,
+    parser.add_argument("--expt-msd", action="append", metavar="CTCF_TYPE=PATH",
                         help="CSV with columns (dt_s, msd_um2) giving the "
-                             "experimental two-point MSD on the Sox2 locus "
-                             "in mESCs; used by --calibrate-with msd.")
-    parser.add_argument("--expt-msd-neuron", type=str, default=None,
-                        help="Same as --expt-msd-mesc but for neuron conditions.")
+                             "experimental two-point MSD at the simulated locus "
+                             "for that ctcf_type; used by --calibrate-with msd. "
+                             "Repeatable.")
     # --- between-condition MSD statistics (Phase 3) ---
     parser.add_argument("--no-msd-stats", action="store_true",
                         help="Skip the between-condition MSD statistics step "
@@ -1513,6 +1423,10 @@ def main():
                              "the first condition discovered (alphabetical "
                              "within the pooled set).")
     args = parser.parse_args()
+    mcool_overrides    = parse_type_overrides(args.mcool, "--mcool")
+    ctcf_bed_overrides = parse_type_overrides(args.ctcf_bed, "--ctcf-bed")
+    elements_overrides = parse_type_overrides(args.elements_bed, "--elements-bed")
+    expt_msd_overrides = parse_type_overrides(args.expt_msd, "--expt-msd")
 
     if not os.path.isdir(args.results_dir):
         logger.error(f"Results directory not found: {args.results_dir}")
@@ -1529,7 +1443,7 @@ def main():
 
     # Discover directories
     if args.condition:
-        from configs.parameters import get_condition, SIMULATION_CONDITIONS
+        from configs.parameters import get_condition
         try:
             cond = get_condition(args.condition)
         except ValueError:
@@ -1564,14 +1478,11 @@ def main():
         base_name = os.path.basename(sim_dir)
         hic_path  = find_hic_path(base_name, args.hic_dir)
         cell_type, ctcf_bed = resolve_ctcf_bed(
-            base_name, args.ctcf_bed_mesc, args.ctcf_bed_neuron, _REPO_ROOT,
+            base_name, ctcf_bed_overrides, _REPO_ROOT,
         )
-        mcool_path = resolve_mcool(base_name, args.mcool_mesc, args.mcool_neuron)
-        elements_bed = resolve_elements_bed(
-            base_name, args.elements_bed_mesc, args.elements_bed_neuron,
-        )
-        expt_msd_csv = (args.expt_msd_neuron if cell_type == "neuron"
-                        else args.expt_msd_mesc)
+        mcool_path = resolve_mcool(base_name, args.hic_dir, mcool_overrides)
+        elements_bed = resolve_elements_bed(base_name, elements_overrides)
+        expt_msd_csv = expt_msd_overrides.get(cell_type)
         work_items.append(dict(
             sim_dir=sim_dir,
             hic_path=hic_path,
@@ -1642,12 +1553,9 @@ def main():
         logger.info("=" * 60)
         pool_replicates(
             args.results_dir, common_dir, args.hic_dir, args.n_jobs,
-            ctcf_bed_mesc=args.ctcf_bed_mesc,
-            ctcf_bed_neuron=args.ctcf_bed_neuron,
-            mcool_mesc=args.mcool_mesc,
-            mcool_neuron=args.mcool_neuron,
-            elements_bed_mesc=args.elements_bed_mesc,
-            elements_bed_neuron=args.elements_bed_neuron,
+            ctcf_bed_overrides=ctcf_bed_overrides,
+            mcool_overrides=mcool_overrides,
+            elements_bed_overrides=elements_overrides,
             elements_label=args.elements_label,
             do_apa=not args.no_apa,
             do_ctcf_overlay=not args.no_ctcf_overlay,
@@ -1655,8 +1563,7 @@ def main():
             do_msd=not args.no_msd,
             do_polymer_dynamics=not args.no_polymer_dynamics,
             calibrate_with=args.calibrate_with,
-            expt_msd_mesc=args.expt_msd_mesc,
-            expt_msd_neuron=args.expt_msd_neuron,
+            expt_msd_overrides=expt_msd_overrides,
             reuse_heavy=args.reuse_heavy,
         )
         logger.info("Phase 2 complete.")

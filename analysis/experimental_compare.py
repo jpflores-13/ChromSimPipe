@@ -3,7 +3,7 @@
 Optional experimental Hi-C / Micro-C comparison helpers.
 
 Loads a ``.mcool`` (or ``.cool``) file at the same resolution the simulation
-uses, extracts the Sox2 locus, and provides convenience routines to compare
+uses, extracts the simulated locus, and provides convenience routines to compare
 it with simulated data using the P(s) and APA modules.
 
 If cooler is not installed or the mcool path doesn't exist, every function

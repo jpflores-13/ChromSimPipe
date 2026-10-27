@@ -10,10 +10,10 @@ After all shards finish, use merge_shards.py to combine conformations.
 
 Usage:
     python run_simulation_shard.py \
-        --params mESC --replicate 0 \
+        --condition control_ctcf-control --replicate 0 \
         --shard-index 0 --n-shards 4 --gpu 0
 
-This is called by cluster/submit_polychrom_multigpu.sh.
+This is called by the simulate_shard rule in workflows/ChromSimPipe.snakefile.
 """
 
 import os
@@ -26,8 +26,8 @@ import h5py
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configs.parameters import (
-    POLYMER, SMC_BOND, SIM_RUN, N_MONOMERS, TILING,
-    get_ctcf_arrays, get_tiled_ctcf_arrays,
+    POLYMER, SMC_BOND, SIM_RUN, N_MONOMERS, TILING, CTCF_TYPES,
+    get_condition, get_tiled_ctcf_arrays,
 )
 from scripts.lef_dynamics import LEFSimulator
 from scripts.run_simulation import get_param_set, resolve_condition, initialize_polymer
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
-              ctcf_type="mESC", shard_index_offset=0):
+              ctcf_type, ctcf_extra=None, shard_index_offset=0):
     """
     Run one shard of the simulation.
 
@@ -69,14 +69,18 @@ def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
 
     with open(os.path.join(shard_dir, "params.json"), "w") as f:
         json.dump({
-            **params, "ctcf_type": ctcf_type, "replicate": replicate,
+            **params, "ctcf_type": ctcf_type, "ctcf_extra": ctcf_extra,
+            "replicate": replicate,
             "shard_index": global_shard_index, "n_shards": n_shards,
             "blocks_per_shard": blocks_per_shard, "seed": shard_seed,
             "tiling": TILING,
         }, f, indent=2, default=str)
 
     # --- Initialize LEF simulator on the FULL tiled chromosome ---
-    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(condition=ctcf_type)
+    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(ctcf_type, ctcf_extra=ctcf_extra)
+    logger.info(f"Shard {shard_index}: CTCF={ctcf_type}"
+                f"{'+' + ctcf_extra if ctcf_extra else ''}, "
+                f"{len(ctcf_pos) // n_tiles} barriers per tile")
     n_lefs = max(1, N // params["separation"])
 
     lef_sim = LEFSimulator(
@@ -370,7 +374,7 @@ def main():
     parser.add_argument("--params", type=str, default=None,
                         help="Parameter set name (legacy, use --condition instead)")
     parser.add_argument("--ctcf-type", type=str, default=None,
-                        choices=["mESC", "neuron"])
+                        choices=CTCF_TYPES)
     parser.add_argument("--replicate", type=int, required=True)
     parser.add_argument("--shard-index", type=int, required=True)
     parser.add_argument("--n-shards", type=int, required=True)
@@ -391,9 +395,10 @@ def main():
         params_name=args.params,
         ctcf_type=args.ctcf_type,
     )
+    ctcf_extra = get_condition(args.condition).get("ctcf_extra") if args.condition else None
 
     run_shard(params, args.replicate, args.shard_index, args.n_shards,
-              args.gpu, args.output, ctcf_type=ctcf_type,
+              args.gpu, args.output, ctcf_type=ctcf_type, ctcf_extra=ctcf_extra,
               shard_index_offset=args.shard_index_offset)
 
 

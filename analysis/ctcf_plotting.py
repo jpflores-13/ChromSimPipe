@@ -267,11 +267,20 @@ def _is_placeholder_label(label: str) -> bool:
     return any(label.startswith(p) for p in _PLACEHOLDER_PREFIXES)
 
 
+def default_genome_assembly() -> str:
+    """UCSC assembly name from config/ChromSimConfig.yaml (genome_assembly)."""
+    try:
+        from configs.parameters import GENOME_ASSEMBLY
+        return GENOME_ASSEMBLY
+    except Exception:  # noqa: BLE001
+        return "hg38"
+
+
 def fetch_ucsc_genes(
     chrom: str,
     start_bp: int,
     end_bp: int,
-    genome: str = "mm10",
+    genome: Optional[str] = None,
     track: str = "ncbiRefSeqCurated",
     timeout: float = 30.0,
 ):
@@ -285,6 +294,7 @@ def fetch_ucsc_genes(
     On network / API error, returns ``None`` and logs a warning — the
     caller can still produce a figure without the gene strip.
     """
+    genome = genome or default_genome_assembly()
     url = (f"https://api.genome.ucsc.edu/getData/track?"
            f"genome={genome};track={track};"
            f"chrom={chrom};start={start_bp};end={end_bp}")
@@ -696,7 +706,7 @@ def emit_ctcf_bed_and_figure(
     elements_color: str = "#33bbee",
     elements_ms: int = 4,
     fetch_genes: bool = True,
-    genome: str = "mm10",
+    genome: Optional[str] = None,
     label_placeholders: bool = True,
 ) -> Tuple[int, List[int], List[int]]:
     """

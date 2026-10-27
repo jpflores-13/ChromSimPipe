@@ -9,17 +9,22 @@
 samplesheet: 'ChromSimSamplesheet.txt'
 
 ## ── Hi-C input files ─────────────────────────────────────────────────────────
-## Absolute paths to your .hic contact maps (one per condition).
-## These are converted to .mcool by the convert_hic rule.
-##
-## Example (STRS project):
-##   hic_control:  '/path/to/STRS/hic/maps/control_megaMap_inter_30.hic'
-##   hic_sorbitol: '/path/to/STRS/hic/maps/sorbitol_megaMap_inter_30.hic'
-hic_control:  '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic'
-hic_sorbitol: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic'
+## One entry per Hi-C map: <hic_type>: <absolute path to .hic>.
+## The hic_type names are your choice; each condition's compare_hic must be
+## one of them. Each map is converted to data/mcool/<hic_type>.cool.
+hic:
+  control:  '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic'
+  sorbitol: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic'
+
+## ── Promoter stall sites (optional) ──────────────────────────────────────────
+## BED of promoter anchors used by conditions with `ctcf_extra: promoter`.
+## Sites are non-directional (they stall cohesin from either side) and use the
+## condition's ctcf_capture / ctcf_release. While empty, Snakemake skips every
+## condition with `ctcf_extra: promoter` (and says so when it starts).
+promoter_stall_bed: ''
 
 ## ── Genome FASTA ─────────────────────────────────────────────────────────────
-## Used by extract_ctcf_sites.py (FIMO motif orientation).
+## Used by scripts/extract_ctcf_sites_hg38.py (FIMO motif orientation).
 ## Longleaf default shown; change if running on a different cluster.
 genome: '/proj/phanstiel_lab/Reference/human/hg38/fasta/GRCh38.primary_assembly.genome.fa'
 genome_assembly: 'hg38'
@@ -61,9 +66,9 @@ locus:
 ##   separation   — inter-cohesin spacing in monomers
 ##   ctcf_capture — stalling probability per CTCF encounter (0–1)
 ##   ctcf_release — escape probability per step while stalled (0–1)
-##   ctcf_type    — "control" or "sorbitol" (selects which CTCF peaks to load)
-##   ctcf_extra   — optional: "promoter" merges promoter stall sites with CTCF sites
-##   compare_hic  — "control" or "sorbitol" (which Hi-C map to compare against)
+##   ctcf_type    — CTCF peak set to load; must match a CTCF_Type in the samplesheet
+##   ctcf_extra   — optional: "promoter" adds the promoter_stall_bed sites as barriers
+##   compare_hic  — which Hi-C map (a key under `hic:`) to compare against
 ## =============================================================================
 conditions:
 

@@ -6,9 +6,10 @@
 #         (or see ChromSimPipe.sh for the full snakemake command)
 #
 # Inputs (set in config/ChromSimConfig.yaml):
-#   hic_control / hic_sorbitol   — .hic contact maps (one per condition)
+#   hic                           — {hic_type: .hic path}, one per Hi-C map
 #   genome                        — genome FASTA for FIMO orientation
-#   samplesheet                   — ChromSimSamplesheet.txt (CTCF peaks per condition)
+#   samplesheet                   — ChromSimSamplesheet.txt (CTCF peaks per ctcf_type)
+#   promoter_stall_bed            — only for conditions with ctcf_extra: promoter
 #
 # Locus + conditions are read from configs/parameters.py (single source of truth).
 # Change the locus section in ChromSimConfig.yaml to switch genomic regions.
@@ -19,7 +20,8 @@ import pandas as pd
 
 sys.path.insert(0, os.getcwd())
 from configs.parameters import (
-    SIMULATION_CONDITIONS, LOCI, SIM_RUN, ACTIVE_LOCUS
+    SIMULATION_CONDITIONS, LOCI, SIM_RUN, ACTIVE_LOCUS,
+    CTCF_TYPES, CTCF_BEDS, HIC_FILES, MCOOL_FILES, PROMOTER_STALL_BED,
 )
 
 configfile: "config/ChromSimConfig.yaml"
@@ -27,6 +29,18 @@ configfile: "config/ChromSimConfig.yaml"
 # ── Pipeline-level constants ───────────────────────────────────────────────────
 COND_LOOKUP  = {c["name"]: c for c in SIMULATION_CONDITIONS}
 COND_NAMES   = [c["name"] for c in SIMULATION_CONDITIONS]
+
+# Promoter-stall conditions need promoter_stall_bed; without it they are left
+# out of `rule all` (not simulated without their promoter barriers).
+SKIPPED_CONDS = [] if PROMOTER_STALL_BED else [
+    c["name"] for c in SIMULATION_CONDITIONS if c.get("ctcf_extra") == "promoter"
+]
+if SKIPPED_CONDS:
+    sys.stderr.write(
+        "\n[ChromSimPipe] promoter_stall_bed is not set in config/ChromSimConfig.yaml;\n"
+        f"[ChromSimPipe] SKIPPING promoter conditions: {', '.join(SKIPPED_CONDS)}\n\n"
+    )
+COND_NAMES = [n for n in COND_NAMES if n not in SKIPPED_CONDS]
 
 LOCUS      = ACTIVE_LOCUS
 LOCUS_INFO = LOCI[LOCUS]
@@ -52,6 +66,29 @@ _locus_tag = f"{CHROM}_{RSTART}_{REND}"
 def _ctcf_bed(ctcf_type):
     return f"data/ctcf_beds/ctcf_oriented_{_ASSEMBLY}_{ctcf_type}_{_locus_tag}.bed"
 
+assert all(CTCF_BEDS[t] == _ctcf_bed(t) for t in CTCF_TYPES), \
+    "CTCF BED naming differs between the Snakefile and configs/parameters.py"
+
+_missing_peaks = [t for t in CTCF_TYPES if t not in _samples.index]
+if _missing_peaks:
+    raise ValueError(f"No samplesheet row for ctcf_type(s) {_missing_peaks} "
+                     f"in {config['samplesheet']}")
+
+def _barrier_inputs(wc):
+    """CTCF BED for the condition, plus the promoter BED when it asks for one."""
+    cond = COND_LOOKUP[wc.condition]
+    inputs = [_ctcf_bed(cond["ctcf_type"])]
+    if cond.get("ctcf_extra") == "promoter":
+        if not PROMOTER_STALL_BED:
+            raise ValueError(f"Condition '{wc.condition}' uses ctcf_extra: promoter "
+                             "but promoter_stall_bed is not set in the config.")
+        inputs.append(PROMOTER_STALL_BED)
+    return inputs
+
+def _compare_mcool(wc):
+    hic = COND_LOOKUP[wc.condition]["compare_hic"]
+    return [MCOOL_FILES[hic]] if hic else []
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # rule all — final target
@@ -66,7 +103,7 @@ rule all:
 # ══════════════════════════════════════════════════════════════════════════════
 rule convert_hic:
     input:
-        hic = lambda wc: config["hic_" + wc.hic_type]
+        hic = lambda wc: HIC_FILES[wc.hic_type]
     output:
         mcool = "data/mcool/{hic_type}.cool"
     resources:
@@ -113,12 +150,11 @@ rule extract_ctcf:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Step 3 — Validate CTCF BED files (runs once, after both conditions extracted)
+# Step 3 — Validate CTCF BED files (runs once, after every ctcf_type is extracted)
 # ══════════════════════════════════════════════════════════════════════════════
 rule validate_ctcf:
     input:
-        control  = _ctcf_bed("control"),
-        sorbitol = _ctcf_bed("sorbitol"),
+        beds = [_ctcf_bed(t) for t in CTCF_TYPES],
     output:
         done = SENTINEL + "/ctcf_validated.done"
     resources:
@@ -136,13 +172,12 @@ rule validate_ctcf:
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Step 4 — GPU simulation: one SLURM job per (condition × replicate × shard)
-#   60 GPU jobs total: 5 conditions × 3 replicates × 4 shards
+#   (conditions × n_replicates × n_shards) GPU jobs
 # ══════════════════════════════════════════════════════════════════════════════
 rule simulate_shard:
     input:
-        ctcf_done      = SENTINEL + "/ctcf_validated.done",
-        control_mcool  = "data/mcool/control.cool",
-        sorbitol_mcool = "data/mcool/sorbitol.cool",
+        ctcf_done = SENTINEL + "/ctcf_validated.done",
+        barriers  = _barrier_inputs,
     output:
         done = SENTINEL + "/sims/{condition}_rep{rep}_shard{shard}.done"
     params:
@@ -174,7 +209,7 @@ rule simulate_shard:
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Step 5 — Merge shards: one CPU job per (condition × replicate)
-#   15 merge jobs: 5 conditions × 3 replicates
+#   (conditions × n_replicates) merge jobs
 # ══════════════════════════════════════════════════════════════════════════════
 rule merge_shards:
     input:
@@ -216,8 +251,7 @@ rule analyze_all:
             condition=wc.condition,
             rep=range(N_REP)
         ),
-        control_mcool  = "data/mcool/control.cool",
-        sorbitol_mcool = "data/mcool/sorbitol.cool",
+        mcool = _compare_mcool,
     output:
         done = SENTINEL + "/analyzed/{condition}.done"
     params:
@@ -239,8 +273,6 @@ rule analyze_all:
             --output-dir {params.output_dir} \\
             --condition {wildcards.condition} \\
             --hic-dir {params.hic_dir} \\
-            --mcool-mesc {input.control_mcool} \\
-            --mcool-neuron {input.sorbitol_mcool} \\
             --n-jobs {params.n_jobs} \\
             --skip-existing \\
             --no-msd

@@ -73,8 +73,9 @@ scancel -u $USER --name simulate_shard   # by job name
 
 After cancelling, run `bash unlock.sh` before resubmitting.
 
-## `cluster/` scripts (legacy)
+## Legacy cluster scripts
 
-The `cluster/` directory contains standalone SLURM batch scripts from before
-Snakemake was adopted. They are preserved for reference but should not be used.
+The standalone SLURM batch scripts from before Snakemake was adopted were
+written for the lab's original cluster and now live in `legacy/cluster/`.
+They are preserved for reference but should not be used.
 `sbatch ChromSimPipe.sh` is the current entry point for everything.

@@ -3,14 +3,13 @@
 Main simulation script: run loop extrusion + 3D polymer simulation using polychrom.
 
 This script:
-  1. Initializes a polymer chain (representing the Sox2 locus, chr3:34-36 Mb)
+  1. Initializes a polymer chain for the locus set in config/ChromSimConfig.yaml
   2. Runs loop extrusion dynamics (1D LEF model)
   3. Feeds LEF bonds into the 3D polymer simulation
   4. Saves conformations for downstream contact map analysis
 
 Usage:
-    python run_simulation.py --params mESC --replicate 0 --gpu 0
-    python run_simulation.py --params CN_long_residency --replicate 0 --gpu 0
+    python run_simulation.py --condition control_ctcf-control --replicate 0 --gpu 0
 
 Requirements:
     pip install polychrom openmm h5py
@@ -30,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configs.parameters import (
     POLYMER, SMC_BOND, SIM_RUN, N_MONOMERS, TILING,
     ALL_PARAM_SETS, SIMULATION_CONDITIONS,
-    get_ctcf_arrays, get_tiled_ctcf_arrays, get_condition,
+    CTCF_TYPES, get_barrier_arrays, get_tiled_ctcf_arrays, get_condition,
     CHROM, REGION_START, REGION_END, RESOLUTION,
 )
 from scripts.lef_dynamics import LEFSimulator
@@ -51,7 +50,7 @@ def get_param_set(name: str) -> dict:
 def resolve_condition(condition_name: str = None, params_name: str = None,
                       ctcf_type: str = None):
     """
-    Resolve simulation parameters and CTCF cell type.
+    Resolve simulation parameters and CTCF type.
 
     Can be called in two ways:
       1. --condition <name>  → looks up SIMULATION_CONDITIONS for both params + CTCF type
@@ -63,9 +62,9 @@ def resolve_condition(condition_name: str = None, params_name: str = None,
         cond = get_condition(condition_name)
         return cond["params"], cond["ctcf_type"]
     elif params_name:
-        params = get_param_set(params_name)
-        ct = ctcf_type or "mESC"  # default to mESC for backward compat
-        return params, ct
+        if not ctcf_type:
+            raise ValueError(f"--params requires --ctcf-type (one of {CTCF_TYPES})")
+        return get_param_set(params_name), ctcf_type
     else:
         raise ValueError("Must provide either --condition or --params")
 
@@ -106,7 +105,8 @@ def initialize_polymer(N: int, density: float = 0.2) -> np.ndarray:
 
 
 def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
-                             gpu: int = 0, ctcf_type: str = "mESC",
+                             gpu: int = 0, ctcf_type: str = None,
+                             ctcf_extra: str | None = None,
                              force_lef_only: bool = False,
                              resume: bool = False,
                              n_blocks_override: int | None = None):
@@ -124,7 +124,9 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
     gpu : int
         CUDA device index.
     ctcf_type : str
-        Which CTCF site set to use: "mESC" or "neuron".
+        Which CTCF site set to use (a ctcf_type from the config).
+    ctcf_extra : str or None
+        Extra barriers to add, e.g. "promoter" (see get_barrier_arrays).
     force_lef_only : bool
         If True, skip the 3D polymer and only write the LEF contact map /
         trajectories. Used when ``--engine lef_only`` is requested so the
@@ -160,14 +162,14 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
     pad = TILING["padding"]                      # 250
 
     name = params["name"]
-    # Include CTCF type in the directory name so mESC-CTCF and neuron-CTCF
-    # runs are stored separately even when using the same cohesin parameters
+    # Include CTCF type in the directory name so runs with different CTCF
+    # sets are stored separately even when using the same cohesin parameters
     run_dir = os.path.join(output_dir, f"{name}_ctcf-{ctcf_type}_rep{replicate}")
     os.makedirs(run_dir, exist_ok=True)
 
     # Save parameters (including which CTCF set was used and tiling info)
     with open(os.path.join(run_dir, "params.json"), "w") as f:
-        json.dump({**params, "ctcf_type": ctcf_type,
+        json.dump({**params, "ctcf_type": ctcf_type, "ctcf_extra": ctcf_extra,
                     "polymer": POLYMER, "sim_run": SIM_RUN, "tiling": TILING,
                     "replicate": replicate}, f, indent=2, default=str)
 
@@ -195,7 +197,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
     np.random.seed(rep_seed)
 
     # --- Initialize LEF simulator on the FULL tiled chromosome ---
-    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(cell_type=ctcf_type)
+    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(ctcf_type, ctcf_extra=ctcf_extra)
     n_lefs = max(1, N // params["separation"])
 
     lef_sim = LEFSimulator(
@@ -502,7 +504,8 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
 
 
 def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: str,
-                                     gpu: int = 0, ctcf_type: str = "mESC",
+                                     gpu: int = 0, ctcf_type: str = None,
+                                     ctcf_extra: str | None = None,
                                      resume: bool = False,
                                      n_blocks_override: int | None = None):
     """
@@ -528,7 +531,8 @@ def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: s
     if not HAS_OPENMM:
         logger.info("OpenMM not available. Falling back to LEF-only simulation.")
         return run_simulation_polychrom(params, replicate, output_dir, gpu,
-                                        ctcf_type=ctcf_type, resume=resume,
+                                        ctcf_type=ctcf_type, ctcf_extra=ctcf_extra,
+                                        resume=resume,
                                         n_blocks_override=n_blocks_override)
 
     N = POLYMER["N"]
@@ -537,7 +541,7 @@ def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: s
     os.makedirs(run_dir, exist_ok=True)
 
     with open(os.path.join(run_dir, "params.json"), "w") as f:
-        json.dump({**params, "ctcf_type": ctcf_type,
+        json.dump({**params, "ctcf_type": ctcf_type, "ctcf_extra": ctcf_extra,
                     "polymer": POLYMER, "sim_run": SIM_RUN,
                     "replicate": replicate}, f, indent=2, default=str)
 
@@ -546,7 +550,7 @@ def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: s
     np.random.seed(rep_seed)
 
     # Initialize LEFs
-    ctcf_pos, ctcf_ori = get_ctcf_arrays(cell_type=ctcf_type)
+    ctcf_pos, ctcf_ori = get_barrier_arrays(ctcf_type, ctcf_extra)
     n_lefs = max(1, N // params["separation"])
     lef_sim = LEFSimulator(
         N=N, n_lefs=n_lefs, lifetime=params["lifetime"],
@@ -698,26 +702,25 @@ def main():
         description="Run cohesin loop extrusion simulation",
         epilog="Examples:\n"
                "  # Using a predefined condition (recommended):\n"
-               "  python run_simulation.py --condition mESC_ctrl --replicate 0 --gpu 0\n"
-               "  python run_simulation.py --condition CN_long_residency_neuron_ctcf --replicate 0\n\n"
-               "  # Legacy: manual pairing of params + CTCF type:\n"
-               "  python run_simulation.py --params mESC --ctcf-type neuron --replicate 0\n",
+               "  python run_simulation.py --condition control_ctcf-control --replicate 0 --gpu 0\n\n"
+               "  # Manual pairing of a params_name + CTCF type:\n"
+               "  python run_simulation.py --params control --ctcf-type sorbitol --replicate 0\n",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     # New condition-based interface (preferred)
     parser.add_argument("--condition", type=str, default=None,
                         help="Simulation condition name from SIMULATION_CONDITIONS "
-                             "(e.g., mESC_ctrl, CN_long_residency_neuron_ctcf). "
+                             "(see `conditions:` in config/ChromSimConfig.yaml). "
                              "This sets both the cohesin parameters and the CTCF site set.")
 
     # Legacy params-based interface (still supported)
     parser.add_argument("--params", type=str, default=None,
-                        help="Parameter set name (e.g., mESC, CN_long_residency). "
+                        help="Parameter set name (a params_name from the config). "
                              "Use with --ctcf-type for manual pairing.")
     parser.add_argument("--ctcf-type", type=str, default=None,
-                        choices=["mESC", "neuron"],
-                        help="Which CTCF site set to use (default: mESC). "
+                        choices=CTCF_TYPES,
+                        help="Which CTCF site set to use. "
                              "Only used with --params, ignored with --condition.")
 
     parser.add_argument("--replicate", type=int, default=0,
@@ -760,8 +763,10 @@ def main():
     logger.info(f"  Lifetime: {params['lifetime']}, Separation: {params['separation']}")
     logger.info(f"  CTCF capture: {params['ctcf_capture']}, release: {params['ctcf_release']}")
 
+    ctcf_extra = get_condition(args.condition).get("ctcf_extra") if args.condition else None
     run_kwargs = dict(params=params, replicate=args.replicate,
                       output_dir=args.output, gpu=args.gpu, ctcf_type=ctcf_type,
+                      ctcf_extra=ctcf_extra,
                       resume=args.resume, n_blocks_override=args.n_blocks)
 
     if args.engine == "lef_only":

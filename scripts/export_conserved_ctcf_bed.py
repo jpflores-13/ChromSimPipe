@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 """
 Export an oriented BED6 file containing only the CTCF sites that are
-conserved between mESC and cortical neurons (CN), using the
-``_conserved_ctcf_sites`` helper already defined in ``configs/parameters.py``.
+conserved across every ctcf_type in config/ChromSimConfig.yaml, using the
+``_conserved_ctcf_sites`` helper defined in ``configs/parameters.py``.
 
 Why
 ---
-The full per-cell-type CTCF BEDs (``CTCF_BED_MESC`` / ``CTCF_BED_NEURON`` in
-``configs/parameters.py``) drive the simulation's CTCF barriers, the APA
-pileup in ``analysis/absolute_quant.py``, and the contact-map CTCF arrow
-overlays in ``analysis/ctcf_plotting.py``.  If instead of per-cell-type sites
-you want every downstream analysis to operate on the mESC∩CN intersection
-(same monomer index, same orientation), you need a single "conserved"
-oriented BED that can be passed via ``--ctcf-bed-mesc`` *and*
-``--ctcf-bed-neuron``.
+The per-type CTCF BEDs (``CTCF_BEDS`` in ``configs/parameters.py``) drive
+the simulation's CTCF barriers, the APA pileup in
+``analysis/absolute_quant.py``, and the contact-map CTCF arrow overlays in
+``analysis/ctcf_plotting.py``.  If instead you want every downstream
+analysis to operate on the intersection (same monomer index, same
+orientation), you need a single "conserved" oriented BED that can be passed
+to ``run_analysis_all.py`` as ``--ctcf-bed <type>=<path>`` for each type.
 
 This script builds exactly that BED in one pass.
 
@@ -33,11 +32,10 @@ Usage
 -----
     python scripts/export_conserved_ctcf_bed.py
     python scripts/export_conserved_ctcf_bed.py --tol 1       # allow 1-monomer drift
-    python scripts/export_conserved_ctcf_bed.py \\
-        --out data/ctcf_oriented_CONSERVED_mESC_CN_chr3.bed
+    python scripts/export_conserved_ctcf_bed.py --out my_conserved.bed
 
 Default output path:
-    data/ctcf_oriented_CONSERVED_mESC_CN_chr3.bed
+    data/ctcf_beds/ctcf_oriented_CONSERVED_<types>_<chrom>_<start>_<end>.bed
 """
 from __future__ import annotations
 
@@ -54,14 +52,17 @@ if _REPO_ROOT not in sys.path:
 from configs.parameters import (  # noqa: E402
     CHROM,
     REGION_START,
+    REGION_END,
     RESOLUTION,
     N_MONOMERS,
+    CTCF_TYPES,
     _conserved_ctcf_sites,
 )
 
 
 DEFAULT_OUT = os.path.join(
-    "data", "ctcf_oriented_CONSERVED_mESC_CN_chr3.bed"
+    "data", "ctcf_beds",
+    f"ctcf_oriented_CONSERVED_{'-'.join(CTCF_TYPES)}_{CHROM}_{REGION_START}_{REGION_END}.bed",
 )
 
 
@@ -85,9 +86,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     parser.add_argument(
         "--tol", type=int, default=0,
-        help="Monomer-index tolerance when matching mESC and neuron sites. "
+        help="Monomer-index tolerance when matching sites across CTCF types. "
              "0 = strict exact-match (default); 1-2 = accept sites that drift "
-             "by one or two 1-kb bins between cell types.",
+             "by one or two bins between types.",
     )
     parser.add_argument(
         "--out", type=str, default=DEFAULT_OUT,
@@ -98,9 +99,9 @@ def main() -> int:
     conserved = _conserved_ctcf_sites(tol_monomers=args.tol)
     if not conserved:
         print("ERROR: _conserved_ctcf_sites returned an empty list. "
-              "Check that CTCF_BED_MESC and CTCF_BED_NEURON in "
-              "configs/parameters.py are both loaded (AUTO_LOAD_CTCF_FROM_BED "
-              "should be True).", file=sys.stderr)
+              f"Check that the CTCF BEDs for {CTCF_TYPES} exist "
+              "(run setup_data.sh) and AUTO_LOAD_CTCF_FROM_BED is True.",
+              file=sys.stderr)
         return 1
 
     # Sanity: all monomer indices should be inside the simulated region.
@@ -122,12 +123,12 @@ def main() -> int:
     with open(args.out, "w") as f:
         f.write("#chrom\tstart\tend\tname\tscore\tstrand\n")
         f.write(
-            f"# Conserved oriented CTCF sites: mESC \u2229 CN "
+            f"# Conserved oriented CTCF sites: {' & '.join(CTCF_TYPES)} "
             f"(tol={args.tol} monomer(s))\n"
         )
         f.write(
             f"# Source: configs.parameters._conserved_ctcf_sites() "
-            f"intersecting CTCF_BED_MESC and CTCF_BED_NEURON\n"
+            f"intersecting CTCF_BEDS for {CTCF_TYPES}\n"
         )
         f.write(
             f"# Region: {CHROM}:{REGION_START}-{REGION_START + N_MONOMERS * RESOLUTION}"

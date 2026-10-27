@@ -19,6 +19,7 @@ import glob
 import argparse
 import logging
 import json
+import re
 
 if os.environ.get("CONDA_DEFAULT_ENV", "") != "cohesin_sim":
     sys.stderr.write(
@@ -34,8 +35,8 @@ logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configs.parameters import (
-    N_MONOMERS, RESOLUTION, REGION_START, REGION_END,
-    SOX2_START_MONOMER, SOX2_END_MONOMER,
+    N_MONOMERS, RESOLUTION, CHROM, REGION_START, REGION_END,
+    ANCHOR_MONOMER, ACTIVE_LOCUS, LOCI,
     SIMULATION_CONDITIONS,
 )
 from analysis.contact_maps import (
@@ -139,12 +140,10 @@ def plot_single_contact_map(contact_map, title, output_path):
         origin="upper", extent=extent_mb,
     )
 
-    # Mark Sox2 locus
-    sox2_start_mb = (REGION_START + SOX2_START_MONOMER * RESOLUTION) / 1e6
-    sox2_end_mb = (REGION_START + SOX2_END_MONOMER * RESOLUTION) / 1e6
-    for pos in [sox2_start_mb, sox2_end_mb]:
-        ax.axhline(pos, color="cyan", lw=0.5, alpha=0.5)
-        ax.axvline(pos, color="cyan", lw=0.5, alpha=0.5)
+    # Mark the locus anchor (anchor_bp in the config)
+    anchor_mb = (REGION_START + ANCHOR_MONOMER * RESOLUTION) / 1e6
+    ax.axhline(anchor_mb, color="cyan", lw=0.5, alpha=0.5)
+    ax.axvline(anchor_mb, color="cyan", lw=0.5, alpha=0.5)
 
     ax.set_xlabel("Position (Mb)")
     ax.set_ylabel("Position (Mb)")
@@ -187,8 +186,7 @@ def plot_multipanel_figure(results, output_path):
         REGION_END / 1e6, REGION_START / 1e6,
     ]
 
-    sox2_start_mb = (REGION_START + SOX2_START_MONOMER * RESOLUTION) / 1e6
-    sox2_end_mb = (REGION_START + SOX2_END_MONOMER * RESOLUTION) / 1e6
+    anchor_mb = (REGION_START + ANCHOR_MONOMER * RESOLUTION) / 1e6
 
     for idx, (label, cmap) in enumerate(results):
         row, col = divmod(idx, ncols)
@@ -200,15 +198,12 @@ def plot_multipanel_figure(results, output_path):
             origin="upper", extent=extent_mb,
         )
 
-        # Mark Sox2
-        for pos in [sox2_start_mb, sox2_end_mb]:
-            ax.axhline(pos, color="cyan", lw=0.3, alpha=0.4)
-            ax.axvline(pos, color="cyan", lw=0.3, alpha=0.4)
+        # Mark the locus anchor
+        ax.axhline(anchor_mb, color="cyan", lw=0.3, alpha=0.4)
+        ax.axvline(anchor_mb, color="cyan", lw=0.3, alpha=0.4)
 
-        # Clean up label for title
-        title = label.replace("_neuron_ctcf", "\n(neuron CTCF)")
-        title = title.replace("_ctcf-mESC", "\n(mESC CTCF)")
-        title = title.replace("_ctcf-neuron", "\n(neuron CTCF)")
+        # Clean up label for title: "<params>_ctcf-<type>" → two lines
+        title = re.sub(r"_ctcf-(.+)$", r"\n(\1 CTCF)", label)
         ax.set_title(title, fontsize=8, fontweight="bold")
         ax.set_xlabel("Mb", fontsize=7)
         ax.set_ylabel("Mb", fontsize=7)
@@ -224,7 +219,9 @@ def plot_multipanel_figure(results, output_path):
     cbar_ax = fig.add_axes([0.94, 0.15, 0.015, 0.7])
     fig.colorbar(im, cax=cbar_ax, label="log2(contact freq)")
 
-    fig.suptitle("Simulated contact maps — Sox2 locus (chr3:34–36 Mb, mm10)",
+    locus_label = LOCI[ACTIVE_LOCUS].get("label") or ACTIVE_LOCUS
+    fig.suptitle(f"Simulated contact maps — {locus_label} "
+                 f"({CHROM}:{REGION_START / 1e6:.2f}–{REGION_END / 1e6:.2f} Mb)",
                  fontsize=12, fontweight="bold", y=1.01)
     plt.savefig(output_path, dpi=200, bbox_inches="tight")
     plt.close()

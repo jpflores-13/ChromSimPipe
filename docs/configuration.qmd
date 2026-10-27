@@ -18,8 +18,10 @@ uses. Nothing is hardcoded in the scripts.
 
 ```yaml
 # --- Input data ---
-hic_control:    /path/to/control.hic       # raw Hi-C in .hic format (KR-normalized)
-hic_sorbitol:   /path/to/sorbitol.hic
+hic:                                       # one entry per Hi-C map; names are your choice
+  control:      /path/to/control.hic       # raw Hi-C in .hic format (KR-normalized)
+  sorbitol:     /path/to/sorbitol.hic
+promoter_stall_bed: ''                     # only for conditions with ctcf_extra: promoter
 genome:         /path/to/hg38.fa           # for FIMO CTCF orientation
 samplesheet:    ChromSimSamplesheet.txt
 

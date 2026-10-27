@@ -103,7 +103,7 @@ _CFG_FILE="config/ChromSimConfig.yaml"
 echo "=== Reading settings from ${_CFG_FILE} ==="
 
 _config_vals=$(${ENV_RUN} -n cohesin_sim python - "${_CFG_FILE}" <<'PYEOF'
-import yaml, sys
+import yaml, sys, shlex
 cfg_path = sys.argv[1]
 with open(cfg_path) as f:
     cfg = yaml.safe_load(f)
@@ -114,8 +114,10 @@ print(f"LOCUS_CHROM={loc['chrom']}")
 print(f"LOCUS_START={loc['region_start']}")
 print(f"LOCUS_END={loc['region_end']}")
 print(f"GENOME_ASSEMBLY={cfg.get('genome_assembly', 'hg38')}")
-print(f"HIC_CONTROL={cfg.get('hic_control', '')}")
-print(f"HIC_SORBITOL={cfg.get('hic_sorbitol', '')}")
+# Hi-C maps: `hic: {type: path}` (older configs: top-level hic_<type> keys)
+hic = dict(cfg.get("hic") or {})
+hic.update({k[4:]: v for k, v in cfg.items() if k.startswith("hic_") and k[4:] not in hic})
+print("HIC_ENTRIES=" + shlex.quote("\n".join(f"{t}\t{p}" for t, p in hic.items())))
 print(f"GENOME_FROM_CFG={cfg.get('genome', '')}")
 print(f"RESOLUTION={cfg.get('resolution', 1000)}")
 print(f"SAMPLESHEET={samplesheet}")
@@ -132,9 +134,8 @@ echo "  Locus: ${LOCUS_KEY}  ${LOCUS_CHROM}:${LOCUS_START}-${LOCUS_END}"
 echo "  Assembly: ${GENOME_ASSEMBLY}"
 echo "  Samplesheet: ${SAMPLESHEET}"
 
-# Read CTCF peak paths from samplesheet
-CTCF_CONTROL_PEAKS=$(awk -F'\t' 'NR>1 && $1=="control"  {print $2; exit}' "${SAMPLESHEET}" 2>/dev/null || echo "")
-CTCF_SORBITOL_PEAKS=$(awk -F'\t' 'NR>1 && $1=="sorbitol" {print $2; exit}' "${SAMPLESHEET}" 2>/dev/null || echo "")
+# CTCF peak files: one "<ctcf_type>\t<peaks path>" line per samplesheet row
+CTCF_ENTRIES=$(awk -F'\t' 'NR>1 && NF>=2 {print $1 "\t" $2}' "${SAMPLESHEET}" 2>/dev/null || echo "")
 
 # =============================================================================
 # STEP 0: Create directory structure
@@ -149,18 +150,18 @@ mkdir -p results/polychrom_3d results/analysis results/figures logs
 echo ""
 echo "=== Step 1: Symlinking .hic files ==="
 
-for hic_var in HIC_CONTROL HIC_SORBITOL; do
-    hic_path="${!hic_var}"
+while IFS=$'\t' read -r hic_type hic_path; do
+    [[ -z "${hic_type}" ]] && continue
     hic_dest="data/hic/$(basename ${hic_path})"
     if [[ ! -f "${hic_path}" ]]; then
-        echo "  WARNING: ${hic_path} not found — edit hic_control/hic_sorbitol in ${_CFG_FILE}"
+        echo "  WARNING: ${hic_path} not found — edit hic: ${hic_type} in ${_CFG_FILE}"
     elif [[ ! -e "${hic_dest}" ]]; then
         ln -s "${hic_path}" "${hic_dest}"
         echo "  Linked: ${hic_dest}"
     else
         echo "  Already exists: ${hic_dest}"
     fi
-done
+done <<< "${HIC_ENTRIES}"
 
 # =============================================================================
 # STEP 2: Convert .hic → .mcool
@@ -186,19 +187,17 @@ convert_hic() {
     fi
 
     echo "  Converting: $(basename ${hic_in}) → $(basename ${mcool_out})"
-    ${ENV_RUN} -n cohesin_sim hic2cool convert "${hic_in}" "${mcool_out}" -r "${res}"
+    ${ENV_RUN} -n cohesin_sim hic2cool convert "${hic_in}" "${mcool_out}" -r "${res}" < /dev/null
     echo "  Done: ${mcool_out}"
 }
 
-convert_hic \
-    "data/hic/$(basename ${HIC_CONTROL})" \
-    "data/mcool/control.cool" \
-    "${RESOLUTION}"
-
-convert_hic \
-    "data/hic/$(basename ${HIC_SORBITOL})" \
-    "data/mcool/sorbitol.cool" \
-    "${RESOLUTION}"
+while IFS=$'\t' read -r hic_type hic_path; do
+    [[ -z "${hic_type}" ]] && continue
+    convert_hic \
+        "data/hic/$(basename ${hic_path})" \
+        "data/mcool/${hic_type}.cool" \
+        "${RESOLUTION}"
+done <<< "${HIC_ENTRIES}"
 
 # =============================================================================
 # STEP 3: Symlink CTCF peak files
@@ -206,8 +205,8 @@ convert_hic \
 echo ""
 echo "=== Step 3: Symlinking CTCF CUT&Tag peak files ==="
 
-for peaks_var in CTCF_CONTROL_PEAKS CTCF_SORBITOL_PEAKS; do
-    peaks_path="${!peaks_var}"
+while IFS=$'\t' read -r ctcf_type peaks_path; do
+    [[ -z "${ctcf_type}" ]] && continue
     peaks_dest="data/ctcf_beds/$(basename ${peaks_path})"
     if [[ ! -f "${peaks_path}" ]]; then
         echo "  WARNING: ${peaks_path} not found"
@@ -217,7 +216,7 @@ for peaks_var in CTCF_CONTROL_PEAKS CTCF_SORBITOL_PEAKS; do
     else
         echo "  Already exists: ${peaks_dest}"
     fi
-done
+done <<< "${CTCF_ENTRIES}"
 
 # =============================================================================
 # STEP 4: Extract oriented CTCF sites for each locus
@@ -231,20 +230,14 @@ else
     echo "    The extraction script will download ~900 MB — expect 20-30 min extra."
 fi
 
-ctcf_control_peaks="data/ctcf_beds/$(basename ${CTCF_CONTROL_PEAKS})"
-ctcf_sorbitol_peaks="data/ctcf_beds/$(basename ${CTCF_SORBITOL_PEAKS})"
-
 chrom="${LOCUS_CHROM}"
 start="${LOCUS_START}"
 end="${LOCUS_END}"
 region="${chrom}:${start}-${end}"
 
-for cond in control sorbitol; do
-    if [[ "${cond}" == "control" ]]; then
-        peaks_file="${ctcf_control_peaks}"
-    else
-        peaks_file="${ctcf_sorbitol_peaks}"
-    fi
+while IFS=$'\t' read -r cond peaks_path; do
+    [[ -z "${cond}" ]] && continue
+    peaks_file="data/ctcf_beds/$(basename ${peaks_path})"
 
     out_bed="data/ctcf_beds/ctcf_oriented_${GENOME_ASSEMBLY}_${cond}_${chrom}_${start}_${end}.bed"
 
@@ -268,10 +261,10 @@ for cond in control sorbitol; do
         --bed "${peaks_file}" \
         --region "${region}" \
         "${genome_args[@]+"${genome_args[@]}"}" \
-        --output "${out_bed}"
+        --output "${out_bed}" < /dev/null
 
     echo "  Done: ${out_bed}"
-done
+done <<< "${CTCF_ENTRIES}"
 
 # =============================================================================
 # STEP 5 (removed): BED files now live directly in data/ctcf_beds/ —

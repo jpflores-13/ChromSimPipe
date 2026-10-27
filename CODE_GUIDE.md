@@ -273,7 +273,8 @@ Edit **once** before the first run. Key fields:
 
 | Field | What to change |
 |-------|---------------|
-| `hic_control` / `hic_sorbitol` | Absolute paths to your `.hic` maps |
+| `hic` | One `<hic_type>: /abs/path.hic` entry per Hi-C map (e.g. `control`, `sorbitol`); each condition's `compare_hic` names one |
+| `promoter_stall_bed` | BED of promoter anchors, needed only by conditions with `ctcf_extra: promoter` |
 | `genome` | Path to hg38 FASTA (default: Longleaf shared reference) |
 | `samplesheet` | Path to `SimSamplesheet.txt` |
 | `n_replicates` | Independent simulation replicates (default: 3) |
@@ -334,8 +335,7 @@ ChromSimPipe/
 ├── analysis/         — Python modules imported by scripts/run_analysis_all.py
 ├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile)
 ├── profiles/slurm/   — SLURM executor configuration for Snakemake
-├── cluster/          — legacy SLURM submit scripts (pre-Snakemake; still functional)
-├── notebooks/        — Jupyter notebooks for exploration and QC
+├── legacy/           — unmaintained code from the lab's mESC/neuron project (see legacy/README.md)
 ├── tests/            — test suite
 ├── results/          — simulation and analysis outputs (git-ignored)
 └── logs/             — top-level Snakemake job stdout/stderr
@@ -363,11 +363,20 @@ config values change.
 - **LEF ↔ polymer bonds** (`SMC_BOND`). How stiff the cohesin "ring" is in
   3D — how strongly it pulls the two loop flanks together.
 
-- **CTCF tracks** (`CTCF_BED_CONTROL`, `CTCF_BED_SORBITOL`,
-  `CTCF_BED_PROMOTER`). Paths to oriented BED files under `data/ctcf_beds/`.
-  At import time, `load_ctcf_from_bed()` reads each file into
-  `CTCF_SITES_CONTROL` / `CTCF_SITES_SORBITOL` — NumPy arrays of monomer
-  indices with `+1` / `−1` orientation labels.
+- **CTCF tracks** (`CTCF_TYPES`, `CTCF_BEDS`). One oriented BED per
+  `ctcf_type` used by a condition, under `data/ctcf_beds/`. At import time,
+  `load_ctcf_from_bed()` reads each file into `CTCF_SITES_BY_TYPE[type]` —
+  monomer indices with `+1` / `−1` orientation labels. Type names come from
+  the config, so any number of CTCF conditions is supported.
+
+- **Promoter stall sites** (`PROMOTER_STALL_BED`, `PROMOTER_STALL_SITES`).
+  Loaded from `promoter_stall_bed` in the config. Conditions with
+  `ctcf_extra: promoter` add these to their CTCF barriers via
+  `get_barrier_arrays()`; they are non-directional (orientation `0`, which
+  stalls cohesin arriving from either side) and use the condition's
+  `ctcf_capture` / `ctcf_release`. While `promoter_stall_bed` is empty,
+  Snakemake skips these conditions and prints which ones it skipped; run
+  directly, a promoter condition refuses to simulate without the BED.
 
 - **Cohesin parameter sets** (`ALL_PARAM_SETS`). One dict per condition
   hypothesis, each with `lifetime`, `separation`, `ctcf_capture`, and
@@ -406,16 +415,9 @@ Snakemake rule: it calls `hic2cool convert` on each `.hic` file listed in
 configured resolution (default 1 kb). No manual steps required — just point
 the config at your `.hic` files.
 
-`scripts/download_bonev_hic.sh` and `scripts/sbatch_bonev_hic.sbatch` are
-**legacy scripts** for downloading the Bonev 2017 mESC/cortical-neuron mm10
-Hi-C dataset. They are not part of the ChromSimPipe Snakemake workflow and
-exist for reference only.
-
-### `scripts/plot_hic_quicklook.py`
-
-Quick sanity-check visualisation: draws a contact-map heatmap with a CTCF
-arrow strip and Mb-labelled axes for a given locus. Useful for verifying the
-converted `.cool` looks correct before launching simulations.
+The Bonev 2017 mESC/cortical-neuron download scripts and the Sox2
+quick-look plotter from the original lab project now live in `legacy/`
+(see `legacy/README.md`); they are not part of the workflow.
 
 ## 3. CTCF annotation
 
@@ -568,14 +570,6 @@ conda run -p ~/.local/share/mamba/envs/cohesin_sim \
 `--engine lef_only` skips the 3D polymer entirely and writes only a 2D
 contact map from 1D LEF statistics.
 
-### 5d. `scripts/run_batch.py` — local batch runner
-
-Run many conditions × replicates without SLURM:
-
-```bash
-python scripts/run_batch.py --engine lef_only --conditions control_ctcf-control
-```
-
 ## 6. Post-simulation analysis
 
 ### 6a. The orchestrator: `scripts/run_analysis_all.py`
@@ -593,8 +587,6 @@ conda run -p ~/.local/share/mamba/envs/cohesin_sim \
     --output-dir results/analysis/control_ctcf-control \
     --condition control_ctcf-control \
     --hic-dir data/mcool \
-    --mcool-mesc data/mcool/control.cool \
-    --mcool-neuron data/mcool/sorbitol.cool \
     --n-jobs 4 --skip-existing --no-msd
 ```
 
@@ -608,7 +600,9 @@ conda run -p ~/.local/share/mamba/envs/cohesin_sim \
 | `--n-jobs N` | Parallel workers for contact detection. |
 | `--skip-existing` | Skip dirs that already have `sim_contact_map.npy`. |
 | `--no-msd` | Skip MSD computation (disabled by default in the Snakemake rule). |
-| `--mcool-mesc` / `--mcool-neuron` | Experimental Hi-C `.cool` files for comparison. |
+| `--hic-dir DIR` | Where to find `<compare_hic>.cool` for each condition (falls back to `data/mcool/`). |
+| `--mcool TYPE=PATH` | Override the `.cool` for one Hi-C type (repeatable). |
+| `--ctcf-bed TYPE=PATH` | Override the oriented CTCF BED for one ctcf_type (repeatable). |
 
 **Per-replicate outputs** (in `<sim_dir>/analysis/`):
 
@@ -652,26 +646,13 @@ python scripts/summarize_analysis.py \
 Lists every directory under `results/polychrom_3d`, its frame count, and
 whether analysis outputs are present. Quick inventory after a SLURM batch.
 
-## Cluster submit scripts (`cluster/`)
+## Legacy cluster scripts (`legacy/cluster/`)
 
-The `cluster/` scripts predate the Snakemake migration and were the original
-way to run the pipeline. **The recommended entry point is now
-`sbatch ChromSimPipe.sh`**, which handles the full DAG automatically.
-
-Use `cluster/` scripts for debugging a single step in isolation, re-running
-one failed condition without relaunching everything, or tasks outside the
-Snakemake DAG (e.g. rebuilding reference Hi-C from raw reads).
-
-| Script | When to use it |
-|--------|---------------|
-| `cluster/check_partitions.sh` | Print GPU availability and QOS limits |
-| `cluster/submit_merge_shards.sh` | Merge shards outside Snakemake |
-| `cluster/submit_analysis_postmerge.sh` | Run analysis on existing merged dirs |
-| `cluster/submit_analysis_all_16cpu.sh` | Same, 16-CPU RAM-lighter variant |
-| `cluster/submit_analysis_resume_chain.sh` | Chain N analysis jobs with `afterany` for wall-time recovery |
-| `cluster/submit_polychrom_multigpu.sh` | Legacy 4-GPU sim array (no Snakemake) |
-| `cluster/submit_hic_pipeline.sh` | Build reference Hi-C from raw FASTQ |
-| `cluster/submit_migrate_legacy.sh` | One-time: migrate pre-2026 output layout |
+The pre-Snakemake SLURM scripts were written for the lab's original cluster
+(mambaforge under `ric.tiget`, `cuda` / `workq` partitions) and the
+mESC/neuron study, so they have been moved to `legacy/cluster/` and are not
+maintained. **Use `sbatch ChromSimPipe.sh`**, which handles the full DAG on
+Longleaf.
 
 ### `afterok` vs `afterany`
 
@@ -720,8 +701,8 @@ inserts the repo root onto `sys.path`. Run from the repo root, or set
 **`KeyError: 'CTCF_Type'` in samplesheet.** `ChromSimSamplesheet.txt` must
 be tab-separated with headers exactly `CTCF_Type` and `CTCF_Peaks_Path`.
 
-**`hic2cool` fails.** Check `config/ChromSimConfig.yaml`: `hic_control` and
-`hic_sorbitol` must be absolute paths to existing `.hic` files.
+**`hic2cool` fails.** Check `config/ChromSimConfig.yaml`: every entry under
+`hic:` must be an absolute path to an existing `.hic` file.
 
 **Analysis fails with "No results found".** Check that
 `results/polychrom_3d/merged_<condition>_rep*/` directories exist. If shards

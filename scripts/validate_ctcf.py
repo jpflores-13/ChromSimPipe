@@ -18,7 +18,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from configs.parameters import (
     CHROM, REGION_START, REGION_END, RESOLUTION, N_MONOMERS,
     ANCHOR_MONOMER, CTCF_BEDS,
-    CTCF_SITES_PLACEHOLDER,
+    CTCF_SITES_BY_TYPE, SIMULATION_CONDITIONS,
+    PROMOTER_STALL_BED, PROMOTER_STALL_SITES,
     get_ctcf_arrays, load_ctcf_from_bed,
 )
 
@@ -355,8 +356,9 @@ def main():
     print(f"  Resolution: {RESOLUTION} bp/monomer")
     print(f"  Monomers:   {N_MONOMERS}")
     print(f"  Anchor:     monomer {ANCHOR_MONOMER} ({ANCHOR_MONOMER * RESOLUTION + REGION_START:,} bp)")
-    print(f"  Conditions: {list(CTCF_BEDS)}")
-    print(f"  Placeholder CTCF: {CTCF_SITES_PLACEHOLDER}")
+    print(f"  CTCF types: {list(CTCF_BEDS)}")
+    missing = [t for t in CTCF_BEDS if t not in CTCF_SITES_BY_TYPE]
+    print(f"  Placeholder CTCF: {missing or 'none'}")
 
     loaded_per_condition = {}
 
@@ -373,12 +375,20 @@ def main():
             info("Using placeholder sites from parameters.py")
             validate_arrays(condition, None)
 
-    # Compare the first two conditions if both were loaded
-    conditions = list(CTCF_BEDS)
-    if len(conditions) >= 2:
-        cond_a, cond_b = conditions[0], conditions[1]
-        if cond_a in loaded_per_condition and cond_b in loaded_per_condition:
+    # Compare every pair of loaded CTCF types
+    loaded_types = list(loaded_per_condition)
+    for i, cond_a in enumerate(loaded_types):
+        for cond_b in loaded_types[i + 1:]:
             compare_conditions(cond_a, cond_b)
+
+    # Promoter stall sites, if any condition asks for them
+    if any(c.get("ctcf_extra") == "promoter" for c in SIMULATION_CONDITIONS):
+        header("PROMOTER STALL SITES (ctcf_extra: promoter)")
+        if check(bool(PROMOTER_STALL_BED) and os.path.isfile(PROMOTER_STALL_BED),
+                 f"promoter_stall_bed exists: {PROMOTER_STALL_BED}"):
+            check(len(PROMOTER_STALL_SITES) > 0,
+                  f"Promoter sites inside {CHROM}:{REGION_START:,}-{REGION_END:,}: "
+                  f"{len(PROMOTER_STALL_SITES)}")
 
     header("SUMMARY")
     print(f"  Passed: {n_pass}")

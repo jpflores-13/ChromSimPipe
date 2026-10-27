@@ -35,9 +35,10 @@ class LEFSimulator:
     ctcf_positions : array-like
         Positions of CTCF binding sites on the lattice.
     ctcf_orientations : array-like
-        Orientation of each CTCF site: +1 (forward) or -1 (reverse).
+        Orientation of each CTCF site: +1 (forward), -1 (reverse) or 0.
         A +1 site blocks the left arm of a LEF (moving leftward).
         A -1 site blocks the right arm of a LEF (moving rightward).
+        A 0 site (non-directional, e.g. promoter anchor) blocks both arms.
     ctcf_capture : float
         Probability that a LEF stalls when encountering an occupied CTCF site.
     ctcf_release : float
@@ -76,6 +77,9 @@ class LEFSimulator:
                     self.left_stall[pos] = True   # blocks leftward-moving arm
                 elif ori == -1:
                     self.right_stall[pos] = True  # blocks rightward-moving arm
+                elif ori == 0:
+                    self.left_stall[pos] = True   # non-directional: blocks both
+                    self.right_stall[pos] = True
 
         # LEF state arrays
         # Each LEF has: left_pos, right_pos, age, left_stalled, right_stalled

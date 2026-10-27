@@ -9,7 +9,7 @@ Reads 3D polymer conformations (from polychrom or OpenMM) and computes:
   4. Comparison metrics with experimental Hi-C
 
 Usage:
-    python contact_maps.py --sim-dir ../results/mESC_rep0 --exp-hic ../data/hic_mESC_Sox2.npy
+    python contact_maps.py --sim-dir ../results/polychrom_3d/merged_control_ctcf-control_rep0 --exp-hic ../data/control.npy
 """
 
 import os

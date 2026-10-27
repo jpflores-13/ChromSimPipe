@@ -73,8 +73,7 @@ Or via the orchestrator (auto-wired as Phase 4):
 
     python scripts/run_analysis_all.py \
         --results-dir results/polychrom_3d \
-        --mcool-mesc   data/hic/bonev_mESC.mcool \
-        --mcool-neuron data/hic/bonev_CN.mcool
+        --hic-dir data/mcool
 
 Pass ``--no-summary-table`` to the orchestrator to skip Phase 4.
 
@@ -365,7 +364,7 @@ def harvest_ps_derivative_table(
     Read ``ps_derivative_table.json`` and flatten into the output dict.
 
     Returns the list of condition labels seen there (sim + experimental).
-    Experimental rows have labels like ``mESC_experimental (exp)`` and
+    Experimental rows have labels like ``control_experimental (exp)`` and
     are kept in the table so sim-vs-in-vivo comparison is one column away.
     """
     p = os.path.join(analysis_dir, "ps_derivative_table.json")
