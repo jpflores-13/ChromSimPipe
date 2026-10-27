@@ -16,13 +16,6 @@ hic:
   condition1: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic'
   condition2: '/work/users/j/p/jpflores/projects/STRS/data/processed/hic/maps/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic'
 
-## ── Promoter stall sites (optional) ──────────────────────────────────────────
-## BED of promoter anchors used by conditions with `ctcf_extra: promoter`.
-## Sites are non-directional (they stall cohesin from either side) and use the
-## condition's ctcf_capture / ctcf_release. While empty, Snakemake skips every
-## condition with `ctcf_extra: promoter` (and says so when it starts).
-promoter_stall_bed: ''
-
 ## ── Genome FASTA ─────────────────────────────────────────────────────────────
 ## Used by scripts/extract_ctcf_sites_hg38.py (FIMO motif orientation).
 ## Longleaf default shown; change if running on a different cluster.
@@ -67,7 +60,6 @@ locus:
 ##   ctcf_capture — stalling probability per CTCF encounter (0–1)
 ##   ctcf_release — escape probability per step while stalled (0–1)
 ##   ctcf_type    — CTCF peak set to load; must match a CTCF_Type in the samplesheet
-##   ctcf_extra   — optional: "promoter" adds the promoter_stall_bed sites as barriers
 ##   compare_hic  — which Hi-C map (a key under `hic:`) to compare against
 ## =============================================================================
 conditions:
@@ -103,30 +95,6 @@ conditions:
     ctcf_capture: 0.0625
     ctcf_release: 0.0033
     ctcf_type:    condition2
-    compare_hic:  condition2
-
-  ## 4. Promoter-anchored cohesin stalling (needs promoter_stall_bed)
-  - name:         cond2_promoter-stall
-    description:  "Condition 2 CTCF sites + promoter stall sites"
-    params_name:  promoter
-    lifetime:     75
-    separation:   240
-    ctcf_capture: 0.125
-    ctcf_release: 0.0033
-    ctcf_type:    condition2
-    ctcf_extra:   promoter
-    compare_hic:  condition2
-
-  ## 5. Sensitivity: promoter stalling + 2x processivity
-  - name:         cond2_promoter-stall_long
-    description:  "Condition 2 CTCF sites + promoter stall sites, 2x processivity"
-    params_name:  promoter_long
-    lifetime:     150
-    separation:   240
-    ctcf_capture: 0.125
-    ctcf_release: 0.0017
-    ctcf_type:    condition2
-    ctcf_extra:   promoter
     compare_hic:  condition2
 
 

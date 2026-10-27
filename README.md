@@ -58,7 +58,7 @@ runs the same way.
 
 ### Example conditions (STRS use case)
 
-`config/ChromSimConfig.yaml` ships five example conditions comparing two
+`config/ChromSimConfig.yaml` ships three example conditions comparing two
 experimental states, `condition1` and `condition2` (each with its own CTCF
 peak set and Hi-C map). To define your own, edit the `conditions:` list there.
 
@@ -67,8 +67,6 @@ peak set and Hi-C map). To define your own, edit the `conditions:` list there.
 | 1 | `cond1_baseline`             | Gabriele 2022 | Condition 1 | Condition 1 Hi-C | Baseline: can we reproduce condition 1 Hi-C? |
 | 2 | `cond2_ctcf-only`            | Gabriele 2022 | Condition 2 | Condition 2 Hi-C | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
 | 3 | `cond2_weak-ctcf`            | Gabriele 2022 (0.5× CTCF capture) | Condition 2 | Condition 2 Hi-C | Weaker CTCF stalling at retained sites? |
-| 4 | `cond2_promoter-stall`       | Gabriele 2022 | Condition 2 + promoter anchors | Condition 2 Hi-C | Promoter-anchored cohesin? (needs `promoter_stall_bed`) |
-| 5 | `cond2_promoter-stall_long`  | Gabriele 2022 (2× processivity) | Condition 2 + promoter anchors | Condition 2 Hi-C | Same + longer processivity? |
 
 ### Example loci (STRS use case, hg38, HEK293T)
 
@@ -148,9 +146,9 @@ simulation, CPU for everything else).
 convert_hic (×2)
     → extract_ctcf (×2)
         → validate_ctcf
-            → simulate_shard (×60: 5 cond × 3 rep × 4 shards, GPU)
-                → merge_shards (×15: 5 cond × 3 rep)
-                    → analyze_all (×5: one per condition)
+            → simulate_shard (×36: 3 cond × 3 rep × 4 shards, GPU)
+                → merge_shards (×9: 3 cond × 3 rep)
+                    → analyze_all (×3: one per condition)
 ```
 
 ### Dry run first

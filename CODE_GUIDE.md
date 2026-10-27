@@ -48,8 +48,6 @@ and cohesin dynamics parameters, the simulation tests user-defined hypotheses.
 | `cond1_baseline` | Baseline | Condition 1 | Does the model reproduce condition 1 Hi-C? |
 | `cond2_ctcf-only` | Baseline | Condition 2 | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
 | `cond2_weak-ctcf` | Baseline | Condition 2 (0.5× stall) | Does weaker stalling at remaining CTCF sites help? |
-| `cond2_promoter-stall` | Baseline | Condition 2 + promoter anchors | Can promoter-anchored stalling reproduce the new loops? |
-| `cond2_promoter-stall_long` | 2× processivity | Condition 2 + promoter anchors | Promoter stalling + longer cohesin runs |
 
 ### Data flow
 
@@ -192,9 +190,9 @@ through `snakemake-executor-plugin-slurm`:
 convert_hic (×2, CPU)
     → extract_ctcf (×2, CPU, FIMO)
         → validate_ctcf (×1, CPU)
-            → simulate_shard (×60, GPU — 5 cond × 3 rep × 4 shards)
-                → merge_shards (×15, CPU — 5 cond × 3 rep)
-                    → analyze_all (×5, CPU — one per condition)
+            → simulate_shard (×36, GPU — 3 cond × 3 rep × 4 shards)
+                → merge_shards (×9, CPU — 3 cond × 3 rep)
+                    → analyze_all (×3, CPU — one per condition)
 ```
 
 To dry-run (see all jobs without submitting): `bash ChromSimPipe.sh --dry-run`.
@@ -239,7 +237,7 @@ Six rules, in order:
 | `convert_hic` | 4 CPU, 32 GB, 2 h | `hic2cool convert` `.hic` → `.cool` at 1 kb (single-resolution) |
 | `extract_ctcf` | 2 CPU, 16 GB, 1 h | `extract_ctcf_sites_hg38.py` via `ctcf_extraction` env |
 | `validate_ctcf` | 1 CPU, 4 GB, 15 min | `validate_ctcf.py` — sanity-checks all BED files |
-| `simulate_shard` | 1 GPU, 4 CPU, 64 GB, 12 h | `run_simulation_shard.py` — 60 jobs total (5 × 3 × 4) |
+| `simulate_shard` | 1 GPU, 4 CPU, 64 GB, 12 h | `run_simulation_shard.py` — 36 jobs with the example config (3 × 3 × 4) |
 | `merge_shards` | 4 CPU, 64 GB, 2 h | `merge_shards.py` — concatenates shard HDF5 streams |
 | `analyze_all` | 4 CPU, 64 GB, 6 h | `run_analysis_all.py` — contact maps, P(s), MSD, figures |
 
@@ -274,7 +272,6 @@ Edit **once** before the first run. Key fields:
 | Field | What to change |
 |-------|---------------|
 | `hic` | One `<hic_type>: /abs/path.hic` entry per Hi-C map (e.g. `condition1`, `condition2`); each condition's `compare_hic` names one |
-| `promoter_stall_bed` | BED of promoter anchors, needed only by conditions with `ctcf_extra: promoter` |
 | `genome` | Path to hg38 FASTA (default: Longleaf shared reference) |
 | `samplesheet` | Path to `SimSamplesheet.txt` |
 | `n_replicates` | Independent simulation replicates (default: 3) |
@@ -368,15 +365,6 @@ config values change.
   `load_ctcf_from_bed()` reads each file into `CTCF_SITES_BY_TYPE[type]` —
   monomer indices with `+1` / `−1` orientation labels. Type names come from
   the config, so any number of CTCF conditions is supported.
-
-- **Promoter stall sites** (`PROMOTER_STALL_BED`, `PROMOTER_STALL_SITES`).
-  Loaded from `promoter_stall_bed` in the config. Conditions with
-  `ctcf_extra: promoter` add these to their CTCF barriers via
-  `get_barrier_arrays()`; they are non-directional (orientation `0`, which
-  stalls cohesin arriving from either side) and use the condition's
-  `ctcf_capture` / `ctcf_release`. While `promoter_stall_bed` is empty,
-  Snakemake skips these conditions and prints which ones it skipped; run
-  directly, a promoter condition refuses to simulate without the BED.
 
 - **Cohesin parameter sets** (`ALL_PARAM_SETS`). One dict per condition
   hypothesis, each with `lifetime`, `separation`, `ctcf_capture`, and
@@ -514,8 +502,8 @@ reflect the current state: `left_pos[i]`, `right_pos[i]`, `ages[i]`,
 
 ### 5a. `scripts/run_simulation_shard.py` — the Snakemake entry point
 
-This is what every `simulate_shard` SLURM job calls (60 jobs total:
-5 conditions × 3 replicates × 4 shards).
+This is what every `simulate_shard` SLURM job calls (36 jobs with the
+example config: 3 conditions × 3 replicates × 4 shards).
 
 **Arguments:**
 

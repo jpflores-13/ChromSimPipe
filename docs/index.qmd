@@ -48,7 +48,7 @@ runs the same way.
 
 ## Example conditions
 
-`config/ChromSimConfig.yaml` ships five example conditions comparing two
+`config/ChromSimConfig.yaml` ships three example conditions comparing two
 experimental states, `condition1` and `condition2`:
 
 | # | Condition | Cohesin params | CTCF sites | Question |
@@ -56,8 +56,6 @@ experimental states, `condition1` and `condition2`:
 | 1 | `cond1_baseline` | Gabriele 2022 | Condition 1 | Can we reproduce condition 1 Hi-C? |
 | 2 | `cond2_ctcf-only` | Gabriele 2022 | Condition 2 | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
 | 3 | `cond2_weak-ctcf` | Gabriele 2022 (0.5× capture) | Condition 2 | Weaker stalling at retained sites? |
-| 4 | `cond2_promoter-stall` | Gabriele 2022 | Condition 2 + promoter anchors | Promoter-anchored cohesin? |
-| 5 | `cond2_promoter-stall_long` | Gabriele 2022 (2× processivity) | Condition 2 + promoter | Same + longer processivity? |
 
 ## Example loci (STRS use case, hg38, HEK293T)
 

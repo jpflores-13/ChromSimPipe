@@ -18,8 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from configs.parameters import (
     CHROM, REGION_START, REGION_END, RESOLUTION, N_MONOMERS,
     ANCHOR_MONOMER, CTCF_BEDS,
-    CTCF_SITES_BY_TYPE, SIMULATION_CONDITIONS,
-    PROMOTER_STALL_BED, PROMOTER_STALL_SITES,
+    CTCF_SITES_BY_TYPE,
     get_ctcf_arrays, load_ctcf_from_bed,
 )
 
@@ -380,15 +379,6 @@ def main():
     for i, cond_a in enumerate(loaded_types):
         for cond_b in loaded_types[i + 1:]:
             compare_conditions(cond_a, cond_b)
-
-    # Promoter stall sites, if any condition asks for them
-    if any(c.get("ctcf_extra") == "promoter" for c in SIMULATION_CONDITIONS):
-        header("PROMOTER STALL SITES (ctcf_extra: promoter)")
-        if check(bool(PROMOTER_STALL_BED) and os.path.isfile(PROMOTER_STALL_BED),
-                 f"promoter_stall_bed exists: {PROMOTER_STALL_BED}"):
-            check(len(PROMOTER_STALL_SITES) > 0,
-                  f"Promoter sites inside {CHROM}:{REGION_START:,}-{REGION_END:,}: "
-                  f"{len(PROMOTER_STALL_SITES)}")
 
     header("SUMMARY")
     print(f"  Passed: {n_pass}")

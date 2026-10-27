@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configs.parameters import (
     POLYMER, SMC_BOND, SIM_RUN, N_MONOMERS, TILING,
     ALL_PARAM_SETS, SIMULATION_CONDITIONS,
-    CTCF_TYPES, get_barrier_arrays, get_tiled_ctcf_arrays, get_condition,
+    CTCF_TYPES, get_ctcf_arrays, get_tiled_ctcf_arrays, get_condition,
     CHROM, REGION_START, REGION_END, RESOLUTION,
 )
 from scripts.lef_dynamics import LEFSimulator
@@ -106,7 +106,6 @@ def initialize_polymer(N: int, density: float = 0.2) -> np.ndarray:
 
 def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
                              gpu: int = 0, ctcf_type: str = None,
-                             ctcf_extra: str | None = None,
                              force_lef_only: bool = False,
                              resume: bool = False,
                              n_blocks_override: int | None = None):
@@ -125,8 +124,6 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
         CUDA device index.
     ctcf_type : str
         Which CTCF site set to use (a ctcf_type from the config).
-    ctcf_extra : str or None
-        Extra barriers to add, e.g. "promoter" (see get_barrier_arrays).
     force_lef_only : bool
         If True, skip the 3D polymer and only write the LEF contact map /
         trajectories. Used when ``--engine lef_only`` is requested so the
@@ -169,7 +166,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
 
     # Save parameters (including which CTCF set was used and tiling info)
     with open(os.path.join(run_dir, "params.json"), "w") as f:
-        json.dump({**params, "ctcf_type": ctcf_type, "ctcf_extra": ctcf_extra,
+        json.dump({**params, "ctcf_type": ctcf_type,
                     "polymer": POLYMER, "sim_run": SIM_RUN, "tiling": TILING,
                     "replicate": replicate}, f, indent=2, default=str)
 
@@ -197,7 +194,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
     np.random.seed(rep_seed)
 
     # --- Initialize LEF simulator on the FULL tiled chromosome ---
-    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(ctcf_type, ctcf_extra=ctcf_extra)
+    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(ctcf_type)
     n_lefs = max(1, N // params["separation"])
 
     lef_sim = LEFSimulator(
@@ -505,7 +502,6 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
 
 def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: str,
                                      gpu: int = 0, ctcf_type: str = None,
-                                     ctcf_extra: str | None = None,
                                      resume: bool = False,
                                      n_blocks_override: int | None = None):
     """
@@ -531,8 +527,7 @@ def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: s
     if not HAS_OPENMM:
         logger.info("OpenMM not available. Falling back to LEF-only simulation.")
         return run_simulation_polychrom(params, replicate, output_dir, gpu,
-                                        ctcf_type=ctcf_type, ctcf_extra=ctcf_extra,
-                                        resume=resume,
+                                        ctcf_type=ctcf_type, resume=resume,
                                         n_blocks_override=n_blocks_override)
 
     N = POLYMER["N"]
@@ -541,7 +536,7 @@ def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: s
     os.makedirs(run_dir, exist_ok=True)
 
     with open(os.path.join(run_dir, "params.json"), "w") as f:
-        json.dump({**params, "ctcf_type": ctcf_type, "ctcf_extra": ctcf_extra,
+        json.dump({**params, "ctcf_type": ctcf_type,
                     "polymer": POLYMER, "sim_run": SIM_RUN,
                     "replicate": replicate}, f, indent=2, default=str)
 
@@ -550,7 +545,7 @@ def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: s
     np.random.seed(rep_seed)
 
     # Initialize LEFs
-    ctcf_pos, ctcf_ori = get_barrier_arrays(ctcf_type, ctcf_extra)
+    ctcf_pos, ctcf_ori = get_ctcf_arrays(ctcf_type)
     n_lefs = max(1, N // params["separation"])
     lef_sim = LEFSimulator(
         N=N, n_lefs=n_lefs, lifetime=params["lifetime"],
@@ -763,10 +758,8 @@ def main():
     logger.info(f"  Lifetime: {params['lifetime']}, Separation: {params['separation']}")
     logger.info(f"  CTCF capture: {params['ctcf_capture']}, release: {params['ctcf_release']}")
 
-    ctcf_extra = get_condition(args.condition).get("ctcf_extra") if args.condition else None
     run_kwargs = dict(params=params, replicate=args.replicate,
                       output_dir=args.output, gpu=args.gpu, ctcf_type=ctcf_type,
-                      ctcf_extra=ctcf_extra,
                       resume=args.resume, n_blocks_override=args.n_blocks)
 
     if args.engine == "lef_only":

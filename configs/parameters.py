@@ -9,9 +9,8 @@ downstream scripts work without modification:
     SIMULATION_CONDITIONS, ALL_PARAM_SETS
     GENOME_ASSEMBLY, CTCF_TYPES, CTCF_BEDS, CTCF_SITES_BY_TYPE
     HIC_TYPES, HIC_FILES, MCOOL_FILES
-    PROMOTER_STALL_BED, PROMOTER_STALL_SITES
     get_condition(), list_conditions()
-    get_ctcf_arrays(), load_ctcf_from_bed(), load_promoter_sites()
+    get_ctcf_arrays(), load_ctcf_from_bed()
     get_tiled_ctcf_arrays(), get_msd_pairs()
     DATA, MSD_PROBE, MSD_FIT, CALIBRATION
 
@@ -140,21 +139,14 @@ CTCF_TYPES = list(dict.fromkeys(
 ))
 CTCF_BEDS = {t: _ctcf_bed_path(t) for t in CTCF_TYPES}
 
-# Optional promoter stall-site BED, used by conditions with `ctcf_extra: promoter`.
-# Relative paths resolve against the repo root.
-PROMOTER_STALL_BED = _cfg.get("promoter_stall_bed") or None
-if PROMOTER_STALL_BED and not _os.path.isabs(PROMOTER_STALL_BED):
-    PROMOTER_STALL_BED = _os.path.join(_REPO_ROOT, PROMOTER_STALL_BED)
-
 
 # =============================================================================
 # CTCF SITE STORAGE (filled at import time by autoload below)
 # =============================================================================
 # Placeholder sites are used only for ctcf_types whose BED has not been
 # generated yet (get_ctcf_arrays warns when that happens).
-_PLACEHOLDER_SITES   = [(500, +1), (1000, -1), (1500, +1)]
-CTCF_SITES_BY_TYPE   = {}
-PROMOTER_STALL_SITES = []
+_PLACEHOLDER_SITES = [(500, +1), (1000, -1), (1500, +1)]
+CTCF_SITES_BY_TYPE = {}
 
 
 # =============================================================================
@@ -178,13 +170,6 @@ for _c in _cfg.get("conditions", []):
         ctcf_type   = _c["ctcf_type"],
         compare_hic = _c.get("compare_hic", None),
     )
-    if "ctcf_extra" in _c:
-        if _c["ctcf_extra"] != "promoter":
-            raise ValueError(
-                f"Condition '{_c['name']}': unsupported ctcf_extra "
-                f"'{_c['ctcf_extra']}' (only 'promoter' is implemented)."
-            )
-        _cond["ctcf_extra"] = _c["ctcf_extra"]
     SIMULATION_CONDITIONS.append(_cond)
 
 ALL_PARAM_SETS = [c["params"] for c in SIMULATION_CONDITIONS]
@@ -204,11 +189,10 @@ def list_conditions():
     print(f"{'Condition':<45} {'CTCF':>10} {'Hi-C':>8}   Description")
     print("-" * 110)
     for c in SIMULATION_CONDITIONS:
-        hic   = c["compare_hic"] or "—"
-        extra = f"+{c['ctcf_extra']}" if c.get("ctcf_extra") else ""
+        hic = c["compare_hic"] or "—"
         print(
             f"{c['name']:<45} "
-            f"{c['ctcf_type'] + extra:>10} "
+            f"{c['ctcf_type']:>10} "
             f"{hic:>8}   "
             f"{c['description']}"
         )
@@ -269,62 +253,9 @@ def load_ctcf_from_bed(bed_path, condition, region_start=None, resolution=None):
     return sites
 
 
-def load_promoter_sites(bed_path, region_start=None, resolution=None):
-    """
-    Load promoter-based cohesin stall sites.
-
-    Promoter anchors are non-directional: each site gets orientation 0, which
-    LEFSimulator treats as a barrier to both extrusion directions.
-    """
-    global PROMOTER_STALL_SITES
-    if region_start is None:
-        region_start = REGION_START
-    if resolution is None:
-        resolution = RESOLUTION
-    sites = []
-    with open(bed_path) as fh:
-        for line in fh:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            fields = line.split("\t")
-            if len(fields) < 3 or fields[0] != CHROM:
-                continue
-            summit  = (int(fields[1]) + int(fields[2])) // 2
-            monomer = (summit - region_start) // resolution
-            if 0 <= monomer < N_MONOMERS:
-                sites.append((monomer, 0))
-    sites = sorted(set(sites))
-    PROMOTER_STALL_SITES = sites
-    return sites
-
-
-def get_barrier_arrays(condition, ctcf_extra=None):
-    """
-    Return (positions, orientations) for one ctcf_type, plus any extra
-    barriers the condition asks for (currently only ctcf_extra="promoter").
-    """
+def get_tiled_ctcf_arrays(condition):
+    """Return CTCF positions/orientations tiled across the full simulated chromosome."""
     positions, orientations = get_ctcf_arrays(condition)
-    if ctcf_extra == "promoter":
-        if not PROMOTER_STALL_SITES:
-            raise RuntimeError(
-                "Condition requests ctcf_extra='promoter' but no promoter stall "
-                f"sites are loaded. Set promoter_stall_bed in {_CONFIG_PATH} "
-                f"(currently: {PROMOTER_STALL_BED!r}) to a BED with sites in "
-                f"{CHROM}:{REGION_START}-{REGION_END}."
-            )
-        positions = np.concatenate(
-            [positions, np.array([s[0] for s in PROMOTER_STALL_SITES], dtype=int)])
-        orientations = np.concatenate(
-            [orientations, np.array([s[1] for s in PROMOTER_STALL_SITES], dtype=int)])
-    elif ctcf_extra is not None:
-        raise ValueError(f"Unsupported ctcf_extra '{ctcf_extra}'")
-    return positions, orientations
-
-
-def get_tiled_ctcf_arrays(condition, ctcf_extra=None):
-    """Return barrier positions/orientations tiled across the full simulated chromosome."""
-    positions, orientations = get_barrier_arrays(condition, ctcf_extra)
     pad       = TILING["padding"]
     tile_size = TILING["tile_size"]
     n_tiles   = TILING["n_tiles"]
@@ -526,7 +457,7 @@ def _auto_select_msd_pairs(ctcf_type):
 
 
 # =============================================================================
-# AUTOLOAD CTCF + PROMOTER BEDs AT IMPORT TIME
+# AUTOLOAD CTCF BEDs AT IMPORT TIME
 # =============================================================================
 if AUTO_LOAD_CTCF_FROM_BED:
     import warnings as _warnings
@@ -540,12 +471,3 @@ if AUTO_LOAD_CTCF_FROM_BED:
                 "Run setup_data.sh to generate it. Placeholder sites will be used.",
                 UserWarning,
             )
-    if PROMOTER_STALL_BED and _os.path.exists(PROMOTER_STALL_BED):
-        load_promoter_sites(PROMOTER_STALL_BED)
-    elif any(c.get("ctcf_extra") == "promoter" for c in SIMULATION_CONDITIONS):
-        _warnings.warn(
-            "Some conditions use ctcf_extra='promoter' but promoter_stall_bed "
-            f"is not set or missing ({PROMOTER_STALL_BED!r}). Those conditions "
-            "are skipped by Snakemake and refuse to simulate until it is provided.",
-            UserWarning,
-        )

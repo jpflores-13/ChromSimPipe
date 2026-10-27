@@ -27,7 +27,7 @@ import h5py
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configs.parameters import (
     POLYMER, SMC_BOND, SIM_RUN, N_MONOMERS, TILING, CTCF_TYPES,
-    get_condition, get_tiled_ctcf_arrays,
+    get_tiled_ctcf_arrays,
 )
 from scripts.lef_dynamics import LEFSimulator
 from scripts.run_simulation import get_param_set, resolve_condition, initialize_polymer
@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
-              ctcf_type, ctcf_extra=None, shard_index_offset=0):
+              ctcf_type, shard_index_offset=0):
     """
     Run one shard of the simulation.
 
@@ -69,18 +69,16 @@ def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
 
     with open(os.path.join(shard_dir, "params.json"), "w") as f:
         json.dump({
-            **params, "ctcf_type": ctcf_type, "ctcf_extra": ctcf_extra,
-            "replicate": replicate,
+            **params, "ctcf_type": ctcf_type, "replicate": replicate,
             "shard_index": global_shard_index, "n_shards": n_shards,
             "blocks_per_shard": blocks_per_shard, "seed": shard_seed,
             "tiling": TILING,
         }, f, indent=2, default=str)
 
     # --- Initialize LEF simulator on the FULL tiled chromosome ---
-    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(ctcf_type, ctcf_extra=ctcf_extra)
-    logger.info(f"Shard {shard_index}: CTCF={ctcf_type}"
-                f"{'+' + ctcf_extra if ctcf_extra else ''}, "
-                f"{len(ctcf_pos) // n_tiles} barriers per tile")
+    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(ctcf_type)
+    logger.info(f"Shard {shard_index}: CTCF={ctcf_type}, "
+                f"{len(ctcf_pos) // n_tiles} sites per tile")
     n_lefs = max(1, N // params["separation"])
 
     lef_sim = LEFSimulator(
@@ -395,10 +393,9 @@ def main():
         params_name=args.params,
         ctcf_type=args.ctcf_type,
     )
-    ctcf_extra = get_condition(args.condition).get("ctcf_extra") if args.condition else None
 
     run_shard(params, args.replicate, args.shard_index, args.n_shards,
-              args.gpu, args.output, ctcf_type=ctcf_type, ctcf_extra=ctcf_extra,
+              args.gpu, args.output, ctcf_type=ctcf_type,
               shard_index_offset=args.shard_index_offset)
 
 

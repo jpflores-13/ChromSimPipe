@@ -17,9 +17,9 @@ the right resources.
 convert_hic (×2, CPU)
     → extract_ctcf (×2, CPU + FIMO)
         → validate_ctcf (×1, CPU)
-            → simulate_shard (×60, GPU — 5 cond × 3 rep × 4 shards)
-                → merge_shards (×15, CPU — 5 cond × 3 rep)
-                    → analyze_all (×5, CPU — one per condition)
+            → simulate_shard (×36, GPU — 3 cond × 3 rep × 4 shards)
+                → merge_shards (×9, CPU — 3 cond × 3 rep)
+                    → analyze_all (×3, CPU — one per condition)
 ```
 
 | Rule | Resources | What it does |
@@ -32,7 +32,7 @@ convert_hic (×2, CPU)
 | `analyze_all` | 4 CPU, 64 GB, 6 h | Contact maps, P(s), APA, figures |
 
 ::: {.callout-note}
-The 60 GPU jobs (`simulate_shard`) run in parallel, subject to cluster queue
+The 36 GPU jobs (`simulate_shard`) run in parallel, subject to cluster queue
 priority. Each shard takes ~8–10 hours of wall time. The main bottleneck is
 GPU availability, not simulation speed.
 :::

@@ -21,7 +21,6 @@ uses. Nothing is hardcoded in the scripts.
 hic:                                       # one entry per Hi-C map; names are your choice
   condition1:   /path/to/condition1.hic    # raw Hi-C in .hic format (KR-normalized)
   condition2:   /path/to/condition2.hic
-promoter_stall_bed: ''                     # only for conditions with ctcf_extra: promoter
 genome:         /path/to/hg38.fa           # for FIMO CTCF orientation
 samplesheet:    ChromSimSamplesheet.txt
 

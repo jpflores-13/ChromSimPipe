@@ -9,7 +9,6 @@
 #   hic                           — {hic_type: .hic path}, one per Hi-C map
 #   genome                        — genome FASTA for FIMO orientation
 #   samplesheet                   — ChromSimSamplesheet.txt (CTCF peaks per ctcf_type)
-#   promoter_stall_bed            — only for conditions with ctcf_extra: promoter
 #
 # Locus + conditions are read from configs/parameters.py (single source of truth).
 # Change the locus section in ChromSimConfig.yaml to switch genomic regions.
@@ -21,7 +20,7 @@ import pandas as pd
 sys.path.insert(0, os.getcwd())
 from configs.parameters import (
     SIMULATION_CONDITIONS, LOCI, SIM_RUN, ACTIVE_LOCUS,
-    CTCF_TYPES, CTCF_BEDS, HIC_FILES, MCOOL_FILES, PROMOTER_STALL_BED,
+    CTCF_TYPES, CTCF_BEDS, HIC_FILES, MCOOL_FILES,
 )
 
 configfile: "config/ChromSimConfig.yaml"
@@ -29,18 +28,6 @@ configfile: "config/ChromSimConfig.yaml"
 # ── Pipeline-level constants ───────────────────────────────────────────────────
 COND_LOOKUP  = {c["name"]: c for c in SIMULATION_CONDITIONS}
 COND_NAMES   = [c["name"] for c in SIMULATION_CONDITIONS]
-
-# Promoter-stall conditions need promoter_stall_bed; without it they are left
-# out of `rule all` (not simulated without their promoter barriers).
-SKIPPED_CONDS = [] if PROMOTER_STALL_BED else [
-    c["name"] for c in SIMULATION_CONDITIONS if c.get("ctcf_extra") == "promoter"
-]
-if SKIPPED_CONDS:
-    sys.stderr.write(
-        "\n[ChromSimPipe] promoter_stall_bed is not set in config/ChromSimConfig.yaml;\n"
-        f"[ChromSimPipe] SKIPPING promoter conditions: {', '.join(SKIPPED_CONDS)}\n\n"
-    )
-COND_NAMES = [n for n in COND_NAMES if n not in SKIPPED_CONDS]
 
 LOCUS      = ACTIVE_LOCUS
 LOCUS_INFO = LOCI[LOCUS]
@@ -73,17 +60,6 @@ _missing_peaks = [t for t in CTCF_TYPES if t not in _samples.index]
 if _missing_peaks:
     raise ValueError(f"No samplesheet row for ctcf_type(s) {_missing_peaks} "
                      f"in {config['samplesheet']}")
-
-def _barrier_inputs(wc):
-    """CTCF BED for the condition, plus the promoter BED when it asks for one."""
-    cond = COND_LOOKUP[wc.condition]
-    inputs = [_ctcf_bed(cond["ctcf_type"])]
-    if cond.get("ctcf_extra") == "promoter":
-        if not PROMOTER_STALL_BED:
-            raise ValueError(f"Condition '{wc.condition}' uses ctcf_extra: promoter "
-                             "but promoter_stall_bed is not set in the config.")
-        inputs.append(PROMOTER_STALL_BED)
-    return inputs
 
 def _compare_mcool(wc):
     hic = COND_LOOKUP[wc.condition]["compare_hic"]
@@ -177,7 +153,7 @@ rule validate_ctcf:
 rule simulate_shard:
     input:
         ctcf_done = SENTINEL + "/ctcf_validated.done",
-        barriers  = _barrier_inputs,
+        ctcf_bed  = lambda wc: _ctcf_bed(COND_LOOKUP[wc.condition]["ctcf_type"]),
     output:
         done = SENTINEL + "/sims/{condition}_rep{rep}_shard{shard}.done"
     params:
