@@ -1,14 +1,48 @@
 executor: slurm
 jobs: 100
 latency-wait: 500
+software-deployment-method: conda
 
 default-resources:
-  name: "'{rule}.{wildcards}'"
   slurm_account: rc_dphansti_pi   # ← change to your SLURM account
-  slurm_partition: general
-  runtime: 4320          # 72 h default wall time (minutes)
-  cpus_per_task: 1
-  mem_mb_per_cpu: 16G
+  slurm_partition: general        # -p
+  runtime: 4320                   # -t (minutes)
+  cpus_per_task: 1                # -c
+  mem_mb: 16000                   # --mem
   nodes: 1
-  output: "'logs_slurm/{rule}.{wildcards}.{jobid}.out'"
-  error:  "'logs_slurm/{rule}.{wildcards}.{jobid}.err'"
+## SLURM job logs go to <outputDir>/logs_slurm (--slurm-logdir in ChromSimPipe.sh)
+
+## Per-rule resources (dietJuicer pattern: rules carry no resources of their own)
+set-resources:
+  convertHic:
+    runtime: 120
+    cpus_per_task: 4
+    mem_mb: 32000
+  getMotif:
+    runtime: 15
+    mem_mb: 1000
+  orientCTCF:
+    runtime: 60
+    cpus_per_task: 2
+    mem_mb: 16000
+  validateCTCF:
+    runtime: 15
+    mem_mb: 4000
+  simulateShard:
+    runtime: 720
+    slurm_partition: gpu
+    qos: gpu_access
+    gpu: 1
+    cpus_per_task: 4
+    mem_mb: 60000
+  mergeShards:
+    runtime: 120
+    cpus_per_task: 4
+    mem_mb: 64000
+  analyzeCondition:
+    runtime: 360
+    cpus_per_task: 4      # keep >= analysis.n_jobs in config/ChromSimConfig.yaml
+    mem_mb: 64000
+  benchmarkSummary:
+    runtime: 15
+    mem_mb: 2000

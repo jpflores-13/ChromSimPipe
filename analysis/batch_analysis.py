@@ -3,13 +3,13 @@
 Batch analysis: compute contact maps for all completed conditions and
 generate a multi-panel comparison figure.
 
-Scans results/polychrom_3d/ for completed simulation directories,
+Scans output/sims/ for completed simulation directories,
 runs contact map analysis on each, saves individual PNGs per condition,
 and produces a single multi-panel figure for quick comparison.
 
 Usage:
     python analysis/batch_analysis.py
-    python analysis/batch_analysis.py --results-dir results/polychrom_3d --n-jobs 4
+    python analysis/batch_analysis.py --results-dir output/sims --n-jobs 4
     python analysis/batch_analysis.py --skip-existing   # only analyze new results
 """
 
@@ -21,13 +21,6 @@ import logging
 import json
 import re
 
-if os.environ.get("CONDA_DEFAULT_ENV", "") != "cohesin_sim":
-    sys.stderr.write(
-        f"[env] active conda env is '{os.environ.get('CONDA_DEFAULT_ENV') or 'none'}', "
-        "expected 'cohesin_sim'. run: conda activate cohesin_sim\n"
-    )
-    sys.exit(1)
-
 import numpy as np
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -37,7 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configs.parameters import (
     N_MONOMERS, RESOLUTION, CHROM, REGION_START, REGION_END,
     ANCHOR_MONOMER, ACTIVE_LOCUS, LOCI,
-    SIMULATION_CONDITIONS,
+    SIMULATION_CONDITIONS, PATHS,
 )
 from analysis.contact_maps import (
     load_conformations_h5,
@@ -268,9 +261,9 @@ def plot_ps_comparison(results_dirs, output_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Batch analysis of all completed conditions")
-    parser.add_argument("--results-dir", type=str, default="results/polychrom_3d",
+    parser.add_argument("--results-dir", type=str, default=PATHS["sims"],
                         help="Base results directory")
-    parser.add_argument("--output-dir", type=str, default="results/figures",
+    parser.add_argument("--output-dir", type=str, default=PATHS["figures"],
                         help="Output directory for PNGs")
     parser.add_argument("--n-jobs", type=int, default=4,
                         help="Parallel workers for contact map computation")

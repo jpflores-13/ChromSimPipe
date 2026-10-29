@@ -67,13 +67,13 @@ explicitly empty rather than filled with a fabricated p-value.
 Usage
 -----
     python scripts/summarize_analysis.py \
-        --analysis-dir results/polychrom_3d/../analysis
+        --analysis-dir output/analysis
 
 Or via the orchestrator (auto-wired as Phase 4):
 
     python scripts/run_analysis_all.py \
-        --results-dir results/polychrom_3d \
-        --hic-dir data/mcool
+        --results-dir output/sims \
+        --hic-dir output/mcool
 
 Pass ``--no-summary-table`` to the orchestrator to skip Phase 4.
 

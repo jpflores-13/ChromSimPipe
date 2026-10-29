@@ -2,8 +2,10 @@
 .claude/
 
 # Generated data and results (large files, not for version control)
+output/
 data/
 results/
+*-[0-9]*.out
 
 # Slurm logs
 logs/
@@ -33,3 +35,4 @@ build/
 *.swp
 .DS_Store
 .snakemake_venv/
+env/

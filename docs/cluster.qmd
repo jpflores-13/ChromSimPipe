@@ -2,57 +2,48 @@
 
 ## How jobs are submitted
 
-`ChromSimPipe.sh` submits itself as a SLURM job. Inside that job, Snakemake
-uses `snakemake-executor-plugin-slurm` to submit each rule as its own SLURM job.
-You only ever run `sbatch ChromSimPipe.sh` — everything else is automatic.
+`sbatch ChromSimPipe.sh` starts the launcher job. Inside it, Snakemake uses
+`snakemake-executor-plugin-slurm` to submit each rule as its own SLURM job.
 
 ## SLURM account and partition
 
-| Setting | Value | Where set |
-|---------|-------|-----------|
-| Account | `rc_dphansti_pi` | `profiles/slurm/config.yaml` |
-| Default partition | `general` | `profiles/slurm/config.yaml` |
-| GPU partition | `gpu` | `simulate_shard` rule in Snakefile |
-| GPU QOS | `gpu_access` | `simulate_shard` rule in Snakefile |
+All of these are in `profiles/slurm/config.yaml`:
+
+| Setting | Value | Where |
+|---------|-------|-------|
+| Account | `rc_dphansti_pi` | `default-resources: slurm_account` |
+| Default partition | `general` | `default-resources: slurm_partition` |
+| GPU partition | `gpu` | `set-resources: simulateShard` |
+| GPU QOS | `gpu_access` | `set-resources: simulateShard` |
 
 ## Per-rule resource requests
 
 | Rule | Partition | CPUs | RAM | Wall time | GPU |
 |------|-----------|------|-----|-----------|-----|
-| `convert_hic` | general | 4 | 32 GB | 2 h | — |
-| `extract_ctcf` | general | 2 | 16 GB | 1 h | — |
-| `validate_ctcf` | general | 1 | 4 GB | 15 min | — |
-| `simulate_shard` | **gpu** | 4 | 60 GB | 12 h | **1** |
-| `merge_shards` | general | 4 | 64 GB | 2 h | — |
-| `analyze_all` | general | 4 | 64 GB | 6 h | — |
+| `convertHic` | general | 4 | 32 GB | 2 h | — |
+| `getMotif` | general | 1 | 1 GB | 15 min | — |
+| `orientCTCF` | general | 2 | 16 GB | 1 h | — |
+| `validateCTCF` | general | 1 | 4 GB | 15 min | — |
+| `simulateShard` | **gpu** | 4 | 60 GB | 12 h | **1** |
+| `mergeShards` | general | 4 | 64 GB | 2 h | — |
+| `analyzeCondition` | general | 4 | 64 GB | 6 h | — |
+| `benchmarkSummary` | general | 1 | 2 GB | 15 min | — |
 
 ## Log file locations
 
 | Log | Path |
 |-----|------|
-| Top-level Snakemake log | `logs/snakemake_{jobid}.err` |
-| Per-rule job logs | `.snakemake/slurm_logs/rule_{rule}/{wildcards}/{jobid}.log` |
-| Setup script log | `logs/setup_data*.log` |
-
-::: {.callout-warning}
-Do not move or rename the `.snakemake/slurm_logs/` directory. Snakemake reads
-those paths to report per-job errors. Move them after the run if you want to
-archive them.
-:::
+| Launcher (main Snakemake process) | `ChromSimPipe-{jobid}.out` |
+| Each job's stdout / stderr | `output/logs/{rule}_{wildcards}.out` / `.err` |
+| SLURM job logs | `output/logs_slurm/` (`--slurm-logdir` in `ChromSimPipe.sh`) |
+| Per-job run time / memory | `output/benchmarks/`, summarised in `output/{runName}_benchmarking.tsv` |
 
 ## Conda environments in SLURM jobs
 
-GPU nodes on Longleaf require initializing conda via `source` rather than
-`module load`. The Snakefile does this:
-
-```bash
-source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
-conda run -p ~/.local/share/mamba/envs/cohesin_sim \
-    python scripts/run_simulation_shard.py ...
-```
-
-Using `conda run -p <full-path>` (not `-n <name>`) is essential for reliable
-environment activation in non-interactive SLURM jobs.
+Each rule declares `conda:` with an entry from `condaEnvs` in the config, and
+the profile sets `software-deployment-method: conda`. Snakemake activates the
+environment inside each job. The launcher's `module load anaconda/<condaVers>`
+puts `conda` on the `PATH` that SLURM jobs inherit.
 
 ## Checking queue status
 
@@ -68,7 +59,7 @@ sacct -j <jobid> --format=JobID,State,Elapsed,ExitCode
 ```bash
 scancel <jobid>                   # one job
 scancel -u $USER                  # ALL your jobs (careful!)
-scancel -u $USER --name simulate_shard   # by job name
+scancel -u $USER --name <jobname>        # by job name
 ```
 
 After cancelling, run `bash unlock.sh` before resubmitting.

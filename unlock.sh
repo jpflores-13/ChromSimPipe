@@ -1,34 +1,31 @@
-#!/usr/bin/env bash
-# ==============================================================================
-# filename:    unlock.sh
-# description: Release the Snakemake directory lock after a failed or
-#              interrupted run. Safe to run before re-submitting SimPipe.sh.
-#
-# Usage:
-#   bash unlock.sh
-# ==============================================================================
+#! /bin/bash -login
 
-set -euo pipefail
+## Release the Snakemake lock after a failed or interrupted run, then
+## resubmit with sbatch ChromSimPipe.sh.
+##
+## Usage:
+##   bash unlock.sh                          # default config
+##   bash unlock.sh --configfile other.yaml
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "${REPO_ROOT}"
+## Exit if any command fails
+set -e
 
-VENV_DIR="${REPO_ROOT}/.snakemake_venv"
-
-if [[ -f "${VENV_DIR}/bin/activate" ]]; then
-    source "${VENV_DIR}/bin/activate"
-else
-    module load python/3.12.4 2>/dev/null || true
-fi
-
-SNAKEFILE="workflows/ChromSimPipe.snakefile"
 CONFIG="config/ChromSimConfig.yaml"
-[ -f "workflows/STRSsim.snakefile" ] && SNAKEFILE="workflows/STRSsim.snakefile"
-[ -f "config/SimConfig.yaml" ] && CONFIG="config/SimConfig.yaml"
+[[ "$1" == "--configfile" ]] && CONFIG="$2"
 
-snakemake \
-    --snakefile  "${SNAKEFILE}" \
-    --configfile "${CONFIG}" \
-    --unlock
+cfg() { sed -nE "s/^$1:[[:space:]]*['\"]?([^'\"#[:space:]]+).*/\1/p" "${CONFIG}" | head -1; }
 
-echo "Lock released."
+## Load required modules
+module load python/"$(cfg pythonVers)"
+
+## Activate virtual environment
+source env/bin/activate
+
+## Unlock snakemake workflow
+snakemake --unlock -s workflows/ChromSimPipe.snakefile --cores 1 --configfile "${CONFIG}"
+
+## Deactivate virtual environment
+deactivate
+
+## Success message
+echo -e "\033[0;32mDirectory unlocked, ready to rerun with sbatch ChromSimPipe.sh"

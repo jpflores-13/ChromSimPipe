@@ -2,85 +2,83 @@
 
 ## Prerequisites
 
-- Longleaf HPC account with access to `rc_dphansti_pi` allocation
-- `.hic` Hi-C maps and CTCF peak `.narrowPeak` files for your experiment
-- GPU partition access (`general` + `gpu`)
+- A SLURM cluster with a GPU partition (defaults are for UNC Longleaf)
+- `python` and `anaconda` environment modules (versions set by `pythonVers`
+  and `condaVers` in the config)
+- CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) and `.hic` maps for your samples
+- A genome FASTA with the same chromosome names as the peaks
 
-## Step 0 — Clone and configure
+There is no separate setup script: converting Hi-C, orienting CTCF sites,
+and building conda environments are all steps of the workflow.
+
+## 1. Samplesheet
+
+`ChromSimSamplesheet.txt` is tab-separated, one row per experimental sample.
+Two columns are required; the rest are free-form metadata:
+
+| Column | Contents |
+|--------|----------|
+| `CTCF_Peaks` | CTCF peak file (narrowPeak/BED), or `NA` |
+| `Hi-C` | `.hic` map to compare simulations against, or `NA` |
+| anything else | metadata (`Project`, `Cell_Type`, `Condition`, ...) |
+
+```
+Project  Cell_Type  Condition   CTCF_Peaks                    Hi-C
+STRS     HEK293T    condition1  /path/to/control.narrowPeak   /path/to/control.hic
+STRS     HEK293T    condition2  /path/to/sorbitol.narrowPeak  /path/to/sorbitol.hic
+```
+
+`fileNamesFrom` in the config lists the columns joined with `_` to name each
+sample (the bagPipes convention). With `fileNamesFrom: ['Condition']` the
+samples above are `condition1` and `condition2`.
+
+## 2. Config
+
+Edit `config/ChromSimConfig.yaml`. The fields most runs change:
+
+| Field | What to set |
+|-------|-------------|
+| `samplesheet`, `fileNamesFrom` | Samplesheet path and naming columns |
+| `outputDir` | Where every output goes (default `output`) |
+| `genome`, `genome_assembly` | FASTA for FIMO and its assembly name |
+| `ctcf_motif` | JASPAR motif ID (or a local MEME file), FIMO threshold, flank, what to do with unoriented peaks |
+| `locus` | Simulated window |
+| `tiling` | Must satisfy `tile_size = locus monomers + 2 × padding` |
+| `conditions` | One entry per simulation; `ctcf_type` / `compare_hic` name samples |
+| `n_replicates`, `n_shards` | Simulations per condition and GPU jobs per simulation |
+| `condaEnvs` | Env file, env name, or env path for each rule group |
+
+See [Configuration](configuration.qmd) for every field.
+
+## 3. SLURM profile
+
+Set `slurm_account` in `profiles/slurm/config.yaml`. Per-rule resources are
+under `set-resources:` in the same file.
+
+## 4. Conda environments
+
+`condaEnvs` in the config tells Snakemake which environment each rule runs in.
+By default these are the files in `envs/`, which Snakemake builds on first
+use. To build them ahead of the first real run:
 
 ```bash
-cd ~/projects/ChromSimPipe   # or wherever you cloned it
-
-# 1. Edit config/ChromSimConfig.yaml to point at your Hi-C and CTCF data
-nano config/ChromSimConfig.yaml
-
-# 2. Edit ChromSimSamplesheet.txt with your CTCF peak file paths
-nano ChromSimSamplesheet.txt
-
-# 3. Edit profiles/slurm/config.yaml to set your SLURM account
-nano profiles/slurm/config.yaml   # change slurm_account
-
-# 4. Optionally change the locus in ChromSimConfig.yaml (default: chr1_fig1)
+bash ChromSimPipe.sh --conda-create-envs-only
 ```
 
-## Step 1 — Build conda environments and prepare data
+To reuse environments you already built, give their name or path instead:
 
-```bash
-bash setup_data.sh
+```yaml
+condaEnvs:
+  sim:  '~/.local/share/mamba/envs/cohesin_sim'
+  ctcf: '~/.local/share/mamba/envs/ctcf_extraction'
 ```
-
-This script reads all paths from `config/ChromSimConfig.yaml` and
-`ChromSimSamplesheet.txt`, then:
-
-1. Creates the `cohesin_sim` conda env (polychrom, cooler, hic2cool, numpy, scipy, matplotlib)
-2. Creates the `ctcf_extraction` conda env (MEME/FIMO, bedtools)
-3. Converts input `.hic` files → `.cool` at 1 kb resolution
-4. Extracts and orients CTCF sites from CUT&Tag peaks via FIMO
-5. Validates the resulting BED files
-
-Takes ~20–30 minutes total (mostly conda build + FIMO).
-
-::: {.callout-tip}
-You can re-run `bash setup_data.sh --skip-envs` to skip conda environment
-creation when switching loci — it will only re-run the CTCF extraction
-and conversion steps.
-:::
-
-## Key config files
-
-### `config/ChromSimConfig.yaml`
-
-Edit **once** before the first run:
-
-| Field | What to change |
-|-------|---------------|
-| `hic` | One `<hic_type>: /abs/path.hic` entry per Hi-C map (e.g. `condition1`, `condition2`); each condition's `compare_hic` names one |
-| `genome` | Path to genome FASTA (for FIMO CTCF orientation) |
-| `samplesheet` | Path to `ChromSimSamplesheet.txt` |
-| `locus > name` | Active locus key (e.g. `chr1_fig1`) |
-| `n_replicates` | Independent simulation replicates (default: 3) |
-| `n_shards` | GPU shards per replicate (default: 4) |
-
-### `ChromSimSamplesheet.txt`
-
-Tab-separated, two columns:
-
-```
-CTCF_Type   CTCF_Peaks_Path
-condition1  /path/to/condition1_CTCF_peaks.narrowPeak
-condition2  /path/to/condition2_CTCF_peaks.narrowPeak
-```
-
-### `profiles/slurm/config.yaml`
-
-Sets the SLURM account and default partition for all jobs. GPU jobs
-override the partition to `gpu` automatically via the Snakefile.
 
 ## Troubleshooting setup
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `ImportError: polychrom` | `cohesin_sim` env not built | Run `bash setup_data.sh` |
-| CTCF BED file not found | CTCF extraction failed | Check `logs/setup_data*.log` |
-| `KeyError: 'CTCF_Type'` | TSV format issue | `ChromSimSamplesheet.txt` must be tab-separated with exact headers |
-| `hic2cool` fails | `.hic` path wrong | Check `config/ChromSimConfig.yaml` paths |
+| `Samplesheet ... has no 'CTCF_Peaks' column` | Header typo, or spaces instead of tabs | Use tabs and the exact headers `CTCF_Peaks`, `Hi-C` |
+| `Duplicate sample name` | `fileNamesFrom` columns don't tell rows apart | Add a column to `fileNamesFrom` |
+| `Condition ctcf_type '...' has no CTCF_Peaks` | Condition names a sample that isn't in the samplesheet | Check sample names against `output/{runName}_ChromSimSamplesheet.txt` |
+| `tile_size ... must equal N_MONOMERS + 2*padding` | Locus changed without updating `tiling` | Recompute `tile_size` (and `chrom_size`) |
+| `Error running conda info` | Anaconda module not loaded | Check `condaVers` against `module avail anaconda` |

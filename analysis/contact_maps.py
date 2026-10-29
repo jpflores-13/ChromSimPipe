@@ -9,7 +9,7 @@ Reads 3D polymer conformations (from polychrom or OpenMM) and computes:
   4. Comparison metrics with experimental Hi-C
 
 Usage:
-    python contact_maps.py --sim-dir ../results/polychrom_3d/merged_baseline_ctcf-condition1_rep0 --exp-hic ../data/condition1.npy
+    python contact_maps.py --sim-dir ../output/sims/merged_baseline_ctcf-condition1_rep0 --exp-hic condition1.npy
 """
 
 import os
@@ -17,13 +17,6 @@ import sys
 import argparse
 import logging
 import json
-
-if os.environ.get("CONDA_DEFAULT_ENV", "") != "cohesin_sim":
-    sys.stderr.write(
-        f"[env] active conda env is '{os.environ.get('CONDA_DEFAULT_ENV') or 'none'}', "
-        "expected 'cohesin_sim'. run: conda activate cohesin_sim\n"
-    )
-    sys.exit(1)
 
 import numpy as np
 # ---------------------------------------------------------------------------
@@ -932,8 +925,8 @@ def compare_contact_maps(
         ins_corr = 0.0
 
     # 6. P(s) power law exponents for both sim and exp
-    sim_ps_metrics = extract_ps_metrics(np.arange(N) * 1000, ps_sim[:N])
-    exp_ps_metrics = extract_ps_metrics(np.arange(N) * 1000, ps_exp[:N])
+    sim_ps_metrics = extract_ps_metrics(np.arange(N) * RESOLUTION, ps_sim[:N], resolution=RESOLUTION)
+    exp_ps_metrics = extract_ps_metrics(np.arange(N) * RESOLUTION, ps_exp[:N], resolution=RESOLUTION)
 
     metrics = {
         "overall_pearson": float(overall_corr),

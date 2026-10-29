@@ -2,117 +2,99 @@
 
 ## How configuration works
 
-ChromSimPipe is fully YAML-driven. All paths, locus coordinates, simulation
-conditions, and cohesin parameters live in two files:
+ChromSimPipe is driven by two files, as in bagPipes and dietJuicer:
 
 | File | Purpose |
 |------|---------|
-| `config/ChromSimConfig.yaml` | Cluster paths, locus definitions, run settings |
-| `ChromSimSamplesheet.txt` | Per-condition CTCF peak files |
+| `ChromSimSamplesheet.txt` | One row per sample: metadata, `CTCF_Peaks`, `Hi-C` |
+| `config/ChromSimConfig.yaml` | Everything else: locus, conditions, physics, paths, software |
 
-`configs/parameters.py` reads `config/ChromSimConfig.yaml` at import time and
-exports named constants + helper functions that every script and Snakemake rule
-uses. Nothing is hardcoded in the scripts.
+`configs/parameters.py` parses both and exports named constants and helper
+functions; the Snakefile and every script import them. Each rule passes the
+config's path to its script in `$CHROMSIM_CONFIG`, so
+`--configfile other.yaml` reaches every job. No path, name, or parameter is
+written into the Snakefile or scripts.
 
-## `config/ChromSimConfig.yaml` — full reference
+## `config/ChromSimConfig.yaml` — reference
+
+The shipped file is commented line by line; this is the outline.
 
 ```yaml
-# --- Input data ---
-hic:                                       # one entry per Hi-C map; names are your choice
-  condition1:   /path/to/condition1.hic    # raw Hi-C in .hic format (KR-normalized)
-  condition2:   /path/to/condition2.hic
-genome:         /path/to/hg38.fa           # for FIMO CTCF orientation
-samplesheet:    ChromSimSamplesheet.txt
+samplesheet:   'ChromSimSamplesheet.txt'
+fileNamesFrom: ['Condition']   # columns joined with '_' to name samples
+outputDir:     'output'
 
-# --- Locus definitions (multiple; one is ACTIVE at a time) ---
-loci:
-  chr1_fig1:
-    chrom:  chr1
-    start:  64200000
-    end:    66200000
-  chr4_fig1:
-    chrom:  chr4
-    start:  1700000
-    end:    3700000
-  chr6_fig1:
-    chrom:  chr6
-    start:  124100000
-    end:    126100000
-  chr16_sox8:
-    chrom:  chr16
-    start:  400000
-    end:    2300000
+genome:          '/path/to/genome.fa'
+genome_assembly: 'hg38'
 
-# --- Active locus (one key from loci above) ---
-active_locus: chr1_fig1
+ctcf_motif:
+  jaspar_id:   'MA0139.1'
+  meme:        ''              # local MEME file; '' = download jaspar_id
+  jaspar_url:  'https://jaspar.elixir.no/api/v1/matrix/{jaspar_id}/?format=meme'
+  fimo_thresh: 1.0e-3
+  flank_bp:    100
+  unoriented:  'drop'          # or 'error'
 
-# --- Simulation settings ---
-resolution:    1000     # bp per monomer
-n_replicates:  3
-n_shards:      4
+resolution:   1000             # bp per monomer
+n_replicates: 3
+n_shards:     4
 
-# --- Tiling ---
-tiling:
-  n_copies: 28          # polymer is 28× the locus (for statistics)
+pythonVers: '3.12.4'           # module load python/<pythonVers>
+condaVers:  '2024.02'          # module load anaconda/<condaVers>
+condaEnvs:                     # env file, env name, or env path
+  sim:  'envs/cohesin_sim.yml'
+  ctcf: 'envs/ctcf_extraction.yml'
 
-# --- Cohesin model (Gabriele 2022 defaults) ---
-smc_bond:
-  lifetime:       75
-  separation:     240
-  ctcf_capture:   0.125
-  ctcf_release:   0.0033
+locus:      {name, chrom, region_start, region_end, label, anchor_bp}
+conditions: [...]              # see below
+polymer:    {density, bond_length, bond_wiggle_dist, angle_force,
+             collision_rate, error_tol, repulsion_trunc, confinement_k,
+             integrator, precision, platform}
+smc_bond:   {wiggle_dist, bond_dist}
+tiling:     {tile_size, chrom_size, padding}
+sim_run:    {engine, seed_base, smc_steps_per_block, md_steps_per_block,
+             total_blocks, warmup_blocks, save_every, restart_milker_every,
+             contact_radius, hdf5_frames_per_file}
+analysis:   {n_jobs, msd, apa, msd_probe, msd_fit, calibration}
 ```
 
-::: {.callout-tip}
-Changing `active_locus` is all you need to switch analysis targets. Re-run
-`bash setup_data.sh --skip-envs` to regenerate CTCF BEDs for the new locus,
-then resubmit.
+::: {.callout-note}
+`sim_run.engine` must be importable in the simulation environment; the
+workflow stops instead of silently switching to another engine. Oriented CTCF
+BEDs must exist before simulation; there are no placeholder sites.
 :::
 
 ## `configs/parameters.py` — exported API
 
-Importing this module gives you:
-
 ```python
 from configs.parameters import (
-    ACTIVE_LOCUS,          # str: e.g. "chr1_fig1"
-    LOCI,                  # dict: all locus defs
-    CHROM,                 # str: e.g. "chr1"
-    REGION_START,          # int: genomic start (bp)
-    REGION_END,            # int: genomic end (bp)
-    RESOLUTION,            # int: bp/monomer
-    N_MONOMERS,            # int: (REGION_END - REGION_START) // RESOLUTION
-    POLYMER,               # dict: polymer physics settings
-    SMC_BOND,              # dict: cohesin bond settings
-    TILING,                # dict: tile_size, chrom_size, padding, n_tiles
-    SIM_RUN,               # dict: block counts, save interval, replicates
+    CONFIG_PATH,           # str: the config being used
+    OUTPUT_DIR, PATHS,     # str, dict: output root and its subdirectories
+    SAMPLES,               # dict: sample name -> {metadata, ctcf_peaks, hic}
+    RUN_NAME,              # str: metadata shared by every sample, '_'-joined
+    ACTIVE_LOCUS, LOCI,    # locus key and definition
+    CHROM, REGION_START, REGION_END, REGION,
+    RESOLUTION, N_MONOMERS,
+    POLYMER, SMC_BOND, TILING, SIM_RUN,
+    N_REPLICATES, N_SHARDS,
     SIMULATION_CONDITIONS, # list[dict]: one dict per condition
     ALL_PARAM_SETS,        # list[dict]: the cohesin params of each condition
-    CTCF_TYPES,            # list[str]: CTCF sets used by the conditions
+    CTCF_TYPES,            # list[str]: samples whose CTCF peaks are simulated
+    CTCF_PEAKS,            # dict: ctcf_type -> peak file
     CTCF_BEDS,             # dict: ctcf_type -> oriented BED path
-    HIC_FILES,             # dict: hic_type -> .hic path
-    MCOOL_FILES,           # dict: hic_type -> data/mcool/<hic_type>.cool
+    HIC_FILES,             # dict: sample -> .hic path
+    MCOOL_FILES,           # dict: sample -> <outputDir>/mcool/<sample>.cool
+    ANALYSIS, MSD_PROBE, MSD_FIT, CALIBRATION,
 )
 ```
 
 ### Helper functions
 
 ```python
-# Full condition dict (params, ctcf_type, compare_hic) by condition name
-cond = get_condition("cond1_baseline")
-
-# Print a table of all conditions
-list_conditions()
-
-# Oriented CTCF sites for a CTCF set (a ctcf_type, not a condition name)
-positions, orientations = get_ctcf_arrays("condition1")
-
-# The same sites repeated across every tile of the simulated polymer
-positions, orientations = get_tiled_ctcf_arrays("condition1")
-
-# Load a BED file into the CTCF set it belongs to (done automatically on import)
-load_ctcf_from_bed("data/ctcf_beds/ctcf_oriented_hg38_condition1_chr1_64210000_66170000.bed",
-                   condition="condition1")
+cond = get_condition("cond1_baseline")       # full condition dict
+list_conditions()                            # table of all conditions
+positions, orientations = get_ctcf_arrays("condition1")        # raises if BED missing
+positions, orientations = get_tiled_ctcf_arrays("condition1")  # repeated per tile
 ```
 
 ## Simulation conditions
@@ -147,21 +129,31 @@ conditions:
 ```
 
 To add a condition, add an entry with a unique `name`. Its `ctcf_type` must
-have a row in `ChromSimSamplesheet.txt`, and its `compare_hic` must be a key
-under `hic:`. Snakemake picks new conditions up automatically.
+name a samplesheet sample with `CTCF_Peaks`, and its `compare_hic` a sample
+with `Hi-C`. Snakemake picks new conditions up automatically.
 
 ## Profiles and SLURM settings
 
-`profiles/slurm/config.yaml` sets cluster-level defaults:
+`profiles/slurm/config.yaml` holds cluster defaults and, under
+`set-resources:`, every rule's request (the dietJuicer pattern — rules carry
+no resources of their own):
 
 ```yaml
-executor:         slurm
+executor: slurm
+software-deployment-method: conda
 default-resources:
-  slurm_account:  rc_dphansti_pi
+  slurm_account:   rc_dphansti_pi
   slurm_partition: general
-  runtime:         4320          # 72 h max; per-rule overrides this
-  mem_mb:          8000
+  runtime:         4320
   cpus_per_task:   1
+  mem_mb:          16000
+set-resources:
+  simulateShard:
+    slurm_partition: gpu
+    qos:             gpu_access
+    gpu:             1
+    cpus_per_task:   4
+    mem_mb:          60000
+    runtime:         720
+  ...
 ```
-
-GPU jobs override these via per-rule `resources:` blocks in the Snakefile.

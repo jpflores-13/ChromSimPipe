@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -7,233 +7,228 @@
   <meta name="dcterms.date" content="2026-01-01" />
   <title>ChromSimPipe Code Guide</title>
   <style>
-
-html {
-font-size: 11pt;
-color: #1a1a1a;
-background-color: #fdfdfd;
-}
-body {
-margin: 0 auto;
-max-width: 36em;
-padding-left: 50px;
-padding-right: 50px;
-padding-top: 50px;
-padding-bottom: 50px;
-hyphens: auto;
-overflow-wrap: break-word;
-text-rendering: optimizeLegibility;
-font-kerning: normal;
-}
-@media (max-width: 600px) {
-body {
-font-size: 0.9em;
-padding: 12px;
-}
-h1 {
-font-size: 1.8em;
-}
-}
-@media print {
-html {
-background-color: white;
-}
-body {
-background-color: transparent;
-color: black;
-font-size: 12pt;
-}
-p, h2, h3 {
-orphans: 3;
-widows: 3;
-}
-h2, h3, h4 {
-page-break-after: avoid;
-}
-}
-p {
-margin: 1em 0;
-}
-a {
-color: #1a1a1a;
-}
-a:visited {
-color: #1a1a1a;
-}
-img {
-max-width: 100%;
-}
-svg {
-height: auto;
-max-width: 100%;
-}
-h1, h2, h3, h4, h5, h6 {
-margin-top: 1.4em;
-}
-h5, h6 {
-font-size: 1em;
-font-style: italic;
-}
-h6 {
-font-weight: normal;
-}
-ol, ul {
-padding-left: 1.7em;
-margin-top: 1em;
-}
-li > ol, li > ul {
-margin-top: 0;
-}
-blockquote {
-margin: 1em 0 1em 1.7em;
-padding-left: 1em;
-border-left: 2px solid #e6e6e6;
-color: #606060;
-}
-code {
-font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-font-size: 85%;
-margin: 0;
-hyphens: manual;
-}
-pre {
-margin: 1em 0;
-overflow: auto;
-}
-pre code {
-padding: 0;
-overflow: visible;
-overflow-wrap: normal;
-}
-.sourceCode {
-background-color: transparent;
-overflow: visible;
-}
-hr {
-border: none;
-border-top: 1px solid #1a1a1a;
-height: 1px;
-margin: 1em 0;
-}
-table {
-margin: 1em 0;
-border-collapse: collapse;
-width: 100%;
-overflow-x: auto;
-display: block;
-font-variant-numeric: lining-nums tabular-nums;
-}
-table caption {
-margin-bottom: 0.75em;
-}
-tbody {
-margin-top: 0.5em;
-border-top: 1px solid #1a1a1a;
-border-bottom: 1px solid #1a1a1a;
-}
-th {
-border-top: 1px solid #1a1a1a;
-padding: 0.25em 0.5em 0.25em 0.5em;
-}
-td {
-padding: 0.125em 0.5em 0.25em 0.5em;
-}
-header {
-margin-bottom: 4em;
-text-align: center;
-}
-#TOC li {
-list-style: none;
-}
-#TOC ul {
-padding-left: 1.3em;
-}
-#TOC > ul {
-padding-left: 0;
-}
-#TOC a:not(:hover) {
-text-decoration: none;
-}
-code{white-space: pre-wrap;}
-span.smallcaps{font-variant: small-caps;}
-div.columns{display: flex; gap: min(4vw, 1.5em);}
-div.column{flex: auto; overflow-x: auto;}
-div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-
-ul.task-list[class]{list-style: none;}
-ul.task-list li input[type="checkbox"] {
-font-size: inherit;
-width: 0.8em;
-margin: 0 0.8em 0.2em -1.6em;
-vertical-align: middle;
-}
-.display.math{display: block; text-align: center; margin: 0.5rem auto;}
-
-html { -webkit-text-size-adjust: 100%; }
-pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
-pre > code.sourceCode > span:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode > span { color: inherit; text-decoration: inherit; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-}
-pre.numberSource code
-{ counter-reset: source-line 0; }
-pre.numberSource code > span
-{ position: relative; left: -4em; counter-increment: source-line; }
-pre.numberSource code > span > a:first-child::before
-{ content: counter(source-line);
-position: relative; left: -1em; text-align: right; vertical-align: baseline;
-border: none; display: inline-block;
--webkit-touch-callout: none; -webkit-user-select: none;
--khtml-user-select: none; -moz-user-select: none;
--ms-user-select: none; user-select: none;
-padding: 0 4px; width: 4em;
-color: #aaaaaa;
-}
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
-div.sourceCode
-{ }
-@media screen {
-pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-}
-code span.al { color: #ff0000; font-weight: bold; } 
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
-code span.at { color: #7d9029; } 
-code span.bn { color: #40a070; } 
-code span.bu { color: #008000; } 
-code span.cf { color: #007020; font-weight: bold; } 
-code span.ch { color: #4070a0; } 
-code span.cn { color: #880000; } 
-code span.co { color: #60a0b0; font-style: italic; } 
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
-code span.do { color: #ba2121; font-style: italic; } 
-code span.dt { color: #902000; } 
-code span.dv { color: #40a070; } 
-code span.er { color: #ff0000; font-weight: bold; } 
-code span.ex { } 
-code span.fl { color: #40a070; } 
-code span.fu { color: #06287e; } 
-code span.im { color: #008000; font-weight: bold; } 
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
-code span.kw { color: #007020; font-weight: bold; } 
-code span.op { color: #666666; } 
-code span.ot { color: #007020; } 
-code span.pp { color: #bc7a00; } 
-code span.sc { color: #4070a0; } 
-code span.ss { color: #bb6688; } 
-code span.st { color: #4070a0; } 
-code span.va { color: #19177c; } 
-code span.vs { color: #4070a0; } 
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
-</style>
+    html {
+      font-size: 11pt;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
 </head>
 <body>
 <header id="title-block-header">
@@ -244,42 +239,53 @@ simulation codebase</p>
 </header>
 <nav id="TOC" role="doc-toc">
 <ul>
-<li><a href="#code_guide-what-every-file-in-this-repo-actually-does" id="toc-code_guide-what-every-file-in-this-repo-actually-does">CODE_GUIDE:
+<li><a href="#code_guide-what-every-file-in-this-repo-actually-does"
+id="toc-code_guide-what-every-file-in-this-repo-actually-does">CODE_GUIDE:
 What Every File in This Repo Actually Does</a>
 <ul>
-<li><a href="#quick-start-and-codebase-walkthrough" id="toc-quick-start-and-codebase-walkthrough">Quick-Start and Codebase
+<li><a href="#quick-start-and-codebase-walkthrough"
+id="toc-quick-start-and-codebase-walkthrough">Quick-Start and Codebase
 Walkthrough</a></li>
-<li><a href="#the-snakemake-pipeline-files" id="toc-the-snakemake-pipeline-files">The Snakemake pipeline
+<li><a href="#the-snakemake-pipeline-files"
+id="toc-the-snakemake-pipeline-files">The Snakemake pipeline
 files</a></li>
 <li><a href="#reading-order" id="toc-reading-order">Reading
 order</a></li>
 <li><a href="#project-layout" id="toc-project-layout">Project
 layout</a></li>
-<li><a href="#1-configuration-configsparameterspy" id="toc-1-configuration-configsparameterspy">1. Configuration:
+<li><a href="#configuration-configsparameters.py"
+id="toc-configuration-configsparameters.py">1. Configuration:
 <code>configs/parameters.py</code></a></li>
-<li><a href="#2-hi-c-data-preparation" id="toc-2-hi-c-data-preparation">2. Hi-C data preparation</a></li>
-<li><a href="#3-ctcf-annotation" id="toc-3-ctcf-annotation">3. CTCF
+<li><a href="#hi-c-data-preparation" id="toc-hi-c-data-preparation">2.
+Hi-C data preparation</a></li>
+<li><a href="#ctcf-annotation" id="toc-ctcf-annotation">3. CTCF
 annotation</a></li>
-<li><a href="#4-the-lef-dynamics-engine" id="toc-4-the-lef-dynamics-engine">4. The LEF dynamics engine</a></li>
-<li><a href="#5-running-simulations" id="toc-5-running-simulations">5.
+<li><a href="#the-lef-dynamics-engine"
+id="toc-the-lef-dynamics-engine">4. The LEF dynamics engine</a></li>
+<li><a href="#running-simulations" id="toc-running-simulations">5.
 Running simulations</a></li>
-<li><a href="#6-post-simulation-analysis" id="toc-6-post-simulation-analysis">6. Post-simulation analysis</a></li>
-<li><a href="#legacy-cluster-scripts-legacycluster" id="toc-legacy-cluster-scripts-legacycluster">Legacy cluster scripts
+<li><a href="#post-simulation-analysis"
+id="toc-post-simulation-analysis">6. Post-simulation analysis</a></li>
+<li><a href="#legacy-cluster-scripts-legacycluster"
+id="toc-legacy-cluster-scripts-legacycluster">Legacy cluster scripts
 (<code>legacy/cluster/</code>)</a></li>
-<li><a href="#conventions-youll-see-everywhere" id="toc-conventions-youll-see-everywhere">Conventions you’ll see
+<li><a href="#conventions-youll-see-everywhere"
+id="toc-conventions-youll-see-everywhere">Conventions you’ll see
 everywhere</a></li>
 <li><a href="#common-pitfalls" id="toc-common-pitfalls">Common
 pitfalls</a></li>
 </ul></li>
 </ul>
 </nav>
-<h1 id="code_guide-what-every-file-in-this-repo-actually-does">CODE_GUIDE:
+<h1
+id="code_guide-what-every-file-in-this-repo-actually-does">CODE_GUIDE:
 What Every File in This Repo Actually Does</h1>
 <p>This is a plain-language walkthrough of the whole codebase. It is
 written for people who don’t read Python and want to understand,
 end-to-end, what runs, what each script produces, and how the files feed
 into each other.</p>
-<p>If you just want to run the pipeline, see <a href="README.md"><code>README.md</code></a>. Come back here when you
+<p>If you just want to run the pipeline, see <a
+href="README.md"><code>README.md</code></a>. Come back here when you
 need to know <em>why</em> a step exists, what an output file contains,
 or where a specific variable is set.</p>
 <hr />
@@ -311,7 +317,7 @@ user-defined hypotheses.</p>
 <col style="width: 18%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th>Condition</th>
 <th>Cohesin</th>
 <th>CTCF sites</th>
@@ -319,19 +325,19 @@ user-defined hypotheses.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td><code>cond1_baseline</code></td>
 <td>Baseline</td>
 <td>Condition 1</td>
 <td>Does the model reproduce condition 1 Hi-C?</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>cond2_ctcf-only</code></td>
 <td>Baseline</td>
 <td>Condition 2</td>
 <td>Do condition 2 CTCF sites alone explain condition 2 Hi-C?</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>cond2_weak-ctcf</code></td>
 <td>Baseline</td>
 <td>Condition 2 (0.5× stall)</td>
@@ -340,58 +346,53 @@ user-defined hypotheses.</p>
 </tbody>
 </table>
 <h3 id="data-flow">Data flow</h3>
-<pre><code>CTCF peaks (.narrowPeak)
-    ↓  extract_ctcf_sites_hg38.py   (add strand orientation via FIMO)
-Oriented CTCF BED files
-    ↓  run_simulation.py + polychrom  (cohesin loop extrusion + 3D polymer)
-Simulated contact maps
-    ↓  run_analysis_all.py
-Comparison figures  ←→  experimental Hi-C (.mcool, from .hic via hic2cool)</code></pre>
-<h3 id="setup-run-this-once">Setup: run this once</h3>
-<p>Edit <code>config/ChromSimConfig.yaml</code> (Hi-C paths, locus,
-conditions) and <code>ChromSimSamplesheet.txt</code> (CTCF peak paths)
-before running.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="bu">cd</span> ~/projects/ChromSimPipe   <span class="co"># or wherever you cloned it</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> setup_data.sh</span></code></pre></div>
-<p><code>setup_data.sh</code> reads all paths from
-<code>ChromSimConfig.yaml</code> and the samplesheet, then:</p>
+<pre><code>ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C)
+    ↓  orientCTCF rule → scripts/extract_ctcf_sites.py  (strand via FIMO)
+Oriented CTCF BED files (output/ctcf/)
+    ↓  simulateShard rule → scripts/run_simulation_shard.py + polychrom
+Simulated conformations (output/sims/)
+    ↓  analyzeCondition rule → scripts/run_analysis_all.py
+Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertHic rule)</code></pre>
+<h3 id="setup-and-launch">Setup and launch</h3>
+<p>The workflow follows the PhanstielLab Snakemake pattern (bagPipes,
+dietJuicer): edit a samplesheet and a config, then submit one launcher.
+There is no separate setup script — converting Hi-C, orienting CTCF, and
+building conda environments are all workflow steps.</p>
 <ol type="1">
-<li><strong>Step −1</strong> — creates the two conda environments
-(<code>cohesin_sim</code> and <code>ctcf_extraction</code>) if they
-don’t already exist.</li>
-<li><strong>Steps 1–3</strong> — symlinks your <code>.hic</code> Hi-C
-files and converts them to <code>.cool</code> at 1 kb resolution (~10–15
-min; run interactively:
-<code>srun --mem=32G --cpus-per-task=4 --pty bash</code>).</li>
-<li><strong>Step 4</strong> — runs
-<code>extract_ctcf_sites_hg38.py</code> via
-<code>conda run -n ctcf_extraction</code>. Uses FIMO to find the JASPAR
-CTCF motif in each peak and assign strand orientation.</li>
-<li><strong>Step 6</strong> — validates all BED files before any
-simulation runs.</li>
+<li><strong><code>ChromSimSamplesheet.txt</code></strong> — one
+tab-separated row per sample. The required columns are
+<code>CTCF_Peaks</code> and <code>Hi-C</code> (<code>NA</code> when a
+sample has no file of that kind); all other columns are metadata.</li>
+<li><strong><code>config/ChromSimConfig.yaml</code></strong> —
+<code>fileNamesFrom</code> names the samplesheet columns joined with
+<code>_</code> to name each sample. Conditions refer to samples by those
+names (<code>ctcf_type</code>, <code>compare_hic</code>). The config
+also sets the locus, physics, genome, CTCF motif, conda environments,
+and <code>outputDir</code>.</li>
+<li><strong><code>profiles/slurm/config.yaml</code></strong> — your
+SLURM account, plus each rule’s CPUs / memory / GPU under
+<code>set-resources:</code>.</li>
 </ol>
-<p>After setup, pick a locus in
-<code>config/ChromSimConfig.yaml</code>:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">locus</span><span class="kw">:</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">name</span><span class="kw">:</span><span class="at"> chr1_fig1</span><span class="co">   # chr1:64,210,000–66,170,000  (JAK1/AK4/LEPR)</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">  # other options: chr4_fig1, chr6_fig1, chr16_sox8</span></span></code></pre></div>
-<p>Then launch:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh</span></code></pre></div>
-<h3 id="the-central-config-configchromsimconfigyaml">The central config:
-<code>config/ChromSimConfig.yaml</code></h3>
-<p>This YAML file is the source of truth for everything. The
-<code>locus</code> section selects the genomic region; from that,
-<code>CHROM</code>, <code>REGION_START</code>, <code>REGION_END</code>,
-and <code>N_MONOMERS</code> (2,000 — one per kb) are derived
-automatically by <code>configs/parameters.py</code> at import time.</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh        <span class="co"># whole workflow</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> ChromSimPipe.sh <span class="at">-n</span>       <span class="co"># dry run</span></span></code></pre></div>
+<h3 id="the-central-config-configchromsimconfig.yaml">The central
+config: <code>config/ChromSimConfig.yaml</code></h3>
+<p>This YAML file and the samplesheet are the source of truth for
+everything. <code>configs/parameters.py</code> reads both at import
+time. From the <code>locus:</code> block it derives <code>CHROM</code>,
+<code>REGION_START</code>, <code>REGION_END</code>, and
+<code>N_MONOMERS</code> (1,960 for the default window at 1 kb per
+monomer).</p>
 <p><strong>CTCF auto-loading.</strong> When any script imports
-<code>configs.parameters</code>, it immediately tries to open the
-oriented CTCF BED for each CTCF set and locus
-(e.g. <code>data/ctcf_beds/ctcf_oriented_hg38_condition1_&lt;locus&gt;.bed</code>).
+<code>configs.parameters</code>, it opens the oriented CTCF BED for each
+CTCF sample and locus if it already exists
+(e.g. <code>output/ctcf/ctcf_oriented_hg38_condition1_&lt;locus&gt;.bed</code>).
 It parses each line into <code>(monomer_position, orientation)</code>
 where <code>+1</code> means a forward-strand motif and <code>−1</code>
-means reverse. If the files don’t exist yet, it falls back to
-placeholder dummy sites and prints a warning.</p>
+means reverse. If a BED does not exist yet, nothing is loaded, and
+<code>get_ctcf_arrays()</code> raises an error when a script asks for
+those sites. There are no placeholder sites.</p>
 <p><strong>Cohesin parameters.</strong> Each condition has a parameter
 set, a dict with <code>lifetime</code> (mean steps before cohesin falls
 off), <code>separation</code> (spacing between cohesins),
@@ -399,14 +400,15 @@ off), <code>separation</code> (spacing between cohesins),
 and <code>ctcf_release</code> (escape probability per step while
 stalled). Values come from Gabriele et al. 2022 (mESC measurements used
 as the human baseline).</p>
-<p><strong>Tiling.</strong> Rather than simulating 2,000 monomers, the
+<p><strong>Tiling.</strong> Rather than simulating 1,960 monomers, the
 simulation runs 70,000 monomers arranged as 28 back-to-back copies of
-the locus (each tile = 2,000 monomers + 250 padding on each side). All
+the locus (each tile = 1,960 monomers + 270 padding on each side). All
 28 tiles are independent, so each GPU run produces ~28× the contact
-statistics at no extra physics cost. Contact maps are folded back down
-to 2,000×2,000 for comparison.</p>
-<h3 id="the-ctcf-extraction-scriptsextract_ctcf_sites_hg38py">The CTCF
-extraction: <code>scripts/extract_ctcf_sites_hg38.py</code></h3>
+statistics at no extra physics cost. Contact maps are averaged back down
+to 1,960×1,960 for comparison. All three numbers are in the
+<code>tiling:</code> block.</p>
+<h3 id="the-ctcf-extraction-scriptsextract_ctcf_sites.py">The CTCF
+extraction: <code>scripts/extract_ctcf_sites.py</code></h3>
 <p>Your <code>.narrowPeak</code> file has peak coordinates but no strand
 information. Orientation matters because a <code>+</code> CTCF site
 blocks a cohesin arm moving leftward, while a <code>−</code> site blocks
@@ -415,15 +417,20 @@ one moving rightward — so a convergent pair (<code>+</code> on the left,
 divergent pair does not.</p>
 <p>This script:</p>
 <ol type="1">
-<li>Takes each peak’s summit from the CUT&amp;Tag narrowPeak file.</li>
-<li>Extracts the DNA sequence at each peak with
+<li>Takes each peak’s summit from the narrowPeak file (column 10).</li>
+<li>Extracts ± <code>ctcf_motif.flank_bp</code> around each summit with
 <code>bedtools getfasta</code>.</li>
-<li>Runs FIMO to scan for the JASPAR MA0139.1 CTCF motif.</li>
-<li>Uses the motif’s strand as the site orientation.</li>
+<li>Runs FIMO for the motif in the MEME file from the
+<code>getMotif</code> rule (JASPAR <code>ctcf_motif.jaspar_id</code>,
+default MA0139.1).</li>
+<li>Uses the strand of the best hit as the site orientation.</li>
+<li>Handles peaks with no hit as <code>ctcf_motif.unoriented</code>
+says: <code>drop</code> leaves them out and lists them in the log;
+<code>error</code> stops the run. Orientations are never guessed.</li>
 <li>Writes a BED6 file where column 6 is <code>+</code> or
 <code>−</code>.</li>
 </ol>
-<h3 id="the-1d-engine-scriptslef_dynamicspy">The 1D engine:
+<h3 id="the-1d-engine-scriptslef_dynamics.py">The 1D engine:
 <code>scripts/lef_dynamics.py</code></h3>
 <p>Before any 3D physics, loop extrusion is modelled as a purely 1D
 stochastic process. <code>LEFSimulator</code> runs this:</p>
@@ -437,216 +444,174 @@ probability <code>ctcf_release</code> per step.</li>
 exclusion).</li>
 <li>Each cohesin lives for a geometrically distributed number of steps
 with mean <code>lifetime</code>, then unbinds and is replaced at a
-random position.</li>
+random position. Stalled cohesins unbind at the same rate.</li>
 </ul>
-<h3 id="the-3d-simulation-scriptsrun_simulationpy">The 3D simulation:
-<code>scripts/run_simulation.py</code></h3>
+<h3 id="the-3d-simulation-scriptsrun_simulation_shard.py">The 3D
+simulation: <code>scripts/run_simulation_shard.py</code></h3>
 <p>This is where polychrom (OpenMM on GPU) runs. For each block:</p>
 <ol type="1">
 <li><code>LEFSimulator.step()</code> advances all cohesins one tick on
 the 1D lattice.</li>
 <li>Cohesin arm positions feed into polychrom as harmonic spring bonds
 between the two bridged monomers.</li>
-<li>OpenMM integrates the polymer under those bonds for 250 MD
-steps.</li>
-<li>Every 10 blocks, all monomer coordinates are saved and pairs within
-3.0 monomer-units of each other are recorded as contacts.</li>
+<li>OpenMM integrates the polymer under those bonds for
+<code>md_steps_per_block</code> (250) MD steps.</li>
+<li>polychrom’s <code>HDF5Reporter</code> saves the coordinates of the
+block. Contacts (pairs within <code>contact_radius</code> = 3.0) are
+counted later, in the analysis.</li>
 </ol>
 <h3 id="the-analysis-analysis">The analysis: <code>analysis/</code></h3>
 <ul>
 <li><strong><code>contact_maps.py</code></strong> — accumulates saved
 conformations into a 2D contact frequency matrix using
-<code>scipy.spatial.KDTree</code> for fast distance lookups. This is the
-simulated analogue of a Hi-C contact map.</li>
+<code>scipy.spatial.cKDTree</code> for fast distance lookups. This is
+the simulated analogue of a Hi-C contact map.</li>
 <li><strong><code>ps_curve.py</code></strong> — computes P(s): contact
 probability as a function of genomic separation. The shape of this curve
 is the primary comparison metric against real Hi-C.</li>
 <li><strong><code>experimental_compare.py</code></strong> — loads your
-<code>.mcool</code> file via <code>cooler</code> and extracts the same
-locus at 1 kb resolution for direct comparison.</li>
+<code>.cool</code> file via <code>cooler</code> and extracts the same
+locus at the configured resolution.</li>
 <li><strong><code>msd_two_point.py</code></strong> — tracks mean-squared
 displacement of specific monomer pairs over time (the in-silico analogue
 of live-cell imaging).</li>
 </ul>
-<h3 id="the-cluster-pipeline-chromsimpipesh--snakemake">The cluster
-pipeline: <code>ChromSimPipe.sh</code> + Snakemake</h3>
-<p>The pipeline is a Snakemake DAG
-(<code>workflows/ChromSimPipe.snakefile</code>) launched by a single
-<code>sbatch ChromSimPipe.sh</code>. Snakemake submits each rule as its
-own SLURM job through <code>snakemake-executor-plugin-slurm</code>:</p>
-<pre><code>convert_hic (×2, CPU)
-    → extract_ctcf (×2, CPU, FIMO)
-        → validate_ctcf (×1, CPU)
-            → simulate_shard (×36, GPU — 3 cond × 3 rep × 4 shards)
-                → merge_shards (×9, CPU — 3 cond × 3 rep)
-                    → analyze_all (×3, CPU — one per condition)</code></pre>
-<p>To dry-run (see all jobs without submitting):
-<code>bash ChromSimPipe.sh --dry-run</code>. If a run fails and leaves a
-lock: <code>bash unlock.sh</code>.</p>
-<p>See <a href="#the-snakemake-pipeline-files">The Snakemake pipeline
-files</a> below for a full description of every new file.</p>
 <hr />
 <h2 id="the-snakemake-pipeline-files">The Snakemake pipeline files</h2>
-<p>These files were added to replace the legacy
-<code>cluster/submit_pipeline.sh</code> bash-script chain with a proper
-Snakemake DAG. Each downstream rule only runs after its inputs exist —
-no manual dependency bookkeeping required.</p>
-<h3 id="chromsimpipesh--sbatch-entry-point"><code>ChromSimPipe.sh</code>
+<p>The workflow is a Snakemake DAG written in the style of the
+PhanstielLab pipelines: a samplesheet plus a config drive everything,
+every rule writes its own log and benchmark, rules carry no cluster
+resources (the profile does), and one <code>sbatch</code> launches it
+all.</p>
+<h3 id="chromsimpipe.sh-sbatch-entry-point"><code>ChromSimPipe.sh</code>
 — sbatch entry point</h3>
-<p>Submit with <code>sbatch ChromSimPipe.sh</code>. It does three
-things:</p>
+<p>Submit with <code>sbatch ChromSimPipe.sh</code>. It:</p>
 <ol type="1">
-<li>Sets up a local Python venv in <code>.snakemake_venv/</code> (first
-run only; uses <code>module load python/3.12.4</code>).</li>
-<li><code>pip install</code>s Snakemake 8.27.1 +
-<code>snakemake-executor-plugin-slurm</code>.</li>
-<li>Calls
-<code>snakemake --profile profiles/slurm --configfile config/ChromSimConfig.yaml --jobs 100 --rerun-incomplete --latency-wait 500</code>.</li>
+<li>Loads <code>python/&lt;pythonVers&gt;</code> and
+<code>anaconda/&lt;condaVers&gt;</code> (both read from the
+config).</li>
+<li>Creates a venv in <code>env/</code> (first run only) and installs
+<code>config/requirements.txt</code> (Snakemake 8.27.1 + the SLURM
+executor plugin).</li>
+<li>Runs
+<code>snakemake -s workflows/ChromSimPipe.snakefile --profile    profiles/slurm --configfile &lt;config&gt; --slurm-logdir    &lt;outputDir&gt;/logs_slurm -j 100 --rerun-incomplete --keep-going -p    --latency-wait 500</code>.</li>
 </ol>
-<p>The venv is reused on subsequent runs.
-<code>bash ChromSimPipe.sh --dry-run</code> prints every SLURM command
-without submitting.</p>
-<h3 id="unlocksh--release-lock-after-failure"><code>unlock.sh</code> —
+<p>Any extra arguments go to <code>snakemake</code> (<code>-n</code> for
+a dry run, <code>--configfile other.yaml</code>,
+<code>--until validateCTCF</code>, …).</p>
+<h3 id="unlock.sh-release-lock-after-failure"><code>unlock.sh</code> —
 release lock after failure</h3>
 <p>Snakemake writes a <code>.snakemake/locks/</code> directory while
 running. If the job dies without cleanup, the lock persists and the next
 run refuses to start. <code>bash unlock.sh</code> runs
 <code>snakemake --unlock</code> against the workflow to clear it.</p>
-<h3 id="workflowschromsimpipesnakefile--the-dag"><code>workflows/ChromSimPipe.snakefile</code>
+<h3
+id="workflowschromsimpipe.snakefile-the-dag"><code>workflows/ChromSimPipe.snakefile</code>
 — the DAG</h3>
-<p>Six rules, in order:</p>
 <table>
 <colgroup>
-<col style="width: 16%" />
-<col style="width: 44%" />
-<col style="width: 38%" />
+<col style="width: 23%" />
+<col style="width: 23%" />
+<col style="width: 53%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th>Rule</th>
-<th>SLURM resources</th>
+<th>Runs</th>
 <th>What it does</th>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><code>convert_hic</code></td>
-<td>4 CPU, 32 GB, 2 h</td>
+<tr class="odd">
+<td><code>convertHic</code></td>
+<td>per Hi-C sample</td>
 <td><code>hic2cool convert</code> <code>.hic</code> → <code>.cool</code>
-at 1 kb (single-resolution)</td>
+at <code>resolution</code></td>
 </tr>
-<tr>
-<td><code>extract_ctcf</code></td>
-<td>2 CPU, 16 GB, 1 h</td>
-<td><code>extract_ctcf_sites_hg38.py</code> via
-<code>ctcf_extraction</code> env</td>
+<tr class="even">
+<td><code>getMotif</code></td>
+<td>once</td>
+<td><code>wget</code> the JASPAR motif (skipped when
+<code>ctcf_motif.meme</code> is set)</td>
 </tr>
-<tr>
-<td><code>validate_ctcf</code></td>
-<td>1 CPU, 4 GB, 15 min</td>
+<tr class="odd">
+<td><code>orientCTCF</code></td>
+<td>per CTCF sample used by a condition</td>
+<td><code>extract_ctcf_sites.py</code></td>
+</tr>
+<tr class="even">
+<td><code>validateCTCF</code></td>
+<td>once</td>
 <td><code>validate_ctcf.py</code> — sanity-checks all BED files</td>
 </tr>
-<tr>
-<td><code>simulate_shard</code></td>
-<td>1 GPU, 4 CPU, 64 GB, 12 h</td>
+<tr class="odd">
+<td><code>simulateShard</code></td>
+<td>condition × replicate × shard (GPU)</td>
 <td><code>run_simulation_shard.py</code> — 36 jobs with the example
-config (3 × 3 × 4)</td>
+config</td>
 </tr>
-<tr>
-<td><code>merge_shards</code></td>
-<td>4 CPU, 64 GB, 2 h</td>
+<tr class="even">
+<td><code>mergeShards</code></td>
+<td>condition × replicate</td>
 <td><code>merge_shards.py</code> — concatenates shard HDF5 streams</td>
 </tr>
-<tr>
-<td><code>analyze_all</code></td>
-<td>4 CPU, 64 GB, 6 h</td>
-<td><code>run_analysis_all.py</code> — contact maps, P(s), MSD,
+<tr class="odd">
+<td><code>analyzeCondition</code></td>
+<td>per condition</td>
+<td><code>run_analysis_all.py</code> — contact maps, P(s), APA,
 figures</td>
 </tr>
+<tr class="even">
+<td><code>benchmarkSummary</code></td>
+<td>once</td>
+<td><code>workflows/utils/benchmarking.py</code></td>
+</tr>
 </tbody>
 </table>
-<p>Wildcard <code>{condition}</code> matches the 5 condition names from
-<code>SIMULATION_CONDITIONS</code> in
-<code>configs/parameters.py</code>. Wildcards <code>{rep}</code> and
-<code>{shard}</code> expand over <code>range(n_replicates)</code> and
-<code>range(n_shards)</code> from
-<code>config/SimConfig.yaml</code>.</p>
-<p>Locus, conditions, and cohesin parameters all come from
-<code>configs/parameters.py</code> at parse time — there is no
-duplication.</p>
-<p>Snakemake tracks completion via sentinel <code>.done</code> files in
-<code>results/.sentinels/</code>. Actual simulation data lives in
-<code>results/polychrom_3d/</code> with the flat naming convention the
-scripts already expect.</p>
-<h3 id="profilesslurmconfigyaml--slurm-executor-defaults"><code>profiles/slurm/config.yaml</code>
-— SLURM executor defaults</h3>
-<p>Tells <code>snakemake-executor-plugin-slurm</code> which account and
-partition to use for all rules by default. Per-rule overrides (GPU
-partition, GPU count, memory, walltime) are set in each rule’s
-<code>resources:</code> block in the Snakefile.</p>
-<p>Key defaults:</p>
+<p>Every rule has the same parts, following bagPipes:</p>
 <ul>
-<li><code>slurm_account: rc_dphansti_pi</code></li>
-<li><code>slurm_partition: general</code> (GPU rules override to
-<code>gpu</code>)</li>
-<li><code>runtime: 4320</code> (72 h fallback for long-running
-jobs)</li>
-<li>Log files:
-<code>logs_slurm/{rule}.{wildcards}.{jobid}.out/err</code></li>
+<li><code>log:</code> — stdout / stderr to
+<code>output/logs/{rule}_{wildcards}.out|.err</code></li>
+<li><code>benchmark:</code> —
+<code>output/benchmarks/{rule}_{wildcards}.tsv</code> (wall time,
+memory), summarised in
+<code>output/{runName}_benchmarking.tsv</code></li>
+<li><code>conda:</code> — an entry from <code>condaEnvs</code> in the
+config</li>
+<li><code>params:</code> — every value read from the config; nothing is
+typed in</li>
 </ul>
-<h3 id="configchromsimconfigyaml--path-configuration"><code>config/ChromSimConfig.yaml</code>
-— path configuration</h3>
-<p>Edit <strong>once</strong> before the first run. Key fields:</p>
-<table>
-<colgroup>
-<col style="width: 31%" />
-<col style="width: 68%" />
-</colgroup>
-<thead>
-<tr>
-<th>Field</th>
-<th>What to change</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>hic</code></td>
-<td>One <code>&lt;hic_type&gt;: /abs/path.hic</code> entry per Hi-C map
-(e.g. <code>condition1</code>, <code>condition2</code>); each
-condition’s <code>compare_hic</code> names one</td>
-</tr>
-<tr>
-<td><code>genome</code></td>
-<td>Path to hg38 FASTA (default: Longleaf shared reference)</td>
-</tr>
-<tr>
-<td><code>samplesheet</code></td>
-<td>Path to <code>SimSamplesheet.txt</code></td>
-</tr>
-<tr>
-<td><code>n_replicates</code></td>
-<td>Independent simulation replicates (default: 3)</td>
-</tr>
-<tr>
-<td><code>n_shards</code></td>
-<td>GPU shards per replicate (default: 4, gives 4× frames per GPU
-run)</td>
-</tr>
-</tbody>
-</table>
-<p>All other parameters (locus, cohesin params, tiling) are read from
-<code>configs/parameters.py</code> and do NOT need to be duplicated
-here.</p>
-<h3 id="chromsimsamplesheettxt--ctcf-input-file-registry"><code>ChromSimSamplesheet.txt</code>
-— CTCF input file registry</h3>
-<p>Tab-separated, two columns: <code>CTCF_Type</code> and
-<code>CTCF_Peaks_Path</code>.</p>
-<pre><code>CTCF_Type   CTCF_Peaks_Path
-condition1  /path/to/condition1_CTCF_peaks.narrowPeak
-condition2  /path/to/condition2_CTCF_peaks.narrowPeak</code></pre>
-<p>The <code>extract_ctcf</code> rule reads this file via
-<code>pandas.read_table()</code> at runtime. If your data moves, update
-the paths here (not in the Snakefile).</p>
+<p>Wildcards: <code>{sampleName}</code> / <code>{ctcfType}</code> are
+samplesheet sample names; <code>{condition}</code> is a condition
+<code>name</code>; <code>{rep}</code> and <code>{shard}</code> expand
+over <code>range(n_replicates)</code> and
+<code>range(n_shards)</code>.</p>
+<p>The Snakefile passes the config’s path to every script in
+<code>$CHROMSIM_CONFIG</code>, so scripts read the same file Snakemake
+was given. Steps whose real outputs are directories (simulation, merge,
+analysis) are tracked through completion markers in
+<code>output/done/</code>.</p>
+<h3
+id="profilesslurmconfig.yaml-slurm-executor-settings"><code>profiles/slurm/config.yaml</code>
+— SLURM executor settings</h3>
+<p><code>default-resources:</code> sets the account, partition, wall
+time, and memory for every job. <code>set-resources:</code> sets each
+rule’s request (the dietJuicer pattern). <code>simulateShard</code> is
+sent to the <code>gpu</code> partition with <code>qos: gpu_access</code>
+and <code>gpu: 1</code>. <code>software-deployment-method: conda</code>
+makes Snakemake activate each rule’s environment.</p>
+<h3
+id="chromsimsamplesheet.txt-samples"><code>ChromSimSamplesheet.txt</code>
+— samples</h3>
+<pre><code>Project  Cell_Type  Condition   CTCF_Peaks                    Hi-C
+STRS     HEK293T    condition1  /path/to/control.narrowPeak   /path/to/control.hic
+STRS     HEK293T    condition2  /path/to/sorbitol.narrowPeak  /path/to/sorbitol.hic</code></pre>
+<p>With <code>fileNamesFrom: ['Condition']</code> the samples are
+<code>condition1</code> and <code>condition2</code>. Metadata values
+shared by every row (<code>STRS</code>, <code>HEK293T</code>) form the
+run name, <code>STRS_HEK293T</code>, used for run-level files. The
+workflow writes the parsed samplesheet, with a <code>sampleName</code>
+column, to <code>output/{runName}_ChromSimSamplesheet.txt</code>.</p>
 <hr />
 <h2 id="reading-order">Reading order</h2>
 <p>Everything here is organised by pipeline stage, top-down:</p>
@@ -686,26 +651,26 @@ walkthrough</li>
 </ul>
 <h2 id="project-layout">Project layout</h2>
 <pre><code>ChromSimPipe/
-├── config/           — ChromSimConfig.yaml (edit before first run)
-├── configs/          — parameters.py (reads YAML; single source of truth for all params)
-├── data/             — experimental inputs (Hi-C .cool files, oriented CTCF beds)
-├── envs/             — conda environment specs (.yml files)
+├── ChromSimPipe.sh   — sbatch launcher
+├── ChromSimSamplesheet.txt — one row per sample (edit before first run)
+├── config/           — ChromSimConfig.yaml + requirements.txt (edit before first run)
+├── configs/          — parameters.py (reads the config + samplesheet; single source of truth)
+├── envs/             — conda environment specs used by the rules
 ├── scripts/          — Python simulation, analysis, and utility scripts
 ├── analysis/         — Python modules imported by scripts/run_analysis_all.py
-├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile)
+├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile) + utils/
 ├── profiles/slurm/   — SLURM executor configuration for Snakemake
 ├── legacy/           — unmaintained code from the lab&#39;s mESC/neuron project (see legacy/README.md)
 ├── tests/            — test suite
-├── results/          — simulation and analysis outputs (git-ignored)
-└── logs/             — top-level Snakemake job stdout/stderr
-                        (per-rule job logs live in .snakemake/slurm_logs/)</code></pre>
-<h2 id="1-configuration-configsparameterspy">1. Configuration:
+└── output/           — everything the workflow writes (git-ignored; set by outputDir)</code></pre>
+<h2 id="configuration-configsparameters.py">1. Configuration:
 <code>configs/parameters.py</code></h2>
 <p><strong>Purpose.</strong> This file is the runtime source of truth
-for every simulation parameter. It reads
-<code>config/ChromSimConfig.yaml</code> at import time and re-exports a
-fixed set of variables so that all downstream scripts stay unchanged
-when config values change.</p>
+for every simulation parameter. It reads the config
+(<code>$CHROMSIM_CONFIG</code>, default
+<code>config/ChromSimConfig.yaml</code>) and the samplesheet it names at
+import time, and re-exports a fixed set of variables so that all
+downstream scripts stay unchanged when config values change.</p>
 <p><strong>Key exported names:</strong></p>
 <ul>
 <li><p><strong>Locus</strong> (<code>CHROM</code>,
@@ -713,8 +678,12 @@ when config values change.</p>
 <code>RESOLUTION</code>, <code>N_MONOMERS</code>,
 <code>ACTIVE_LOCUS</code>). Derived from the <code>locus:</code> block
 in <code>ChromSimConfig.yaml</code>. For the included STRS example:
-hg38, ~2 Mb windows in chr1/chr4/chr6/chr16. At 1 kb/monomer, each
-window → ~2,000 monomers.</p></li>
+hg38, chr1:64,210,000–66,170,000 → 1,960 monomers at 1
+kb/monomer.</p></li>
+<li><p><strong>Samples and outputs</strong> (<code>SAMPLES</code>,
+<code>RUN_NAME</code>, <code>OUTPUT_DIR</code>, <code>PATHS</code>).
+Sample names, metadata and input files from the samplesheet; every
+output directory under <code>outputDir</code>.</p></li>
 <li><p><strong>Polymer physics</strong> (<code>POLYMER</code> dict).
 Bond lengths, bending stiffness (<code>angle_force</code>), confinement
 density, integration tolerance, GPU platform. Rarely changed between
@@ -723,12 +692,14 @@ projects.</p></li>
 stiff the cohesin “ring” is in 3D — how strongly it pulls the two loop
 flanks together.</p></li>
 <li><p><strong>CTCF tracks</strong> (<code>CTCF_TYPES</code>,
-<code>CTCF_BEDS</code>). One oriented BED per <code>ctcf_type</code>
-used by a condition, under <code>data/ctcf_beds/</code>. At import time,
+<code>CTCF_PEAKS</code>, <code>CTCF_BEDS</code>). One oriented BED per
+<code>ctcf_type</code> used by a condition, under
+<code>output/ctcf/</code>. At import time,
 <code>load_ctcf_from_bed()</code> reads each file into
 <code>CTCF_SITES_BY_TYPE[type]</code> — monomer indices with
-<code>+1</code> / <code>−1</code> orientation labels. Type names come
-from the config, so any number of CTCF conditions is supported.</p></li>
+<code>+1</code> / <code>−1</code> orientation labels. Type names are
+samplesheet sample names, so any number of CTCF samples is
+supported.</p></li>
 <li><p><strong>Cohesin parameter sets</strong>
 (<code>ALL_PARAM_SETS</code>). One dict per condition hypothesis, each
 with <code>lifetime</code>, <code>separation</code>,
@@ -739,16 +710,19 @@ Gabriele et al. 2022.</p></li>
 iterates over. Each entry pairs a cohesin parameter set with a CTCF
 track and has a <code>name</code>
 (e.g. <code>cond1_baseline</code>).</p></li>
-<li><p><strong>Tiling</strong> (<code>TILING</code>). The 2 Mb locus is
+<li><p><strong>Tiling</strong> (<code>TILING</code>). The locus is
 copied 28× into one long polymer for 28× better contact statistics at no
-extra physics cost. <code>TILING[&quot;chrom_size&quot;]</code> is the full
+extra physics cost. <code>TILING["chrom_size"]</code> is the full
 polymer length (~70,000 monomers).</p></li>
 <li><p><strong>Run parameters</strong> (<code>SIM_RUN</code>).
-<code>total_blocks</code>, <code>md_steps</code>,
-<code>save_every</code>, <code>warmup_blocks</code>.</p></li>
-<li><p><strong>Calibration</strong> (<code>CALIBRATION</code>). Whether
-to map simulation units → physical units via Hi-C P(s) alignment, MSD,
-or skip.</p></li>
+<code>engine</code>, <code>seed_base</code>, <code>total_blocks</code>,
+<code>md_steps_per_block</code>, <code>save_every</code>,
+<code>warmup_blocks</code>, <code>hdf5_frames_per_file</code>.</p></li>
+<li><p><strong>Analysis</strong> (<code>ANALYSIS</code>,
+<code>MSD_PROBE</code>, <code>MSD_FIT</code>, <code>CALIBRATION</code>).
+Worker count, APA window, MSD probes and fits, and how to map simulation
+units → physical units — all from the <code>analysis:</code>
+block.</p></li>
 </ul>
 <p><strong>Helper functions you’ll see called elsewhere:</strong></p>
 <ul>
@@ -756,59 +730,68 @@ or skip.</p></li>
 <code>SIMULATION_CONDITIONS</code>.</li>
 <li><code>list_conditions()</code> — list all condition names.</li>
 <li><code>get_ctcf_arrays(ctcf_type)</code> — returns
-<code>(positions, orientations)</code> for the untiled 2 Mb locus.</li>
+<code>(positions, orientations)</code> for the untiled locus; raises if
+that sample’s BED has not been made.</li>
 <li><code>get_tiled_ctcf_arrays(ctcf_type)</code> — same but repeated
 across the tiled polymer (what the simulations actually use).</li>
 <li><code>load_ctcf_from_bed(path)</code> — read a BED6 file and return
 <code>(positions, orientations)</code> as monomer-index arrays.</li>
 </ul>
-<h2 id="2-hi-c-data-preparation">2. Hi-C data preparation</h2>
+<h2 id="hi-c-data-preparation">2. Hi-C data preparation</h2>
 <p>In ChromSimPipe, Hi-C conversion is handled automatically by the
-<code>convert_hic</code> Snakemake rule: it calls
-<code>hic2cool convert</code> on each <code>.hic</code> file listed in
-<code>config/ChromSimConfig.yaml</code> to produce a single-resolution
-<code>.cool</code> at the configured resolution (default 1 kb). No
-manual steps required — just point the config at your <code>.hic</code>
-files.</p>
+<code>convertHic</code> Snakemake rule: it calls
+<code>hic2cool convert</code> on each <code>.hic</code> file in the
+samplesheet’s <code>Hi-C</code> column to produce a single-resolution
+<code>output/mcool/&lt;sample&gt;.cool</code> at the configured
+resolution (default 1 kb).</p>
 <p>The Bonev 2017 mESC/cortical-neuron download scripts and the Sox2
 quick-look plotter from the original lab project now live in
 <code>legacy/</code> (see <code>legacy/README.md</code>); they are not
 part of the workflow.</p>
-<h2 id="3-ctcf-annotation">3. CTCF annotation</h2>
-<h3 id="scriptsextract_ctcf_sites_hg38py"><code>scripts/extract_ctcf_sites_hg38.py</code></h3>
+<h2 id="ctcf-annotation">3. CTCF annotation</h2>
+<h3
+id="scriptsextract_ctcf_sites.py"><code>scripts/extract_ctcf_sites.py</code></h3>
 <p><strong>Purpose.</strong> Given a CTCF ChIP-seq or CUT&amp;Tag peak
-BED and a genome FASTA, run FIMO against the JASPAR MA0139.1 CTCF motif
-to assign strand orientation to each peak, and write an oriented BED6
+file, a genome FASTA, and a CTCF motif (MEME format), run FIMO to assign
+strand orientation to each peak in the locus, and write an oriented BED6
 file.</p>
-<p>The <code>extract_ctcf</code> Snakemake rule calls this automatically
-for every sample in <code>ChromSimSamplesheet.txt</code>. To run
-manually:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> run <span class="at">-p</span> ~/.local/share/mamba/envs/ctcf_extraction <span class="dt">\</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    python scripts/extract_ctcf_sites_hg38.py <span class="dt">\</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--source</span> bed <span class="dt">\</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--bed</span> /path/to/peaks.narrowPeak <span class="dt">\</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--region</span> chr1:64210000-66170000 <span class="dt">\</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--genome</span> /path/to/hg38.fa <span class="dt">\</span></span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output</span> data/ctcf_beds/ctcf_oriented_hg38_condition1_chr1_64210000_66170000.bed</span></code></pre></div>
-<p><strong>Output:</strong> BED6 — one row per peak with a usable FIMO
-hit; column 6 (<code>+</code>/<code>−</code>) is the motif strand.</p>
-<h3 id="scriptsvalidate_ctcfpy"><code>scripts/validate_ctcf.py</code></h3>
+<p>The <code>orientCTCF</code> Snakemake rule calls this for every
+sample a condition uses as its <code>ctcf_type</code>; every argument
+comes from the config. To run manually (inside the <code>ctcf</code>
+environment):</p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/extract_ctcf_sites.py <span class="dt">\</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--bed</span> /path/to/peaks.narrowPeak <span class="dt">\</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--region</span> chr1:64210000-66170000 <span class="dt">\</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--genome</span> /path/to/genome.fa <span class="dt">\</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--motif</span> output/motifs/MA0139.1.meme <span class="dt">\</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--assembly</span> hg38 <span class="dt">\</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--fimo-thresh</span> 1e-3 <span class="at">--flank</span> 100 <span class="at">--unoriented</span> drop <span class="at">--resolution</span> 1000 <span class="dt">\</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output</span> output/ctcf/ctcf_oriented_hg38_condition1_chr1_64210000_66170000.bed</span></code></pre></div>
+<p><strong>Output:</strong> BED6 — one row per peak with a FIMO hit;
+column 6 (<code>+</code>/<code>−</code>) is the motif strand.</p>
+<h3
+id="scriptsvalidate_ctcf.py"><code>scripts/validate_ctcf.py</code></h3>
 <p><strong>Purpose.</strong> Pre-flight sanity check before any
 simulation. Loads the oriented CTCF BEDs, converts genomic coordinates
 to monomer indices, and prints a report. Called by the
-<code>validate_ctcf</code> Snakemake rule; also runnable standalone:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> run <span class="at">-p</span> ~/.local/share/mamba/envs/cohesin_sim python scripts/validate_ctcf.py</span></code></pre></div>
+<code>validateCTCF</code> Snakemake rule; also runnable standalone
+(inside the <code>sim</code> environment):</p>
+<div class="sourceCode" id="cb6"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/validate_ctcf.py</span></code></pre></div>
 <p>Checks: BED parses cleanly; all sites are inside the simulation
 window; coordinate → monomer-index mapping is monotone; prints counts
 per condition and sites gained / lost / shared. Exits non-zero on
-failure.</p>
-<h3 id="scriptsexport_conserved_ctcf_bedpy"><code>scripts/export_conserved_ctcf_bed.py</code></h3>
+failure, including when a BED is missing.</p>
+<h3
+id="scriptsexport_conserved_ctcf_bed.py"><code>scripts/export_conserved_ctcf_bed.py</code></h3>
 <p><strong>Purpose.</strong> Intersect two oriented CTCF BEDs, keep only
 sites shared in both (same position and orientation), and write a
 conserved-sites BED. Useful for testing “CTCF binding didn’t change,
 only cohesin did” scenarios.</p>
-<h2 id="4-the-lef-dynamics-engine">4. The LEF dynamics engine</h2>
-<h3 id="scriptslef_dynamicspy"><code>scripts/lef_dynamics.py</code></h3>
+<h2 id="the-lef-dynamics-engine">4. The LEF dynamics engine</h2>
+<h3
+id="scriptslef_dynamics.py"><code>scripts/lef_dynamics.py</code></h3>
 <p><strong>Purpose.</strong> A lightweight 1D Python simulator for
 loop-extruding factors (cohesins). No 3D physics — just: where are the
 cohesins on the lattice, where are they stalled, where do they jump when
@@ -865,11 +848,11 @@ times, return the list of per-step bond lists.</li>
 <code>left_pos[i]</code>, <code>right_pos[i]</code>,
 <code>ages[i]</code>, <code>left_stalled[i]</code>,
 <code>right_stalled[i]</code>, <code>occupied[pos]</code>.</p>
-<h2 id="5-running-simulations">5. Running simulations</h2>
-<h3 id="5a-scriptsrun_simulation_shardpy--the-snakemake-entry-point">5a.
+<h2 id="running-simulations">5. Running simulations</h2>
+<h3 id="a.-scriptsrun_simulation_shard.py-the-snakemake-entry-point">5a.
 <code>scripts/run_simulation_shard.py</code> — the Snakemake entry
 point</h3>
-<p>This is what every <code>simulate_shard</code> SLURM job calls (36
+<p>This is what every <code>simulateShard</code> SLURM job calls (36
 jobs with the example config: 3 conditions × 3 replicates × 4
 shards).</p>
 <p><strong>Arguments:</strong></p>
@@ -879,38 +862,39 @@ shards).</p>
 <col style="width: 60%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th>Flag</th>
 <th>Meaning</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td><code>--condition NAME</code></td>
 <td>One of the names in <code>SIMULATION_CONDITIONS</code>. Sets cohesin
 params + CTCF track.</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>--replicate N</code></td>
 <td>Integer replicate index (drives RNG seed).</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>--shard-index I</code></td>
 <td>Which shard of this replicate (0…<code>n_shards-1</code>).</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>--n-shards K</code></td>
 <td>Total shards per replicate (default 4).</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>--gpu I</code></td>
 <td>CUDA device index.</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>--output DIR</code></td>
-<td>Output base directory (default <code>results/</code>).</td>
+<td>Output base directory (the workflow passes
+<code>output/sims</code>).</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>--shard-index-offset M</code></td>
 <td>Add <code>M</code> to shard index — use to extend existing runs
 without overwriting.</td>
@@ -918,12 +902,14 @@ without overwriting.</td>
 </tbody>
 </table>
 <p>Shard output goes to
-<code>&lt;output&gt;/&lt;condition&gt;_rep&lt;r&gt;_shard&lt;i&gt;/</code>.</p>
+<code>&lt;output&gt;/&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;r&gt;_shard&lt;i&gt;/</code>.</p>
 <p><strong>What it does:</strong></p>
 <ol type="1">
 <li>Look up the condition → resolve to
-<code>(params_dict, ctcf_type)</code>.</li>
-<li>Build the tiled polymer (<code>N = TILING[&quot;chrom_size&quot;]</code>),
+<code>(params_dict, ctcf_type)</code>. Check that the engine in
+<code>sim_run.engine</code> can be imported; stop if not (no silent
+fallback to another engine).</li>
+<li>Build the tiled polymer (<code>N = TILING["chrom_size"]</code>),
 fetch tiled CTCF arrays.</li>
 <li>Warm up <code>LEFSimulator</code> for <code>warmup_blocks</code>
 steps (throw away).</li>
@@ -936,40 +922,43 @@ adding/removing bonds).</li>
 <li><code>sim.local_energy_minimization()</code> relaxes the starting
 configuration.</li>
 <li>Run <code>total_blocks / n_shards</code> blocks;
-<code>HDF5Reporter</code> saves conformations every
-<code>save_every</code> blocks.</li>
+<code>HDF5Reporter</code> saves the conformation of every block
+(<code>hdf5_frames_per_file</code> per file). <code>save_every</code>
+and the 3D side of <code>warmup_blocks</code> are not applied in this
+runner.</li>
 </ol>
-<h3 id="5b-scriptsmerge_shardspy">5b.
+<h3 id="b.-scriptsmerge_shards.py">5b.
 <code>scripts/merge_shards.py</code></h3>
 <p>Concatenates per-shard HDF5 streams into
 <code>merged_&lt;condition&gt;_rep&lt;N&gt;/</code> with the same layout
 the analysis expects. Writes <code>merge_metadata.json</code> recording
 which shard IDs contributed.</p>
 <pre><code>--condition, --replicate, --n-shards, --results-dir</code></pre>
-<h3 id="5c-scriptsrun_simulationpy--single-run--local-testing">5c.
+<h3 id="c.-scriptsrun_simulation.py-single-run-local-testing">5c.
 <code>scripts/run_simulation.py</code> — single-run / local testing</h3>
 <p>One-shot simulation without sharding. Useful for local testing or
 LEF-only sanity checks:</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> run <span class="at">-p</span> ~/.local/share/mamba/envs/cohesin_sim <span class="dt">\</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>    python scripts/run_simulation.py <span class="dt">\</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="at">--replicate</span> 0 <span class="at">--gpu</span> 0 <span class="at">--output</span> results/</span></code></pre></div>
-<p><code>--engine lef_only</code> skips the 3D polymer entirely and
-writes only a 2D contact map from 1D LEF statistics.</p>
-<h2 id="6-post-simulation-analysis">6. Post-simulation analysis</h2>
-<h3 id="6a-the-orchestrator-scriptsrun_analysis_allpy">6a. The
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/run_simulation.py <span class="dt">\</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="at">--replicate</span> 0 <span class="at">--gpu</span> 0 <span class="at">--output</span> output/sims</span></code></pre></div>
+<p><code>--engine</code> defaults to <code>sim_run.engine</code>;
+<code>--engine lef_only</code> skips the 3D polymer entirely and writes
+only a 2D contact map from 1D LEF statistics.</p>
+<h2 id="post-simulation-analysis">6. Post-simulation analysis</h2>
+<h3 id="a.-the-orchestrator-scriptsrun_analysis_all.py">6a. The
 orchestrator: <code>scripts/run_analysis_all.py</code></h3>
 <p>One command that walks every
 <code>merged_&lt;condition&gt;_rep&lt;N&gt;</code> directory, runs the
 full analysis suite, and writes per-condition outputs. Called by the
-<code>analyze_all</code> Snakemake rule.</p>
+<code>analyzeCondition</code> Snakemake rule.</p>
 <p><strong>How to run directly</strong> (e.g. for one condition):</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="ex">conda</span> run <span class="at">-p</span> ~/.local/share/mamba/envs/cohesin_sim <span class="dt">\</span></span>
-<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>    python scripts/run_analysis_all.py <span class="dt">\</span></span>
-<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--results-dir</span> results/polychrom_3d <span class="dt">\</span></span>
-<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output-dir</span> results/analysis/cond1_baseline <span class="dt">\</span></span>
-<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="dt">\</span></span>
-<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--hic-dir</span> data/mcool <span class="dt">\</span></span>
-<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--n-jobs</span> 4 <span class="at">--skip-existing</span> <span class="at">--no-msd</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/run_analysis_all.py <span class="dt">\</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--results-dir</span> output/sims <span class="dt">\</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output-dir</span> output/analysis/cond1_baseline <span class="dt">\</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="dt">\</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--hic-dir</span> output/mcool <span class="dt">\</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--n-jobs</span> 4 <span class="at">--skip-existing</span> <span class="at">--no-msd</span></span></code></pre></div>
 <p><strong>Selected flags:</strong></p>
 <table>
 <colgroup>
@@ -977,47 +966,48 @@ full analysis suite, and writes per-condition outputs. Called by the
 <col style="width: 70%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th>Flag</th>
 <th>What it does</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td><code>--results-dir DIR</code></td>
 <td>Where to find merged simulation directories.</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>--output-dir DIR</code></td>
 <td>Where to write outputs.</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>--condition NAME</code></td>
 <td>Analyse one condition only.</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>--n-jobs N</code></td>
-<td>Parallel workers for contact detection.</td>
+<td>Parallel workers for contact detection (default
+<code>analysis.n_jobs</code>).</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>--skip-existing</code></td>
 <td>Skip dirs that already have <code>sim_contact_map.npy</code>.</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>--no-msd</code></td>
-<td>Skip MSD computation (disabled by default in the Snakemake
-rule).</td>
+<td>Skip MSD computation (the Snakemake rule adds this unless
+<code>analysis.msd: True</code>).</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>--hic-dir DIR</code></td>
 <td>Where to find <code>&lt;compare_hic&gt;.cool</code> for each
-condition (falls back to <code>data/mcool/</code>).</td>
+condition (falls back to <code>output/mcool/</code>).</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>--mcool TYPE=PATH</code></td>
 <td>Override the <code>.cool</code> for one Hi-C type (repeatable).</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>--ctcf-bed TYPE=PATH</code></td>
 <td>Override the oriented CTCF BED for one ctcf_type (repeatable).</td>
 </tr>
@@ -1031,47 +1021,47 @@ condition (falls back to <code>data/mcool/</code>).</td>
 <col style="width: 66%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th>File</th>
 <th>What it is</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td><code>sim_contact_map.npy</code></td>
 <td>2D contact matrix from 3D conformations</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>sim_ps_curve.npz</code></td>
 <td>Contact probability vs genomic distance</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>sim_insulation.npy</code></td>
 <td>Insulation score along the locus</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>apa_convergent.png</code></td>
 <td>Aggregate Peak Analysis at convergent CTCF pairs</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>sim_vs_exp_map.png</code></td>
 <td>Side-by-side sim vs experimental Hi-C heatmap</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>comparison_metrics.json</code></td>
 <td>Pearson + stratum-adjusted correlations with experimental Hi-C</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>msd_&lt;label&gt;.npz</code></td>
 <td>Two-point MSD curves (if <code>--no-msd</code> not set)</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>calibration.json</code></td>
 <td>Physical-unit mapping: nm/monomer, sec/frame</td>
 </tr>
 </tbody>
 </table>
-<h3 id="6b-analysis-modules-analysis">6b. Analysis modules
+<h3 id="b.-analysis-modules-analysis">6b. Analysis modules
 (<code>analysis/</code>)</h3>
 <table>
 <colgroup>
@@ -1079,67 +1069,68 @@ condition (falls back to <code>data/mcool/</code>).</td>
 <col style="width: 52%" />
 </colgroup>
 <thead>
-<tr>
+<tr class="header">
 <th>Module</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody>
-<tr>
+<tr class="odd">
 <td><code>contact_maps.py</code></td>
 <td>Contact matrix from conformations via
 <code>scipy.spatial.cKDTree</code>; also P(s), insulation, map-vs-map
 correlation</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>ps_curve.py</code></td>
 <td>Power-law fitting of P(s)</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>absolute_quant.py</code></td>
 <td>Aggregate Peak Analysis (APA) at convergent CTCF pairs</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>ctcf_plotting.py</code></td>
 <td>Contact-map heatmaps with CTCF arrow strips</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>experimental_compare.py</code></td>
 <td>Sim vs experimental Hi-C comparison (<code>.cool</code> and
 <code>.npy</code>)</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>msd_two_point.py</code></td>
 <td>Mean-squared displacement of monomer pairs; sub-diffusive exponent
 fit</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>polymer_dynamics.py</code></td>
 <td>Radius of gyration, loop fractions, dwell-time distributions</td>
 </tr>
-<tr>
+<tr class="even">
 <td><code>calibration.py</code></td>
 <td>Map simulation units → physical units (nm/monomer, sec/frame)</td>
 </tr>
-<tr>
+<tr class="odd">
 <td><code>batch_analysis.py</code></td>
 <td>Older single-pass analysis over all result dirs (simpler than the
 orchestrator)</td>
 </tr>
 </tbody>
 </table>
-<h3 id="6c-scriptssummarize_analysispy">6c.
+<h3 id="c.-scriptssummarize_analysis.py">6c.
 <code>scripts/summarize_analysis.py</code></h3>
 <p>Collects scalar metrics from all conditions into one CSV/XLSX
 table:</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/summarize_analysis.py <span class="dt">\</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--analysis-dir</span> results/analysis <span class="dt">\</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--reference-condition</span> cond1_baseline</span></code></pre></div>
-<h3 id="6d-scriptscheck_resultspy">6d.
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/summarize_analysis.py <span class="dt">\</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--analysis-dir</span> output/analysis <span class="dt">\</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--reference-condition</span> cond1_baseline</span></code></pre></div>
+<h3 id="d.-scriptscheck_results.py">6d.
 <code>scripts/check_results.py</code></h3>
-<p>Lists every directory under <code>results/polychrom_3d</code>, its
-frame count, and whether analysis outputs are present. Quick inventory
-after a SLURM batch.</p>
+<p>Lists every directory under <code>output/sims</code>, its frame
+count, and whether analysis outputs are present. Quick inventory after a
+SLURM batch.</p>
 <h2 id="legacy-cluster-scripts-legacycluster">Legacy cluster scripts
 (<code>legacy/cluster/</code>)</h2>
 <p>The pre-Snakemake SLURM scripts were written for the lab’s original
@@ -1162,29 +1153,33 @@ this pattern.</li>
 <h2 id="conventions-youll-see-everywhere">Conventions you’ll see
 everywhere</h2>
 <ul>
-<li><strong>Monomer = 1 kb.</strong> One bead ↔︎ 1,000 bp. Monomer index
-<code>i</code> covers <code>REGION_START + i * RESOLUTION</code> to
+<li><strong>Monomer = <code>resolution</code> bp (1 kb by
+default).</strong> Monomer index <code>i</code> covers
+<code>REGION_START + i * RESOLUTION</code> to
 <code>REGION_START + (i+1) * RESOLUTION</code>.</li>
-<li><strong>Tiled chromosome.</strong> Simulations run on ~70,000
-monomers = 28 copies of the 2 Mb locus with padding. Contact maps fold
-back to <code>N_MONOMERS</code> (~2,000) for comparison. This gives ~28×
-more contact statistics at no extra physics cost.</li>
+<li><strong>Tiled chromosome.</strong> Simulations run on
+<code>chrom_size</code> (70,000) monomers = 28 copies of the locus with
+padding. Contact maps are averaged back to <code>N_MONOMERS</code>
+(1,960) for comparison. This gives ~28× more contact statistics at no
+extra physics cost.</li>
 <li><strong>Output directory names.</strong> Shards:
-<code>&lt;condition&gt;_rep&lt;N&gt;_shard&lt;S&gt;/</code>. Merged:
-<code>merged_&lt;condition&gt;_rep&lt;N&gt;/</code>. The
-<code>_ctcf-&lt;type&gt;</code> in the condition name
-(e.g. <code>cond1_baseline</code>) is the key separator between runs
-with the same cohesin params but different CTCF tracks.</li>
+<code>output/sims/&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;_shard&lt;S&gt;/</code>.
+Merged:
+<code>output/sims/merged_&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;/</code>.
+The <code>_ctcf-&lt;type&gt;</code> part separates runs with the same
+cohesin params but different CTCF tracks.</li>
 <li><strong>RNG seed.</strong>
-<code>42 + replicate * 10000 + shard * 1000</code>. Always derived from
-indices so reruns are reproducible.</li>
+<code>seed_base + replicate * 10000 + shard * 1000</code>
+(<code>seed_base</code> = 42 in the config). Always derived from indices
+so reruns are reproducible.</li>
 <li><strong>Every run writes <code>params.json</code></strong> with the
 full parameter dict + CTCF type + replicate. If a result looks wrong,
 check <code>params.json</code> first.</li>
-<li><strong>Sentinel files.</strong> Snakemake tracks completion via
-<code>.done</code> files in <code>results/.sentinels/</code>. Don’t
-touch these manually; delete the relevant <code>.done</code> file if you
-need to re-run a step.</li>
+<li><strong>Completion markers.</strong> Snakemake tracks simulation,
+merge, and analysis steps through <code>.done</code> files in
+<code>output/done/</code>. Delete the relevant <code>.done</code> file
+if you need to re-run a step (for example after changing a parameter
+that only the scripts read).</li>
 </ul>
 <h2 id="common-pitfalls">Common pitfalls</h2>
 <p><strong>CUDA architecture error.</strong>
@@ -1199,22 +1194,22 @@ CUDA toolkit that matches the target GPU.</p>
 <code>analysis</code>.</strong> Every script in <code>scripts/</code>
 inserts the repo root onto <code>sys.path</code>. Run from the repo
 root, or set <code>PYTHONPATH=/path/to/ChromSimPipe</code>.</p>
-<p><strong><code>KeyError: &#39;CTCF_Type&#39;</code> in samplesheet.</strong>
-<code>ChromSimSamplesheet.txt</code> must be tab-separated with headers
-exactly <code>CTCF_Type</code> and <code>CTCF_Peaks_Path</code>.</p>
-<p><strong><code>hic2cool</code> fails.</strong> Check
-<code>config/ChromSimConfig.yaml</code>: every entry under
-<code>hic:</code> must be an absolute path to an existing
-<code>.hic</code> file.</p>
+<p><strong><code>Samplesheet ... has no 'CTCF_Peaks' column</code>.</strong>
+<code>ChromSimSamplesheet.txt</code> must be tab-separated and include
+the headers <code>CTCF_Peaks</code> and <code>Hi-C</code>, plus every
+column named in <code>fileNamesFrom</code>.</p>
+<p><strong><code>hic2cool</code> fails.</strong> Check the sample’s
+<code>Hi-C</code> path in the samplesheet, and
+<code>output/logs/convertHic_&lt;sample&gt;.err</code>.</p>
 <p><strong>Analysis fails with “No results found”.</strong> Check that
-<code>results/polychrom_3d/merged_&lt;condition&gt;_rep*/</code>
-directories exist. If shards completed but the merged directory is
-missing, run <code>merge_shards.py</code> manually or re-trigger the
-Snakemake <code>merge_shards</code> rule.</p>
-<p><strong>Per-job SLURM logs location.</strong> Per-rule job logs go to
-<code>.snakemake/slurm_logs/rule_&lt;name&gt;/&lt;wildcards&gt;/&lt;jobid&gt;.log</code>,
-not to <code>logs/</code>. The <code>logs/</code> directory only
-contains the top-level Snakemake process output
-(e.g. <code>logs/snakemake_&lt;jobid&gt;.err</code>).</p>
+<code>output/sims/merged_*_rep*/</code> directories exist. If shards
+completed but the merged directory is missing, delete
+<code>output/done/mergeShards_&lt;condition&gt;_rep&lt;N&gt;.done</code>
+and resubmit.</p>
+<p><strong>Where the logs are.</strong> Each job’s stdout / stderr:
+<code>output/logs/&lt;rule&gt;_&lt;wildcards&gt;.out|.err</code>.
+SLURM’s own job logs: <code>output/logs_slurm/</code>. The launcher
+(main Snakemake process): <code>ChromSimPipe-&lt;jobid&gt;.out</code> in
+the repo root.</p>
 </body>
 </html>

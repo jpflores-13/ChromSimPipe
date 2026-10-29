@@ -19,14 +19,13 @@ dependencies:
 
   # --- Hi-C data processing ---
   - cooler        # reads .mcool reference files in analysis/experimental_compare.py and analysis/ps_curve.py
-  - hic2cool      # converts .hic → .mcool in setup_data.sh
+  - hic2cool      # converts .hic → .cool (convertHic rule)
 
   # --- Analysis & visualization ---
   - matplotlib
-  - pandas        # used by the Snakefile samplesheet reader and summary tables
+  - pandas        # summary tables
 
-  # --- pip-only packages ---
-  - pyyaml       # required by configs/parameters.py to read SimConfig.yaml
+  - pyyaml        # configs/parameters.py reads config/ChromSimConfig.yaml
 
   # --- pip-only packages ---
   - pip:

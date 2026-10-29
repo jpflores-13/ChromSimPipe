@@ -1,256 +1,313 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 # ==============================================================================
-# ChromSimPipe Snakemake workflow
-# Cohesin loop-extrusion simulation pipeline
+# ChromSimPipe — cohesin loop-extrusion simulation workflow
 #
-# Usage:  sbatch ChromSimPipe.sh
-#         (or see ChromSimPipe.sh for the full snakemake command)
+# Run with:  sbatch ChromSimPipe.sh
 #
-# Inputs (set in config/ChromSimConfig.yaml):
-#   hic                           — {hic_type: .hic path}, one per Hi-C map
-#   genome                        — genome FASTA for FIMO orientation
-#   samplesheet                   — ChromSimSamplesheet.txt (CTCF peaks per ctcf_type)
+# All inputs come from the config file (config/ChromSimConfig.yaml) and the
+# samplesheet it names. configs/parameters.py parses both; this file only
+# wires the rules together.
 #
-# Locus + conditions are read from configs/parameters.py (single source of truth).
-# Change the locus section in ChromSimConfig.yaml to switch genomic regions.
+#   convertHic (per Hi-C sample) ─────────────────────────────┐
+#   getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF  │
+#                    ─► simulateShard (condition × rep × shard, GPU)
+#                    ─► mergeShards (condition × rep)         │
+#                    ─► analyzeCondition (condition) ◄────────┘
+#                    ─► benchmarkSummary
 # ==============================================================================
 
-import sys, os
-import pandas as pd
+import os
+import sys
+
+##### Load config and sample sheets #####
+## `--configfile other.yaml` replaces the default config entirely (it must be
+## a complete config); configs/parameters.py reads the same file, here and in
+## every job, via $CHROMSIM_CONFIG.
+DEFAULT_CONFIG = "config/ChromSimConfig.yaml"
+if not workflow.overwrite_configfiles:
+    configfile: DEFAULT_CONFIG
+CONFIGFILE = os.path.abspath((list(workflow.overwrite_configfiles) or [DEFAULT_CONFIG])[-1])
+os.environ["CHROMSIM_CONFIG"] = CONFIGFILE
 
 sys.path.insert(0, os.getcwd())
 from configs.parameters import (
-    SIMULATION_CONDITIONS, LOCI, SIM_RUN, ACTIVE_LOCUS,
-    CTCF_TYPES, CTCF_BEDS, HIC_FILES, MCOOL_FILES,
+    SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, CTCF_BEDS,
+    HIC_FILES, MCOOL_FILES, PATHS, SAMPLES, RUN_NAME,
+    REGION, N_REPLICATES, N_SHARDS, ANALYSIS, LOCUS_TAG, GENOME_ASSEMBLY,
 )
 
-configfile: "config/ChromSimConfig.yaml"
 
-# ── Pipeline-level constants ───────────────────────────────────────────────────
-COND_LOOKUP  = {c["name"]: c for c in SIMULATION_CONDITIONS}
-COND_NAMES   = [c["name"] for c in SIMULATION_CONDITIONS]
-
-LOCUS      = ACTIVE_LOCUS
-LOCUS_INFO = LOCI[LOCUS]
-CHROM      = LOCUS_INFO["chrom"]
-RSTART     = LOCUS_INFO["region_start"]
-REND       = LOCUS_INFO["region_end"]
-REGION     = f"{CHROM}:{RSTART}-{REND}"
-
-N_REP        = config.get("n_replicates", SIM_RUN["n_replicates"])
-N_SHARDS     = config.get("n_shards", 4)
-RESULTS_DIR  = "results/polychrom_3d"
-SENTINEL     = "results/.sentinels"
-
-# Read samplesheet (CTCF_Type → CTCF_Peaks_Path)
-_samples = pd.read_table(config["samplesheet"]).set_index("CTCF_Type", drop=False)
-
-def peaks_path(ctcf_type):
-    return _samples.loc[ctcf_type, "CTCF_Peaks_Path"]
-
-_ASSEMBLY  = config.get("genome_assembly", "hg38")
-_locus_tag = f"{CHROM}_{RSTART}_{REND}"
-
-def _ctcf_bed(ctcf_type):
-    return f"data/ctcf_beds/ctcf_oriented_{_ASSEMBLY}_{ctcf_type}_{_locus_tag}.bed"
-
-assert all(CTCF_BEDS[t] == _ctcf_bed(t) for t in CTCF_TYPES), \
-    "CTCF BED naming differs between the Snakefile and configs/parameters.py"
-
-_missing_peaks = [t for t in CTCF_TYPES if t not in _samples.index]
-if _missing_peaks:
-    raise ValueError(f"No samplesheet row for ctcf_type(s) {_missing_peaks} "
-                     f"in {config['samplesheet']}")
-
-def _compare_mcool(wc):
-    hic = COND_LOOKUP[wc.condition]["compare_hic"]
-    return [MCOOL_FILES[hic]] if hic else []
+def rel(path):
+    """Paths inside the working directory are written relative to it."""
+    if not os.path.isabs(path):
+        return path
+    r = os.path.relpath(path)
+    return path if r.startswith("..") else r
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# rule all — final target
-# ══════════════════════════════════════════════════════════════════════════════
+def conda_env(key):
+    """Resolve a condaEnvs entry: an env file, an existing env name, or an env path."""
+    env = os.path.expanduser(str(config["condaEnvs"][key]))
+    if env.endswith((".yml", ".yaml")) and not os.path.isabs(env):
+        return os.path.abspath(env)   # Snakemake resolves env files from workflows/ otherwise
+    return env
+
+
+COND_LOOKUP = {c["name"]: c for c in SIMULATION_CONDITIONS}
+COND_NAMES  = list(COND_LOOKUP)
+
+OUT        = rel(os.path.dirname(PATHS["mcool"]))
+MCOOL_DIR  = rel(PATHS["mcool"])
+CTCF_DIR   = rel(PATHS["ctcf"])
+MOTIF_DIR  = rel(PATHS["motifs"])
+SIM_DIR    = rel(PATHS["sims"])
+ANA_DIR    = rel(PATHS["analysis"])
+LOG_DIR    = rel(PATHS["logs"])
+BENCH_DIR  = rel(PATHS["benchmarks"])
+DONE_DIR   = rel(PATHS["done"])
+
+ENV_SIM  = conda_env("sim")
+ENV_CTCF = conda_env("ctcf")
+
+MOTIF = config["ctcf_motif"]
+MOTIF_MEME = (os.path.expanduser(MOTIF["meme"]) if MOTIF.get("meme")
+              else f"{MOTIF_DIR}/{MOTIF['jaspar_id']}.meme")
+
+wildcard_constraints:
+    rep   = r"\d+",
+    shard = r"\d+"
+
+## Write the parsed samplesheet (with sample names) next to the outputs.
+## Only rewritten when it changes: every cluster job re-parses this file.
+_sheet = f"{OUT}/{RUN_NAME}_ChromSimSamplesheet.txt"
+_cols  = list(next(iter(SAMPLES.values()))["metadata"])
+_text  = "\t".join(["sampleName"] + _cols) + "\n" + "".join(
+    "\t".join([name] + [s["metadata"][c] for c in _cols]) + "\n"
+    for name, s in SAMPLES.items()
+)
+if not os.path.exists(_sheet) or open(_sheet).read() != _text:
+    os.makedirs(OUT, exist_ok=True)
+    with open(_sheet, "w") as _fh:
+        _fh.write(_text)
+
+
+def compare_mcool(wildcards):
+    hic = COND_LOOKUP[wildcards.condition]["compare_hic"]
+    return [rel(MCOOL_FILES[hic])] if hic else []
+
+
+## Define actions on success
+onsuccess:
+    print("ChromSimPipe completed successfully! Wahoo!")
+
+
+##### Define rules #####
 rule all:
     input:
-        expand(SENTINEL + "/analyzed/{condition}.done", condition=COND_NAMES)
+        expand(f"{DONE_DIR}/analyzeCondition_{{condition}}.done", condition=COND_NAMES),
+        f"{OUT}/{RUN_NAME}_benchmarking.tsv"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Step 1 — Convert .hic → .mcool (one job per Hi-C map)
-# ══════════════════════════════════════════════════════════════════════════════
-rule convert_hic:
+rule convertHic:
     input:
-        hic = lambda wc: HIC_FILES[wc.hic_type]
+        hic = lambda wildcards: HIC_FILES[wildcards.sampleName]
     output:
-        mcool = "data/mcool/{hic_type}.cool"
-    resources:
-        runtime        = 120,
-        cpus_per_task  = 4,
-        mem_mb         = 32000,
-    shell:
-        """
-        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
-        mkdir -p data/mcool
-        conda run -p ~/.local/share/mamba/envs/cohesin_sim hic2cool convert \\
-            {input.hic} {output.mcool} -r {config[resolution]}
-        """
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# Step 2 — Extract oriented CTCF sites via FIMO (one job per CTCF condition)
-# ══════════════════════════════════════════════════════════════════════════════
-rule extract_ctcf:
-    input:
-        peaks = lambda wc: peaks_path(wc.ctcf_type)
-    output:
-        bed = f"data/ctcf_beds/ctcf_oriented_{_ASSEMBLY}_{{ctcf_type}}_{_locus_tag}.bed"
+        cool = f"{MCOOL_DIR}/{{sampleName}}.cool"
+    log:
+        err = f"{LOG_DIR}/convertHic_{{sampleName}}.err",
+        out = f"{LOG_DIR}/convertHic_{{sampleName}}.out"
+    benchmark:
+        f"{BENCH_DIR}/convertHic_{{sampleName}}.tsv"
     params:
-        region = REGION,
-        genome = config.get("genome", ""),
-    resources:
-        runtime        = 60,
-        cpus_per_task  = 2,
-        mem_mb         = 16000,
+        resolution = config["resolution"]
+    conda: ENV_SIM
     shell:
         """
-        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
-        mkdir -p data/ctcf_beds
-        genome_arg=""
-        [ -f "{params.genome}" ] && genome_arg="--genome {params.genome}"
-        conda run -p ~/.local/share/mamba/envs/ctcf_extraction python scripts/extract_ctcf_sites_hg38.py \\
-            --source bed \\
-            --bed {input.peaks} \\
-            --region {params.region} \\
-            $genome_arg \\
-            --output {output.bed}
+        hic2cool convert {input.hic} {output.cool} -r {params.resolution} 1> {log.out} 2> {log.err}
         """
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Step 3 — Validate CTCF BED files (runs once, after every ctcf_type is extracted)
-# ══════════════════════════════════════════════════════════════════════════════
-rule validate_ctcf:
+if not MOTIF.get("meme"):
+    rule getMotif:
+        output:
+            meme = MOTIF_MEME
+        log:
+            err = f"{LOG_DIR}/getMotif_{MOTIF['jaspar_id']}.err",
+            out = f"{LOG_DIR}/getMotif_{MOTIF['jaspar_id']}.out"
+        benchmark:
+            f"{BENCH_DIR}/getMotif_{MOTIF['jaspar_id']}.tsv"
+        params:
+            url = MOTIF["jaspar_url"].format(jaspar_id=MOTIF["jaspar_id"])
+        conda: ENV_CTCF
+        shell:
+            """
+            wget -O {output.meme} "{params.url}" 1> {log.out} 2> {log.err}
+            grep -q "^MOTIF" {output.meme} || {{ echo "Not a MEME file: {params.url}" >> {log.err}; exit 1; }}
+            """
+
+
+rule orientCTCF:
     input:
-        beds = [_ctcf_bed(t) for t in CTCF_TYPES],
+        peaks  = lambda wildcards: CTCF_PEAKS[wildcards.ctcfType],
+        genome = config["genome"],
+        motif  = MOTIF_MEME
     output:
-        done = SENTINEL + "/ctcf_validated.done"
-    resources:
-        runtime        = 15,
-        cpus_per_task  = 1,
-        mem_mb         = 4000,
+        bed = f"{CTCF_DIR}/ctcf_oriented_{GENOME_ASSEMBLY}_{{ctcfType}}_{LOCUS_TAG}.bed"
+    log:
+        err = f"{LOG_DIR}/orientCTCF_{{ctcfType}}.err",
+        out = f"{LOG_DIR}/orientCTCF_{{ctcfType}}.out"
+    benchmark:
+        f"{BENCH_DIR}/orientCTCF_{{ctcfType}}.tsv"
+    params:
+        region     = REGION,
+        assembly   = GENOME_ASSEMBLY,
+        thresh     = MOTIF["fimo_thresh"],
+        flank      = MOTIF["flank_bp"],
+        unoriented = MOTIF["unoriented"],
+        resolution = config["resolution"]
+    conda: ENV_CTCF
     shell:
         """
-        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
-        mkdir -p $(dirname {output.done})
-        conda run -p ~/.local/share/mamba/envs/cohesin_sim python scripts/validate_ctcf.py
+        python scripts/extract_ctcf_sites.py \
+            --bed {input.peaks} \
+            --region {params.region} \
+            --genome {input.genome} \
+            --motif {input.motif} \
+            --assembly {params.assembly} \
+            --fimo-thresh {params.thresh} \
+            --flank {params.flank} \
+            --unoriented {params.unoriented} \
+            --resolution {params.resolution} \
+            --output {output.bed} 1> {log.out} 2> {log.err}
+        """
+
+
+rule validateCTCF:
+    input:
+        beds = [rel(CTCF_BEDS[t]) for t in CTCF_TYPES]
+    output:
+        done = f"{DONE_DIR}/validateCTCF.done"
+    log:
+        err = f"{LOG_DIR}/validateCTCF.err",
+        out = f"{LOG_DIR}/validateCTCF.out"
+    benchmark:
+        f"{BENCH_DIR}/validateCTCF.tsv"
+    params:
+        configfile = CONFIGFILE
+    conda: ENV_SIM
+    shell:
+        """
+        CHROMSIM_CONFIG={params.configfile} python scripts/validate_ctcf.py 1> {log.out} 2> {log.err}
         touch {output.done}
         """
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Step 4 — GPU simulation: one SLURM job per (condition × replicate × shard)
-#   (conditions × n_replicates × n_shards) GPU jobs
-# ══════════════════════════════════════════════════════════════════════════════
-rule simulate_shard:
+rule simulateShard:
     input:
-        ctcf_done = SENTINEL + "/ctcf_validated.done",
-        ctcf_bed  = lambda wc: _ctcf_bed(COND_LOOKUP[wc.condition]["ctcf_type"]),
+        validated = rules.validateCTCF.output.done,
+        bed       = lambda wildcards: rel(CTCF_BEDS[COND_LOOKUP[wildcards.condition]["ctcf_type"]])
     output:
-        done = SENTINEL + "/sims/{condition}_rep{rep}_shard{shard}.done"
+        done = f"{DONE_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.done"
+    log:
+        err = f"{LOG_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.err",
+        out = f"{LOG_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.out"
+    benchmark:
+        f"{BENCH_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.tsv"
     params:
-        results_dir = RESULTS_DIR,
-        n_shards    = N_SHARDS,
-    resources:
-        runtime         = 720,
-        slurm_partition = "gpu",
-        qos             = "gpu_access",
-        cpus_per_task   = 4,
-        mem_mb          = 60000,
-        mem_mb_per_cpu  = 0,
-        gpu             = 1,
+        configfile = CONFIGFILE,
+        sim_dir    = SIM_DIR,
+        n_shards   = N_SHARDS
+    conda: ENV_SIM
     shell:
         """
-        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
-        mkdir -p {params.results_dir}
-        mkdir -p $(dirname {output.done})
-        conda run -p ~/.local/share/mamba/envs/cohesin_sim python scripts/run_simulation_shard.py \\
-            --condition {wildcards.condition} \\
-            --replicate {wildcards.rep} \\
-            --shard-index {wildcards.shard} \\
-            --n-shards {params.n_shards} \\
-            --gpu 0 \\
-            --output {params.results_dir}
+        CHROMSIM_CONFIG={params.configfile} python scripts/run_simulation_shard.py \
+            --condition {wildcards.condition} \
+            --replicate {wildcards.rep} \
+            --shard-index {wildcards.shard} \
+            --n-shards {params.n_shards} \
+            --gpu 0 \
+            --output {params.sim_dir} 1> {log.out} 2> {log.err}
         touch {output.done}
         """
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Step 5 — Merge shards: one CPU job per (condition × replicate)
-#   (conditions × n_replicates) merge jobs
-# ══════════════════════════════════════════════════════════════════════════════
-rule merge_shards:
+rule mergeShards:
     input:
-        lambda wc: expand(
-            SENTINEL + "/sims/{condition}_rep{rep}_shard{shard}.done",
-            condition=wc.condition,
-            rep=wc.rep,
-            shard=range(N_SHARDS)
-        )
+        lambda wildcards: expand(rules.simulateShard.output.done,
+                                 condition=wildcards.condition, rep=wildcards.rep,
+                                 shard=range(N_SHARDS))
     output:
-        done = SENTINEL + "/merged/{condition}_rep{rep}.done"
+        done = f"{DONE_DIR}/mergeShards_{{condition}}_rep{{rep}}.done"
+    log:
+        err = f"{LOG_DIR}/mergeShards_{{condition}}_rep{{rep}}.err",
+        out = f"{LOG_DIR}/mergeShards_{{condition}}_rep{{rep}}.out"
+    benchmark:
+        f"{BENCH_DIR}/mergeShards_{{condition}}_rep{{rep}}.tsv"
     params:
-        results_dir = RESULTS_DIR,
-        n_shards    = N_SHARDS,
-    resources:
-        runtime        = 120,
-        cpus_per_task  = 4,
-        mem_mb         = 64000,
+        configfile = CONFIGFILE,
+        sim_dir    = SIM_DIR,
+        n_shards   = N_SHARDS
+    conda: ENV_SIM
     shell:
         """
-        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
-        mkdir -p $(dirname {output.done})
-        conda run -p ~/.local/share/mamba/envs/cohesin_sim python scripts/merge_shards.py \\
-            --condition {wildcards.condition} \\
-            --replicate {wildcards.rep} \\
-            --n-shards {params.n_shards} \\
-            --results-dir {params.results_dir}
+        CHROMSIM_CONFIG={params.configfile} python scripts/merge_shards.py \
+            --condition {wildcards.condition} \
+            --replicate {wildcards.rep} \
+            --n-shards {params.n_shards} \
+            --results-dir {params.sim_dir} 1> {log.out} 2> {log.err}
         touch {output.done}
         """
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# Step 6 — Analysis: contact maps, P(s) curves, MSD, figures (one job per cond)
-# ══════════════════════════════════════════════════════════════════════════════
-rule analyze_all:
+rule analyzeCondition:
     input:
-        merged = lambda wc: expand(
-            SENTINEL + "/merged/{condition}_rep{rep}.done",
-            condition=wc.condition,
-            rep=range(N_REP)
-        ),
-        mcool = _compare_mcool,
+        merged = lambda wildcards: expand(rules.mergeShards.output.done,
+                                          condition=wildcards.condition,
+                                          rep=range(N_REPLICATES)),
+        mcool  = compare_mcool
     output:
-        done = SENTINEL + "/analyzed/{condition}.done"
+        done = f"{DONE_DIR}/analyzeCondition_{{condition}}.done"
+    log:
+        err = f"{LOG_DIR}/analyzeCondition_{{condition}}.err",
+        out = f"{LOG_DIR}/analyzeCondition_{{condition}}.out"
+    benchmark:
+        f"{BENCH_DIR}/analyzeCondition_{{condition}}.tsv"
     params:
-        results_dir = RESULTS_DIR,
-        output_dir  = lambda wc: f"results/analysis/{wc.condition}",
-        hic_dir     = "data/mcool",
-        n_jobs      = 4,
-    resources:
-        runtime        = 360,
-        cpus_per_task  = 4,
-        mem_mb         = 64000,
+        configfile = CONFIGFILE,
+        sim_dir    = SIM_DIR,
+        out_dir    = lambda wildcards: f"{ANA_DIR}/{wildcards.condition}",
+        mcool_dir  = MCOOL_DIR,
+        n_jobs     = ANALYSIS["n_jobs"],
+        msd_flag   = "" if ANALYSIS["msd"] else "--no-msd"
+    conda: ENV_SIM
     shell:
         """
-        source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
-        mkdir -p {params.output_dir}
-        mkdir -p $(dirname {output.done})
-        conda run -p ~/.local/share/mamba/envs/cohesin_sim python scripts/run_analysis_all.py \\
-            --results-dir {params.results_dir} \\
-            --output-dir {params.output_dir} \\
-            --condition {wildcards.condition} \\
-            --hic-dir {params.hic_dir} \\
-            --n-jobs {params.n_jobs} \\
-            --skip-existing \\
-            --no-msd
+        mkdir -p {params.out_dir}
+        CHROMSIM_CONFIG={params.configfile} python scripts/run_analysis_all.py \
+            --results-dir {params.sim_dir} \
+            --output-dir {params.out_dir} \
+            --condition {wildcards.condition} \
+            --hic-dir {params.mcool_dir} \
+            --n-jobs {params.n_jobs} \
+            --skip-existing \
+            {params.msd_flag} 1> {log.out} 2> {log.err}
         touch {output.done}
+        """
+
+
+rule benchmarkSummary:
+    input:
+        expand(rules.analyzeCondition.output.done, condition=COND_NAMES)
+    output:
+        f"{OUT}/{RUN_NAME}_benchmarking.tsv"
+    log:
+        err = f"{LOG_DIR}/benchmarkSummary.err"
+    params:
+        bench_dir = BENCH_DIR
+    conda: ENV_SIM
+    shell:
+        """
+        python workflows/utils/benchmarking.py {params.bench_dir} {output} 2> {log.err}
         """

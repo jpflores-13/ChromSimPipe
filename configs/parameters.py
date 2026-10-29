@@ -1,39 +1,48 @@
 """
-Simulation parameters loader — reads config/ChromSimConfig.yaml (falls back to SimConfig.yaml).
+Simulation parameters loader — reads config/ChromSimConfig.yaml and the
+samplesheet it names. Nothing here is hard-coded: every value comes from the
+config (set CHROMSIM_CONFIG=/path/to/config.yaml to use another file).
 
-Presents the same public API as the original hardcoded parameters.py so all
-downstream scripts work without modification:
+Public API used by the Snakefile and scripts:
 
+    CONFIG_PATH, REPO_ROOT, OUTPUT_DIR, PATHS
     ACTIVE_LOCUS, LOCI, CHROM, REGION_START, REGION_END, RESOLUTION, N_MONOMERS
-    POLYMER, SMC_BOND, TILING, SIM_RUN
-    SIMULATION_CONDITIONS, ALL_PARAM_SETS
-    GENOME_ASSEMBLY, CTCF_TYPES, CTCF_BEDS, CTCF_SITES_BY_TYPE
+    POLYMER, SMC_BOND, TILING, SIM_RUN, N_REPLICATES, N_SHARDS
+    SAMPLES, SIMULATION_CONDITIONS, ALL_PARAM_SETS
+    GENOME_ASSEMBLY, CTCF_TYPES, CTCF_PEAKS, CTCF_BEDS, CTCF_SITES_BY_TYPE
     HIC_TYPES, HIC_FILES, MCOOL_FILES
     get_condition(), list_conditions()
     get_ctcf_arrays(), load_ctcf_from_bed()
     get_tiled_ctcf_arrays(), get_msd_pairs()
-    DATA, MSD_PROBE, MSD_FIT, CALIBRATION
+    ANALYSIS, DATA, MSD_PROBE, MSD_FIT, CALIBRATION
 
-CTCF types (e.g. "condition1", "condition2") and Hi-C types are whatever names the
-config uses — nothing here assumes a particular pair of conditions.
+Sample names are built from the samplesheet columns listed in
+``fileNamesFrom``; conditions refer to samples by that name.
 """
 
+import csv as _csv
 import numpy as np
 import os as _os
 
-# ── Locate and load config (ChromSimConfig.yaml preferred, falls back to SimConfig.yaml) ──
-_REPO_ROOT   = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), ".."))
-_CONFIG_PATH = _os.path.join(_REPO_ROOT, "config", "ChromSimConfig.yaml")
-if not _os.path.exists(_CONFIG_PATH):
-    _CONFIG_PATH = _os.path.join(_REPO_ROOT, "config", "SimConfig.yaml")
+# ── Locate and load config ────────────────────────────────────────────────────
+REPO_ROOT   = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), ".."))
+CONFIG_PATH = _os.path.abspath(_os.path.expanduser(_os.environ.get(
+    "CHROMSIM_CONFIG", _os.path.join(REPO_ROOT, "config", "ChromSimConfig.yaml"))))
+_REPO_ROOT  = REPO_ROOT   # backwards-compatible alias
 
 try:
     import yaml as _yaml
 except ImportError:
     raise ImportError("PyYAML is required: pip install pyyaml (or conda install pyyaml)")
 
-with open(_CONFIG_PATH) as _f:
+with open(CONFIG_PATH) as _f:
     _cfg = _yaml.safe_load(_f)
+
+
+def _repo_path(path):
+    """Expand ~ and resolve a config path relative to the repo root."""
+    path = _os.path.expanduser(str(path))
+    return path if _os.path.isabs(path) else _os.path.join(REPO_ROOT, path)
 
 
 # =============================================================================
@@ -59,6 +68,7 @@ REGION_START = _locus["region_start"]
 REGION_END   = _locus["region_end"]
 RESOLUTION   = int(_cfg.get("resolution", 1000))
 N_MONOMERS   = (REGION_END - REGION_START) // RESOLUTION
+REGION       = f"{CHROM}:{REGION_START}-{REGION_END}"
 
 _ASSEMBLY    = _cfg.get("genome_assembly", "hg38")
 GENOME_ASSEMBLY = _ASSEMBLY
@@ -77,6 +87,10 @@ POLYMER = dict(
     angle_force      = _poly.get("angle_force",      1.5),
     collision_rate   = _poly.get("collision_rate",   0.03),
     error_tol        = _poly.get("error_tol",        0.003),
+    repulsion_trunc  = _poly.get("repulsion_trunc",  3.0),
+    confinement_k    = _poly.get("confinement_k",    1.0),
+    integrator       = _poly.get("integrator",       "variableLangevin"),
+    precision        = _poly.get("precision",        "mixed"),
     platform         = _poly.get("platform",         "CUDA"),
 )
 
@@ -101,7 +115,7 @@ TILING["n_tiles"] = TILING["chrom_size"] // TILING["tile_size"]
 assert TILING["tile_size"] == N_MONOMERS + 2 * TILING["padding"], (
     f"tile_size ({TILING['tile_size']}) must equal "
     f"N_MONOMERS ({N_MONOMERS}) + 2*padding ({2*TILING['padding']}). "
-    f"Check locus coordinates and tiling section in SimConfig.yaml."
+    f"Check the locus and tiling sections in {CONFIG_PATH}."
 )
 
 
@@ -110,6 +124,9 @@ assert TILING["tile_size"] == N_MONOMERS + 2 * TILING["padding"], (
 # =============================================================================
 _run = _cfg.get("sim_run", {})
 SIM_RUN = dict(
+    engine               = str(_run.get("engine",               "polychrom")),
+    seed_base            = int(_run.get("seed_base",            42)),
+    hdf5_frames_per_file = int(_run.get("hdf5_frames_per_file", 100)),
     smc_steps_per_block  = int(_run.get("smc_steps_per_block",  1)),
     md_steps_per_block   = int(_run.get("md_steps_per_block",   250)),
     total_blocks         = int(_run.get("total_blocks",         50000)),
@@ -119,16 +136,87 @@ SIM_RUN = dict(
     contact_radius       = float(_run.get("contact_radius",     3.0)),
     n_replicates         = int(_run.get("n_replicates", _cfg.get("n_replicates", 3))),
 )
+N_REPLICATES = SIM_RUN["n_replicates"]
+N_SHARDS     = int(_cfg.get("n_shards", 4))
+
+_ENGINES = ("polychrom", "openmm", "lef_only")
+if SIM_RUN["engine"] not in _ENGINES:
+    raise ValueError(f"sim_run.engine must be one of {_ENGINES}, got {SIM_RUN['engine']!r}")
+
+
+# =============================================================================
+# OUTPUT LAYOUT (everything under outputDir)
+# =============================================================================
+OUTPUT_DIR = _repo_path(_cfg.get("outputDir", "output"))
+PATHS = dict(
+    mcool      = _os.path.join(OUTPUT_DIR, "mcool"),
+    ctcf       = _os.path.join(OUTPUT_DIR, "ctcf"),
+    motifs     = _os.path.join(OUTPUT_DIR, "motifs"),
+    sims       = _os.path.join(OUTPUT_DIR, "sims"),
+    analysis   = _os.path.join(OUTPUT_DIR, "analysis"),
+    figures    = _os.path.join(OUTPUT_DIR, "figures"),
+    logs       = _os.path.join(OUTPUT_DIR, "logs"),
+    benchmarks = _os.path.join(OUTPUT_DIR, "benchmarks"),
+    done       = _os.path.join(OUTPUT_DIR, "done"),
+)
+
+
+# =============================================================================
+# SAMPLESHEET
+# =============================================================================
+SAMPLESHEET_PATH = _repo_path(_cfg["samplesheet"])
+FILE_NAMES_FROM  = list(_cfg.get("fileNamesFrom") or [])
+_MISSING = {"", "na", "none", "."}
+
+with open(SAMPLESHEET_PATH, newline="") as _f:
+    _rows = [
+        {k.strip(): (v or "").strip() for k, v in r.items()}
+        for r in _csv.DictReader(_f, delimiter="\t")
+        if any((v or "").strip() for v in r.values())
+    ]
+
+for _col in ["CTCF_Peaks", "Hi-C"] + FILE_NAMES_FROM:
+    if _rows and _col not in _rows[0]:
+        raise KeyError(f"Samplesheet {SAMPLESHEET_PATH} has no '{_col}' column "
+                       f"(columns: {list(_rows[0])})")
+if not FILE_NAMES_FROM:
+    raise ValueError("fileNamesFrom must list at least one samplesheet column")
+
+
+def _value_or_none(v):
+    return None if v.lower() in _MISSING else _repo_path(v)
+
+
+SAMPLES = {}
+for _r in _rows:
+    _name = "_".join(_r[c] for c in FILE_NAMES_FROM)
+    if _name in SAMPLES:
+        raise ValueError(f"Duplicate sample name '{_name}' from fileNamesFrom "
+                         f"{FILE_NAMES_FROM}; add a column that tells them apart.")
+    SAMPLES[_name] = dict(
+        metadata   = _r,
+        ctcf_peaks = _value_or_none(_r["CTCF_Peaks"]),
+        hic        = _value_or_none(_r["Hi-C"]),
+    )
+
+## Run name: metadata values shared by every sample, joined with '_'
+## (the bagPipes `namer` pattern). Used to name run-level summary files.
+_meta_cols = [c for c in (_rows[0] if _rows else {}) if c not in ("CTCF_Peaks", "Hi-C")]
+_shared    = [next(iter(vals)) for vals in ({r[c] for r in _rows} for c in _meta_cols)
+              if len(vals) == 1]
+RUN_NAME   = "_".join(v for v in _shared if v) or "ChromSimPipe"
 
 
 # =============================================================================
 # CTCF BED FILE PATHS
 # =============================================================================
-# Lives in data/ctcf_beds/; naming: ctcf_oriented_{assembly}_{ctcf_type}_{chrom}_{start}_{end}.bed
+# Lives in <outputDir>/ctcf/; naming: ctcf_oriented_{assembly}_{ctcf_type}_{chrom}_{start}_{end}.bed
+LOCUS_TAG = f"{CHROM}_{REGION_START}_{REGION_END}"
+
+
 def _ctcf_bed_path(ctcf_type):
-    return (
-        f"data/ctcf_beds/ctcf_oriented_{_ASSEMBLY}_{ctcf_type}_"
-        f"{CHROM}_{REGION_START}_{REGION_END}.bed"
+    return _os.path.join(
+        PATHS["ctcf"], f"ctcf_oriented_{_ASSEMBLY}_{ctcf_type}_{LOCUS_TAG}.bed"
     )
 
 AUTO_LOAD_CTCF_FROM_BED = True
@@ -137,15 +225,19 @@ AUTO_LOAD_CTCF_FROM_BED = True
 CTCF_TYPES = list(dict.fromkeys(
     c["ctcf_type"] for c in _cfg.get("conditions", []) if c.get("ctcf_type")
 ))
-CTCF_BEDS = {t: _ctcf_bed_path(t) for t in CTCF_TYPES}
+for _t in CTCF_TYPES:
+    if _t not in SAMPLES or SAMPLES[_t]["ctcf_peaks"] is None:
+        raise ValueError(
+            f"Condition ctcf_type '{_t}' has no CTCF_Peaks in {SAMPLESHEET_PATH}. "
+            f"Samples with peaks: {[k for k, v in SAMPLES.items() if v['ctcf_peaks']]}"
+        )
+CTCF_PEAKS = {t: SAMPLES[t]["ctcf_peaks"] for t in CTCF_TYPES}
+CTCF_BEDS  = {t: _ctcf_bed_path(t) for t in CTCF_TYPES}
 
 
 # =============================================================================
 # CTCF SITE STORAGE (filled at import time by autoload below)
 # =============================================================================
-# Placeholder sites are used only for ctcf_types whose BED has not been
-# generated yet (get_ctcf_arrays warns when that happens).
-_PLACEHOLDER_SITES = [(500, +1), (1000, -1), (1500, +1)]
 CTCF_SITES_BY_TYPE = {}
 
 
@@ -210,13 +302,11 @@ def get_ctcf_arrays(condition):
         )
     sites = CTCF_SITES_BY_TYPE.get(condition)
     if sites is None:
-        import warnings
-        warnings.warn(
-            f"Using PLACEHOLDER CTCF sites for ctcf_type='{condition}'! "
-            "Run setup_data.sh to generate oriented BED files.",
-            UserWarning,
+        raise FileNotFoundError(
+            f"No oriented CTCF BED loaded for ctcf_type='{condition}' "
+            f"(expected {CTCF_BEDS.get(condition)}). Run the workflow's "
+            "orientCTCF rule first."
         )
-        sites = [s for s in _PLACEHOLDER_SITES if s[0] < N_MONOMERS]
     positions    = np.array([s[0] for s in sites], dtype=int)
     orientations = np.array([s[1] for s in sites], dtype=int)
     return positions, orientations
@@ -270,20 +360,17 @@ def get_tiled_ctcf_arrays(condition):
 # =============================================================================
 # HI-C DATA PATHS
 # =============================================================================
-# Hi-C maps come from the `hic:` mapping in the config ({hic_type: path}).
-# Older configs with top-level `hic_<type>:` keys are still accepted.
-HIC_FILES = dict(_cfg.get("hic") or {})
-for _k, _v in _cfg.items():
-    if _k.startswith("hic_") and _k[4:] not in HIC_FILES:
-        HIC_FILES[_k[4:]] = _v
+# Hi-C maps come from the samplesheet's Hi-C column; each is converted to
+# <outputDir>/mcool/<sample>.cool.
+HIC_FILES   = {k: v["hic"] for k, v in SAMPLES.items() if v["hic"]}
 HIC_TYPES   = list(HIC_FILES)
-MCOOL_FILES = {t: f"data/mcool/{t}.cool" for t in HIC_TYPES}
+MCOOL_FILES = {t: _os.path.join(PATHS["mcool"], f"{t}.cool") for t in HIC_TYPES}
 
 for _cond in SIMULATION_CONDITIONS:
     if _cond["compare_hic"] and _cond["compare_hic"] not in HIC_FILES:
         raise ValueError(
             f"Condition '{_cond['name']}' has compare_hic='{_cond['compare_hic']}', "
-            f"but the config only defines Hi-C maps for {HIC_TYPES}."
+            f"but the samplesheet only has Hi-C maps for {HIC_TYPES}."
         )
 
 DATA = dict(
@@ -296,43 +383,61 @@ DATA = dict(
 # =============================================================================
 # MSD + CALIBRATION (analysis-side)
 # =============================================================================
-MSD_PROBE = dict(
-    # Explicit (monomer_a, monomer_b) pairs per ctcf_type; empty = auto-select.
-    pairs  = {},
-    labels = {},
-    auto = dict(
-        anchor_bp              = _locus["anchor_bp"],
-        min_sep_monomers       = 200,
-        max_sep_monomers       = 1500,
-        require_convergent     = True,
-        n_pairs                = 2,
-        require_conserved      = True,
-        conserved_tol_monomers = 0,
-        prefer_flanking        = True,
-        disjoint_anchors       = True,
-        relax_if_missing       = True,
+_ana = _cfg.get("analysis", {}) or {}
+_apa = _ana.get("apa", {}) or {}
+ANALYSIS = dict(
+    n_jobs = int(_ana.get("n_jobs", 4)),
+    msd    = bool(_ana.get("msd", False)),
+    apa    = dict(
+        min_size_bins = int(_apa.get("min_size_bins", 20)),
+        max_size_bins = int(_apa.get("max_size_bins", 1000)),
+        pad           = int(_apa.get("pad", 10)),
     ),
 )
 
-MSD_FIT = dict(
-    lag_min_frames     = 1,
-    lag_max_frac       = 1 / 3,
-    fit_lag_min        = 5,
-    fit_lag_max_frac   = 0.25,
-    min_n_lags_for_fit = 6,
+_probe = _ana.get("msd_probe", {}) or {}
+_auto  = _probe.get("auto", {}) or {}
+MSD_PROBE = dict(
+    # Explicit (monomer_a, monomer_b) pairs per ctcf_type; empty = auto-select.
+    pairs  = dict(_probe.get("pairs") or {}),
+    labels = dict(_probe.get("labels") or {}),
+    auto = dict(
+        anchor_bp              = _locus["anchor_bp"],
+        min_sep_monomers       = int(_auto.get("min_sep_monomers", 200)),
+        max_sep_monomers       = int(_auto.get("max_sep_monomers", 1500)),
+        require_convergent     = bool(_auto.get("require_convergent", True)),
+        n_pairs                = int(_auto.get("n_pairs", 2)),
+        require_conserved      = bool(_auto.get("require_conserved", True)),
+        conserved_tol_monomers = int(_auto.get("conserved_tol_monomers", 0)),
+        prefer_flanking        = bool(_auto.get("prefer_flanking", True)),
+        disjoint_anchors       = bool(_auto.get("disjoint_anchors", True)),
+        relax_if_missing       = bool(_auto.get("relax_if_missing", True)),
+    ),
 )
 
+_fit = _ana.get("msd_fit", {}) or {}
+MSD_FIT = dict(
+    lag_min_frames     = int(_fit.get("lag_min_frames", 1)),
+    lag_max_frac       = float(_fit.get("lag_max_frac", 1 / 3)),
+    fit_lag_min        = int(_fit.get("fit_lag_min", 5)),
+    fit_lag_max_frac   = float(_fit.get("fit_lag_max_frac", 0.25)),
+    min_n_lags_for_fit = int(_fit.get("min_n_lags_for_fit", 6)),
+)
+
+_cal     = _ana.get("calibration", {}) or {}
+_cal_hic = _cal.get("hic", {}) or {}
+_cal_msd = _cal.get("msd", {}) or {}
 CALIBRATION = dict(
-    default_anchor = "hic",
+    default_anchor = _cal.get("default_anchor", "hic"),
     hic = dict(
-        s_ref_bp             = 100_000,
-        persistence_nm       = 50.0,
-        nm_per_bp            = 0.34,
+        s_ref_bp             = int(_cal_hic.get("s_ref_bp", 100_000)),
+        persistence_nm       = float(_cal_hic.get("persistence_nm", 50.0)),
+        nm_per_bp            = float(_cal_hic.get("nm_per_bp", 0.34)),
         fixed_bp_per_monomer = RESOLUTION,
     ),
     msd = dict(
-        expt_msd      = {},   # {ctcf_type: CSV path}
-        loc_error_um2 = 0.0,
+        expt_msd      = {k: _repo_path(v) for k, v in (_cal_msd.get("expt_msd") or {}).items()},
+        loc_error_um2 = float(_cal_msd.get("loc_error_um2", 0.0)),
     ),
 )
 
@@ -460,14 +565,9 @@ def _auto_select_msd_pairs(ctcf_type):
 # AUTOLOAD CTCF BEDs AT IMPORT TIME
 # =============================================================================
 if AUTO_LOAD_CTCF_FROM_BED:
-    import warnings as _warnings
-    for _type, _rel in CTCF_BEDS.items():
-        _abs = _os.path.join(_REPO_ROOT, _rel)
-        if _os.path.exists(_abs):
-            load_ctcf_from_bed(_abs, condition=_type)
-        else:
-            _warnings.warn(
-                f"CTCF BED not found for ctcf_type='{_type}': {_abs}\n"
-                "Run setup_data.sh to generate it. Placeholder sites will be used.",
-                UserWarning,
-            )
+    # BEDs are workflow outputs, so they are absent when the Snakefile first
+    # imports this module; get_ctcf_arrays() raises if one is still missing
+    # when a script needs it.
+    for _type, _path in CTCF_BEDS.items():
+        if _os.path.exists(_path):
+            load_ctcf_from_bed(_path, condition=_type)

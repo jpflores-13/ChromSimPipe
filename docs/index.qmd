@@ -17,33 +17,26 @@ runs the same way.
 ## How the pieces fit together
 
 ```
-  CTCF peaks (CUT&Tag / ChIP-seq)      Experimental Hi-C (.hic maps)
-    condition A + condition B              condition A + condition B
-          │                                       │
-          ▼                                       ▼
-  data/ctcf_beds/*.bed             data/mcool/*.cool
-   (oriented CTCF sites,            (1 kb contact maps; converted by hic2cool)
-    from FIMO JASPAR MA0139.1)
-          │                                       │
-          └──────────────┬────────────────────────┘
-                         ▼
-                 configs/parameters.py
-           (N conditions × active locus)
-                         │
-                         ▼
-         GPU polymer simulation (polychrom / OpenMM)
-         SLURM jobs: N conditions × reps × shards
-                         │
-                         ▼
-              results/polychrom_3d/merged_*/
-                         │
-                         ▼
-              scripts/run_analysis_all.py
-           (contact map, P(s), APA, MSD,
-            experimental Hi-C comparison)
-                         │
-                         ▼
-                results/analysis/*.npy, *.png
+  ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
+  (one row per sample: metadata,               (locus, conditions, physics,
+   CTCF_Peaks, Hi-C)                            genome, motif, envs, outputDir)
+          │                                               │
+          └───────────────────────┬───────────────────────┘
+                                  ▼
+                        configs/parameters.py
+                                  │
+                                  ▼
+     convertHic ── getMotif ── orientCTCF ── validateCTCF
+                                  │
+             simulateShard (condition × replicate × shard, GPU)
+                                  │
+                     mergeShards (condition × replicate)
+                                  │
+              analyzeCondition (contact map, P(s), APA,
+               insulation, comparison with Hi-C)
+                                  │
+                                  ▼
+                       output/analysis/{condition}/
 ```
 
 ## Example conditions

@@ -268,12 +268,9 @@ def _is_placeholder_label(label: str) -> bool:
 
 
 def default_genome_assembly() -> str:
-    """UCSC assembly name from config/ChromSimConfig.yaml (genome_assembly)."""
-    try:
-        from configs.parameters import GENOME_ASSEMBLY
-        return GENOME_ASSEMBLY
-    except Exception:  # noqa: BLE001
-        return "hg38"
+    """UCSC assembly name from the config (genome_assembly)."""
+    from configs.parameters import GENOME_ASSEMBLY
+    return GENOME_ASSEMBLY
 
 
 def fetch_ucsc_genes(

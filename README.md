@@ -22,45 +22,42 @@ peaks against matched Hi-C maps. Swap in your own data and the pipeline
 runs the same way.
 
 **If you want a line-by-line walkthrough of every script, read
-[`CODE_GUIDE.md`](CODE_GUIDE.md) or [`CODE_GUIDE.pdf`](CODE_GUIDE.pdf).**
+[`CODE_GUIDE.md`](CODE_GUIDE.md).**
 
 ### How the pieces fit together
 
 ```
-  CTCF peaks (CUT&Tag / ChIP-seq)      Experimental Hi-C (.hic maps)
-    condition A + condition B              condition A + condition B
-          │                                       │
-          ▼                                       ▼
-  data/ctcf_beds/*.bed             data/mcool/*.cool
-   (oriented CTCF sites,            (1 kb contact maps; converted by hic2cool)
-    from FIMO JASPAR MA0139.1)
-          │                                       │
-          └──────────────┬────────────────────────┘
-                         ▼
-                 configs/parameters.py
-           (N conditions × active locus)
-                         │
-                         ▼
-         GPU polymer simulation (polychrom / OpenMM)
-         SLURM jobs: N conditions × reps × shards
-                         │
-                         ▼
-              results/polychrom_3d/merged_*/
-                         │
-                         ▼
-              scripts/run_analysis_all.py
-           (contact map, P(s), APA, MSD,
-            experimental Hi-C comparison)
-                         │
-                         ▼
-                results/analysis/*.npy, *.png
+  ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
+  (one row per sample: metadata,               (locus, conditions, physics,
+   CTCF_Peaks, Hi-C)                            genome, motif, envs, outputDir)
+          │                                               │
+          └───────────────────────┬───────────────────────┘
+                                  ▼
+                        configs/parameters.py
+                (parses both; the only place values are read)
+                                  │
+                                  ▼
+                   workflows/ChromSimPipe.snakefile
+                                  │
+     convertHic ── getMotif ── orientCTCF ── validateCTCF
+                                  │
+             simulateShard (condition × replicate × shard, GPU)
+                                  │
+                     mergeShards (condition × replicate)
+                                  │
+              analyzeCondition (contact map, P(s), APA,
+               insulation, comparison with Hi-C) ── benchmarkSummary
+                                  │
+                                  ▼
+                       output/analysis/{condition}/
 ```
 
 ### Example conditions (STRS use case)
 
 `config/ChromSimConfig.yaml` ships three example conditions comparing two
-experimental states, `condition1` and `condition2` (each with its own CTCF
-peak set and Hi-C map). To define your own, edit the `conditions:` list there.
+experimental samples, `condition1` and `condition2` (each a row in
+`ChromSimSamplesheet.txt` with its own CTCF peaks and Hi-C map). To define
+your own, edit the `conditions:` list there.
 
 | # | Name | Cohesin params | CTCF sites | Compare vs | Question |
 |---|------|---------------|------------|------------|----------|
@@ -68,162 +65,163 @@ peak set and Hi-C map). To define your own, edit the `conditions:` list there.
 | 2 | `cond2_ctcf-only`            | Gabriele 2022 | Condition 2 | Condition 2 Hi-C | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
 | 3 | `cond2_weak-ctcf`            | Gabriele 2022 (0.5× CTCF capture) | Condition 2 | Condition 2 Hi-C | Weaker CTCF stalling at retained sites? |
 
-### Example loci (STRS use case, hg38, HEK293T)
+### Example locus (STRS use case, hg38, HEK293T)
 
-The default configuration ships four ~2 Mb loci from the STRS paper figures.
-Change `ACTIVE_LOCUS` in `configs/parameters.py` to switch loci, or add your own.
+The default configuration simulates the 1.96 Mb chr1 window used in the STRS
+figures. Change the `locus:` block in `config/ChromSimConfig.yaml` to switch
+loci (and the `tiling:` block to match: `tile_size` must equal the locus
+length in monomers + 2 × `padding`).
 
 | Key | Chrom | Window | Genes |
 |-----|-------|--------|-------|
-| `chr1_fig1`  | chr1  | 64.2 – 66.2 Mb | JAK1 / AK4 / LEPR |
-| `chr4_fig1`  | chr4  | 1.7 – 3.7 Mb   | RNF4 / ADD1 / HTT |
-| `chr6_fig1`  | chr6  | 124.1 – 126.1 Mb | NKAIN2 / RNF217 |
-| `chr16_sox8` | chr16 | 0.4 – 2.3 Mb   | SOX8 |
+| `chr1_fig1`  | chr1  | 64.21 – 66.17 Mb | JAK1 / AK4 / LEPR |
 
 ---
 
 ## Prerequisites
 
-- Longleaf HPC account with access to `rc_dphansti_pi` allocation
-- `.hic` Hi-C maps and CTCF peak `.narrowPeak` files for your experiment
-  (the defaults point to `~/projects/STRS` for the included example)
-- `module load anaconda/2024.02` available (already on Longleaf)
-- GPU partition access (`general` + `gpu`)
+- A SLURM cluster with a GPU partition (defaults are for UNC Longleaf)
+- `module load python/<pythonVers>` and `module load anaconda/<condaVers>`
+  available (versions set in the config)
+- CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) and `.hic` maps for your samples
+- A genome FASTA with the same chromosome names as the peaks
 
----
+## Quickstart
 
-## Setup (run once)
+The workflow follows the PhanstielLab Snakemake pattern
+([bagPipes](https://github.com/PhanstielLab/bagPipes),
+[dietJuicer](https://github.com/PhanstielLab/dietJuicer)): edit a samplesheet
+and a config, then `sbatch` one launcher.
 
-### Step 0 — Clone and configure
+1. Clone the workflow into a working directory:
 
-```bash
-cd ~/projects/ChromSimPipe   # or wherever you cloned it
+    ```bash
+    git clone https://github.com/jpflores-13/chromsimpipe.git ChromSimPipe
+    cd ChromSimPipe
+    ```
 
-# 1. Edit config/ChromSimConfig.yaml to point at your Hi-C and CTCF data.
-nano config/ChromSimConfig.yaml
+2. Edit the tab-separated `ChromSimSamplesheet.txt`. Each row is one
+   experimental sample. `CTCF_Peaks` (narrowPeak/BED) and `Hi-C` (`.hic`)
+   are required columns (write `NA` if a sample has no file of that kind);
+   every other column is metadata:
 
-# 2. Edit ChromSimSamplesheet.txt with your CTCF peak file paths.
-nano ChromSimSamplesheet.txt
+    | Project | Cell_Type | Condition  | CTCF_Peaks                  | Hi-C                     |
+    |---------|-----------|------------|-----------------------------|--------------------------|
+    | STRS    | HEK293T   | condition1 | /path/to/control.narrowPeak | /path/to/control.hic     |
+    | STRS    | HEK293T   | condition2 | /path/to/sorbitol.narrowPeak| /path/to/sorbitol.hic    |
 
-# 3. Edit profiles/slurm/config.yaml to set your SLURM account.
-nano profiles/slurm/config.yaml   # change slurm_account
+3. Edit `config/ChromSimConfig.yaml`. `fileNamesFrom` lists the samplesheet
+   columns joined to name each sample; conditions refer to samples by that
+   name:
 
-# 4. Optionally change the locus in ChromSimConfig.yaml (default: chr1_fig1)
-```
+    ```yaml
+    samplesheet: 'ChromSimSamplesheet.txt'
+    fileNamesFrom: ['Condition']      # → sample names condition1, condition2
+    outputDir: 'output'
+    genome: '/path/to/genome.fa'      # FIMO motif orientation
+    ...
+    conditions:
+      - name:        cond1_baseline
+        ctcf_type:   condition1       # sample whose CTCF peaks to simulate
+        compare_hic: condition1       # sample whose Hi-C to compare against
+        ...
+    ```
 
-### Step 1 — Build conda environments and prepare data
+4. Set your SLURM account in `profiles/slurm/config.yaml`
+   (`slurm_account`). Per-rule CPU / memory / GPU requests live there too,
+   under `set-resources:`.
 
-```bash
-bash setup_data.sh
-```
+5. Submit the workflow:
 
-This script reads all paths from `config/ChromSimConfig.yaml` and
-`ChromSimSamplesheet.txt`, then:
-1. Creates `cohesin_sim` conda env (polychrom, cooler, hic2cool, numpy, scipy, matplotlib)
-2. Creates `ctcf_extraction` conda env (MEME/FIMO, bedtools, samtools)
-3. Converts input `.hic` files → `.cool` at 1 kb resolution (single-resolution cooler)
-4. Extracts and orients CTCF sites from CUT&Tag peaks via FIMO
-5. Validates the resulting BED files
+    ```bash
+    sbatch ChromSimPipe.sh
+    ```
 
-Takes ~20–30 minutes total (mostly conda + FIMO).
-
----
-
-## Running the pipeline
-
-```bash
-sbatch ChromSimPipe.sh
-```
-
-That's it. `ChromSimPipe.sh` submits itself as a SLURM job, sets up a Python venv
-with Snakemake, and launches the full DAG via `snakemake-executor-plugin-slurm`.
-Each rule becomes its own SLURM job with the right resources (GPU for
-simulation, CPU for everything else).
-
-### What happens
-
-```
-convert_hic (×2)
-    → extract_ctcf (×2)
-        → validate_ctcf
-            → simulate_shard (×36: 3 cond × 3 rep × 4 shards, GPU)
-                → merge_shards (×9: 3 cond × 3 rep)
-                    → analyze_all (×3: one per condition)
-```
+    `ChromSimPipe.sh` loads Python and Anaconda (versions from the config),
+    builds a venv from `config/requirements.txt`, and runs Snakemake with the
+    SLURM profile. Each rule becomes its own SLURM job; the conda
+    environments in `condaEnvs:` are built by Snakemake on first use.
 
 ### Dry run first
 
 ```bash
-bash ChromSimPipe.sh --dry-run
+bash ChromSimPipe.sh -n
 ```
 
-Prints all rules and shell commands that would be submitted — nothing runs.
+Prints every job and shell command that would be submitted; nothing runs.
+Any extra arguments are passed to `snakemake` (e.g.
+`bash ChromSimPipe.sh --conda-create-envs-only` builds the environments
+without running anything).
 
-### Changing locus
+### Using a different config
 
 ```bash
-# Edit configs/parameters.py:
-ACTIVE_LOCUS = "chr4_fig1"   # or chr6_fig1, chr16_sox8
-
-# Re-run setup for the new locus CTCF beds, then relaunch:
-bash setup_data.sh --skip-envs   # skips conda env creation
-sbatch ChromSimPipe.sh
+sbatch ChromSimPipe.sh --configfile config/my_locus.yaml
 ```
+
+The file must be a complete config; the Snakefile and every script read it.
 
 ### After a failed run
 
 ```bash
-bash unlock.sh   # release Snakemake lock
-sbatch ChromSimPipe.sh --rerun-incomplete   # (--rerun-incomplete is the default)
+bash unlock.sh               # release the Snakemake lock
+sbatch ChromSimPipe.sh       # --rerun-incomplete is on by default
 ```
+
+### What runs
+
+| Rule | Jobs (default config) | What it does |
+|------|-----------------------|--------------|
+| `convertHic` | 1 per Hi-C sample (2) | `hic2cool convert` `.hic` → `.cool` at `resolution` |
+| `getMotif` | 1 | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped if `ctcf_motif.meme` is set) |
+| `orientCTCF` | 1 per CTCF sample used (2) | FIMO motif strand → oriented CTCF BED for the locus |
+| `validateCTCF` | 1 | Checks every BED parses and maps onto the polymer |
+| `simulateShard` | conditions × reps × shards (36, GPU) | polychrom 3D loop-extrusion simulation |
+| `mergeShards` | conditions × reps (9) | Concatenates shard trajectories |
+| `analyzeCondition` | 1 per condition (3) | Contact maps, P(s), insulation, APA, Hi-C comparison |
+| `benchmarkSummary` | 1 | Collects per-job run time / memory into one table |
 
 ---
 
 ## Output structure
 
-```
-data/
-├── hic/                          # symlinks to input .hic files
-├── mcool/
-│   ├── condition1.cool           # converted by convert_hic rule (single-resolution)
-│   └── condition2.cool
-└── ctcf_beds/
-    ├── ctcf_oriented_hg38_condA_{chrom}_{start}_{end}.bed
-    └── ctcf_oriented_hg38_condB_{chrom}_{start}_{end}.bed
+Everything is written under `outputDir` (default `output/`):
 
-results/
-├── polychrom_3d/
-│   ├── {params}_ctcf-{type}_rep{N}_shard{M}/   # raw GPU output (per shard)
-│   │   ├── params.json
-│   │   └── blocks_*.h5
-│   └── merged_{params}_ctcf-{type}_rep{N}/      # merged by merge_shards rule
-│       ├── params.json
-│       └── blocks_*.h5
-│
-├── analysis/{condition}/         # per-condition analysis outputs
-│   ├── *_contact_map.npy
-│   ├── *_ps_curve.npz
-│   ├── *_sim_vs_exp_map.png
-│   ├── *_msd_*.png / .npz
-│   └── ...
-│
-├── figures/                      # contact map panels
-│
-└── .sentinels/                   # Snakemake tracking files (safe to ignore)
 ```
+output/
+├── {runName}_ChromSimSamplesheet.txt   # samplesheet with sample names
+├── {runName}_benchmarking.tsv          # wall time / memory per job
+├── mcool/{sample}.cool
+├── motifs/{jaspar_id}.meme
+├── ctcf/ctcf_oriented_{assembly}_{sample}_{chrom}_{start}_{end}.bed
+├── sims/
+│   ├── {params_name}_ctcf-{sample}_rep{N}_shard{M}/   # per-shard GPU output
+│   └── merged_{params_name}_ctcf-{sample}_rep{N}/     # merged per replicate
+├── analysis/{condition}/               # contact maps, P(s), APA, figures, metrics
+├── logs/{rule}_{wildcards}.out|.err    # each job's stdout / stderr
+├── logs_slurm/                         # SLURM job logs
+├── benchmarks/{rule}_{wildcards}.tsv
+└── done/                               # completion markers Snakemake tracks
+```
+
+`{runName}` joins the metadata values shared by every sample (here
+`STRS_HEK293T`).
 
 ---
 
-## Snakemake pipeline files
+## Pipeline files
 
 | File | Purpose |
 |------|---------|
-| `ChromSimPipe.sh` | sbatch entry point — run this to launch the pipeline |
-| `unlock.sh` | Release Snakemake lock after a failed run |
-| `workflows/ChromSimPipe.snakefile` | Full DAG definition (6 rules) |
-| `profiles/slurm/config.yaml` | SLURM executor defaults (account, partitions, memory) |
-| `config/ChromSimConfig.yaml` | Path + condition configuration (edit before first run) |
-| `ChromSimSamplesheet.txt` | CTCF peak file paths (one row per condition) |
+| `ChromSimPipe.sh` | sbatch entry point — run this to launch the workflow |
+| `unlock.sh` | Release the Snakemake lock after a failed run |
+| `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
+| `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, software versions |
+| `config/requirements.txt` | Snakemake version for the launcher venv |
+| `profiles/slurm/config.yaml` | SLURM executor settings and per-rule resources |
+| `workflows/ChromSimPipe.snakefile` | The workflow |
+| `workflows/utils/benchmarking.py` | Builds `{runName}_benchmarking.tsv` |
+| `envs/*.yml` | Conda environments used by the rules |
 
 ---
 
@@ -242,9 +240,10 @@ single-molecule imaging in mESCs. Adjust the `conditions:` list in
 
 ### Tiling trick
 
-The 2 Mb locus (~2000 monomers) is simulated as 28 tiled copies on a 70,000-monomer
-"chromosome" (2500 monomers/tile = 2000 locus + 250 padding each side). This gives
-28× more contact statistics per GPU run. Reference: Yang et al. 2023 *Nat Commun*.
+The 1,960-monomer locus is simulated as 28 tiled copies on a 70,000-monomer
+"chromosome" (2,500 monomers/tile = 1,960 locus + 270 padding each side). This
+gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
+*Nat Commun*. All three numbers are set in the `tiling:` block of the config.
 
 ---
 
@@ -252,14 +251,14 @@ The 2 Mb locus (~2000 monomers) is simulated as 28 tiled copies on a 70,000-mono
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `ImportError: polychrom` | `cohesin_sim` env not built | Run `bash setup_data.sh` |
-| `CUDA not available` | Wrong SLURM partition | GPU jobs need `--partition=gpu --gpus=1` (set automatically by Snakemake) |
-| Snakemake lock error | Previous run crashed | Run `bash unlock.sh` then resubmit |
-| CTCF BED file not found | `setup_data.sh` not run or CTCF extraction failed | Check `logs/setup_data*.log` |
-| No peaks file in samplesheet | Wrong data path | Edit `ChromSimSamplesheet.txt` with correct absolute paths |
-| `KeyError: 'CTCF_Type'` in samplesheet | TSV format issue | File must be tab-separated with headers `CTCF_Type` and `CTCF_Peaks_Path` |
-| `hic2cool` fails | `.hic` file not found | Check the paths under `hic:` in `config/ChromSimConfig.yaml` |
-| Analysis fails with "No results found" | Merge step incomplete | Check `results/polychrom_3d/` for `merged_*` directories |
+| `Error running conda info` | Anaconda not loaded | `condaVers` in the config must match a `module avail anaconda` version |
+| `CUDA not available` | GPU job on wrong partition | Check `simulateShard` under `set-resources:` in `profiles/slurm/config.yaml` |
+| `sim_run.engine is 'polychrom' but it cannot be imported` | Sim env missing polychrom | Rebuild the `condaEnvs.sim` environment |
+| Snakemake lock error | Previous run crashed | `bash unlock.sh`, then resubmit |
+| `Samplesheet ... has no 'CTCF_Peaks' column` | Header typo, or not tab-separated | Headers must be tab-separated and include `CTCF_Peaks` and `Hi-C` |
+| `Condition ctcf_type '...' has no CTCF_Peaks` | Condition names a sample that isn't in the samplesheet | Sample names come from `fileNamesFrom`; check the spelling |
+| `peaks had no FIMO hit` | `ctcf_motif.unoriented: 'error'` and some peaks lack a motif | Inspect them in `output/logs/orientCTCF_*.err`, or switch to `'drop'` |
+| A job failed | — | Its stdout / stderr are in `output/logs/{rule}_{wildcards}.out|.err` |
 
 For the full codebase walkthrough, see [`CODE_GUIDE.md`](CODE_GUIDE.md).
 

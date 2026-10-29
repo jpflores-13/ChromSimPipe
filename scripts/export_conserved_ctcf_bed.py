@@ -35,7 +35,7 @@ Usage
     python scripts/export_conserved_ctcf_bed.py --out my_conserved.bed
 
 Default output path:
-    data/ctcf_beds/ctcf_oriented_CONSERVED_<types>_<chrom>_<start>_<end>.bed
+    <outputDir>/ctcf/ctcf_oriented_<assembly>_CONSERVED_<types>_<chrom>_<start>_<end>.bed
 """
 from __future__ import annotations
 
@@ -56,13 +56,15 @@ from configs.parameters import (  # noqa: E402
     RESOLUTION,
     N_MONOMERS,
     CTCF_TYPES,
+    GENOME_ASSEMBLY,
+    PATHS,
     _conserved_ctcf_sites,
 )
 
 
 DEFAULT_OUT = os.path.join(
-    "data", "ctcf_beds",
-    f"ctcf_oriented_CONSERVED_{'-'.join(CTCF_TYPES)}_{CHROM}_{REGION_START}_{REGION_END}.bed",
+    PATHS["ctcf"],
+    f"ctcf_oriented_{GENOME_ASSEMBLY}_CONSERVED_{'-'.join(CTCF_TYPES)}_{CHROM}_{REGION_START}_{REGION_END}.bed",
 )
 
 
@@ -100,7 +102,7 @@ def main() -> int:
     if not conserved:
         print("ERROR: _conserved_ctcf_sites returned an empty list. "
               f"Check that the CTCF BEDs for {CTCF_TYPES} exist "
-              "(run setup_data.sh) and AUTO_LOAD_CTCF_FROM_BED is True.",
+              "(run the workflow's orientCTCF rule first).",
               file=sys.stderr)
         return 1
 
