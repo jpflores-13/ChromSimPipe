@@ -58,8 +58,8 @@ LEF positions are updated every `sim_run.md_steps_per_block` MD steps; each save
 
 ::: {.callout-note}
 The OpenMM simulation runs on GPU. The SLURM job requests 1 GPU, 4 CPUs, and
-60 GB RAM (`qos: gpu_access`, Longleaf `gpu` partition), set under
-`set-resources:` in `profiles/slurm/config.yaml`. All `simulateShard` jobs
+60 GB RAM, set under `set-resources:` in `profiles/<site>/config.yaml`
+(on Longleaf: `gpu` partition, `qos: gpu_access`). All `simulateShard` jobs
 (conditions × replicates × shards) can run in parallel.
 :::
 

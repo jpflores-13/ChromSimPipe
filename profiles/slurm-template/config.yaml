@@ -1,0 +1,51 @@
+## Template for any SLURM cluster. Copy this folder (e.g. to profiles/<cluster>/),
+## fill in the <...> values, and set hpcProfile in config/ChromSimConfig.yaml.
+## `sinfo -s` lists partitions; `sacctmgr show assoc user=$USER` lists accounts.
+executor: slurm
+jobs: 100
+latency-wait: 500
+software-deployment-method: conda
+
+default-resources:
+  slurm_account: <account>          # delete this line if your cluster has no accounts
+  slurm_partition: <cpu partition>
+  runtime: 4320                     # minutes
+  cpus_per_task: 1
+  mem_mb: 16000
+  nodes: 1
+
+## Per-rule resources (rules carry no resources of their own)
+set-resources:
+  convertHic:
+    runtime: 120
+    cpus_per_task: 4
+    mem_mb: 32000
+  getMotif:
+    runtime: 15
+    mem_mb: 1000
+  orientCTCF:
+    runtime: 60
+    cpus_per_task: 2
+    mem_mb: 16000
+  validateCTCF:
+    runtime: 15
+    mem_mb: 4000
+  simulateShard:
+    runtime: 720
+    slurm_partition: <gpu partition>
+    gpu: 1                          # becomes --gpus=1; if your site wants --gres, use
+                                    # gres: "gpu:1" instead
+    # qos: <gpu qos>                # only if your site requires a QOS for GPUs
+    cpus_per_task: 4
+    mem_mb: 60000
+  mergeShards:
+    runtime: 120
+    cpus_per_task: 4
+    mem_mb: 64000
+  analyzeCondition:
+    runtime: 360
+    cpus_per_task: 4                # keep >= analysis.n_jobs in the config
+    mem_mb: 64000
+  benchmarkSummary:
+    runtime: 15
+    mem_mb: 2000

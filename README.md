@@ -80,9 +80,9 @@ length in monomers + 2 × `padding`).
 
 ## Prerequisites
 
-- A SLURM cluster with a GPU partition (defaults are for UNC Longleaf)
-- `module load python/<pythonVers>` and `module load anaconda/<condaVers>`
-  available (versions set in the config)
+- A SLURM cluster with a GPU partition, or one machine with a GPU (see
+  [Running on a different cluster](#running-on-a-different-cluster))
+- `python3` ≥ 3.11 and `conda` (loaded by your site's `profiles/<site>/env.sh`)
 - CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) and `.hic` maps for your samples
 - A genome FASTA with the same chromosome names as the peaks
 
@@ -127,9 +127,9 @@ and a config, then `sbatch` one launcher.
         ...
     ```
 
-4. Set your SLURM account in `profiles/slurm/config.yaml`
-   (`slurm_account`). Per-rule CPU / memory / GPU requests live there too,
-   under `set-resources:`.
+4. Pick your compute site with `hpcProfile` in the config (default
+   `profiles/longleaf`). For another cluster, see
+   [Running on a different cluster](#running-on-a-different-cluster).
 
 5. Submit the workflow:
 
@@ -137,9 +137,9 @@ and a config, then `sbatch` one launcher.
     sbatch ChromSimPipe.sh
     ```
 
-    `ChromSimPipe.sh` loads Python and Anaconda (versions from the config),
-    builds a venv from `config/requirements.txt`, and runs Snakemake with the
-    SLURM profile. Each rule becomes its own SLURM job; the conda
+    `ChromSimPipe.sh` sources the site's `env.sh` (module loads), builds a
+    venv from `config/requirements.txt`, and runs Snakemake with the site's
+    profile. Each rule becomes its own SLURM job; the conda
     environments in `condaEnvs:` are built by Snakemake on first use.
 
 ### Dry run first
@@ -181,6 +181,41 @@ sbatch ChromSimPipe.sh       # --rerun-incomplete is on by default
 | `analyzeCondition` | 1 per condition (3) | Contact maps, P(s), insulation, APA, Hi-C comparison |
 | `benchmarkSummary` | 1 | Collects per-job run time / memory into one table |
 
+## Running on a different cluster
+
+Everything specific to a compute site lives in one folder under `profiles/`;
+the config names it with `hpcProfile`. The science config and samplesheet do
+not change when you move.
+
+| Folder | For |
+|--------|-----|
+| `profiles/longleaf/` | UNC Longleaf (SLURM) |
+| `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
+| `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
+
+Each folder has two files:
+
+- `env.sh` — sourced by `ChromSimPipe.sh` and `unlock.sh`; makes `python3`
+  (≥ 3.11) and `conda` available (`module load ...`, or
+  `source ~/miniforge3/etc/profile.d/conda.sh`).
+- `config.yaml` — the Snakemake profile: scheduler, account, partitions, and
+  each rule's CPUs / memory / GPU.
+
+To set up a new SLURM cluster:
+
+```bash
+cp -r profiles/slurm-template profiles/<cluster>
+nano profiles/<cluster>/config.yaml   # account, CPU partition, GPU partition (+ QOS if required)
+nano profiles/<cluster>/env.sh        # module loads for python3 and conda
+# then in config/ChromSimConfig.yaml:  hpcProfile: 'profiles/<cluster>'
+sbatch ChromSimPipe.sh
+```
+
+`sinfo -s` lists partitions, `sacctmgr show assoc user=$USER` lists your
+accounts, and `module avail` shows the available software. Without editing the
+config, `--profile profiles/<cluster>` picks a site for a single run. For
+`profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
+
 ---
 
 ## Output structure
@@ -218,7 +253,8 @@ output/
 | `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
 | `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, software versions |
 | `config/requirements.txt` | Snakemake version for the launcher venv |
-| `profiles/slurm/config.yaml` | SLURM executor settings and per-rule resources |
+| `profiles/<site>/config.yaml` | Scheduler settings and per-rule resources for one compute site |
+| `profiles/<site>/env.sh` | Module loads for that site |
 | `workflows/ChromSimPipe.snakefile` | The workflow |
 | `workflows/utils/benchmarking.py` | Builds `{runName}_benchmarking.tsv` |
 | `envs/*.yml` | Conda environments used by the rules |
@@ -251,8 +287,8 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `Error running conda info` | Anaconda not loaded | `condaVers` in the config must match a `module avail anaconda` version |
-| `CUDA not available` | GPU job on wrong partition | Check `simulateShard` under `set-resources:` in `profiles/slurm/config.yaml` |
+| `Error running conda info` | conda not on `PATH` | Fix the conda line in `profiles/<site>/env.sh` |
+| `CUDA not available` | GPU job on wrong partition | Check `simulateShard` under `set-resources:` in `profiles/<site>/config.yaml` |
 | `sim_run.engine is 'polychrom' but it cannot be imported` | Sim env missing polychrom | Rebuild the `condaEnvs.sim` environment |
 | Snakemake lock error | Previous run crashed | `bash unlock.sh`, then resubmit |
 | `Samplesheet ... has no 'CTCF_Peaks' column` | Header typo, or not tab-separated | Headers must be tab-separated and include `CTCF_Peaks` and `Hi-C` |

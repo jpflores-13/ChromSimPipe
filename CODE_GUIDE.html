@@ -369,9 +369,14 @@ sample has no file of that kind); all other columns are metadata.</li>
 names (<code>ctcf_type</code>, <code>compare_hic</code>). The config
 also sets the locus, physics, genome, CTCF motif, conda environments,
 and <code>outputDir</code>.</li>
-<li><strong><code>profiles/slurm/config.yaml</code></strong> — your
-SLURM account, plus each rule’s CPUs / memory / GPU under
-<code>set-resources:</code>.</li>
+<li><strong><code>profiles/&lt;site&gt;/</code></strong> — the compute
+site, named by <code>hpcProfile</code> in the config.
+<code>config.yaml</code> holds the scheduler, account and each rule’s
+CPUs / memory / GPU under <code>set-resources:</code>;
+<code>env.sh</code> loads the software. Shipped: <code>longleaf</code>
+(UNC), <code>local</code> (no scheduler), and
+<code>slurm-template</code> (copy and fill in for any other SLURM
+cluster).</li>
 </ol>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh        <span class="co"># whole workflow</span></span>
@@ -487,14 +492,16 @@ all.</p>
 — sbatch entry point</h3>
 <p>Submit with <code>sbatch ChromSimPipe.sh</code>. It:</p>
 <ol type="1">
-<li>Loads <code>python/&lt;pythonVers&gt;</code> and
-<code>anaconda/&lt;condaVers&gt;</code> (both read from the
-config).</li>
+<li>Sources <code>&lt;hpcProfile&gt;/env.sh</code>, which makes
+<code>python3</code> and <code>conda</code> available on that site
+(<code>--profile</code> overrides <code>hpcProfile</code>).</li>
 <li>Creates a venv in <code>env/</code> (first run only) and installs
 <code>config/requirements.txt</code> (Snakemake 8.27.1 + the SLURM
 executor plugin).</li>
 <li>Runs
-<code>snakemake -s workflows/ChromSimPipe.snakefile --profile    profiles/slurm --configfile &lt;config&gt; --slurm-logdir    &lt;outputDir&gt;/logs_slurm -j 100 --rerun-incomplete --keep-going -p    --latency-wait 500</code>.</li>
+<code>snakemake -s workflows/ChromSimPipe.snakefile --profile    &lt;hpcProfile&gt; --configfile &lt;config&gt; --rerun-incomplete --keep-going -p</code>,
+adding <code>--slurm-logdir &lt;outputDir&gt;/logs_slurm</code> when the
+profile uses the SLURM executor.</li>
 </ol>
 <p>Any extra arguments go to <code>snakemake</code> (<code>-n</code> for
 a dry run, <code>--configfile other.yaml</code>,
@@ -592,14 +599,16 @@ was given. Steps whose real outputs are directories (simulation, merge,
 analysis) are tracked through completion markers in
 <code>output/done/</code>.</p>
 <h3
-id="profilesslurmconfig.yaml-slurm-executor-settings"><code>profiles/slurm/config.yaml</code>
-— SLURM executor settings</h3>
-<p><code>default-resources:</code> sets the account, partition, wall
-time, and memory for every job. <code>set-resources:</code> sets each
-rule’s request (the dietJuicer pattern). <code>simulateShard</code> is
-sent to the <code>gpu</code> partition with <code>qos: gpu_access</code>
-and <code>gpu: 1</code>. <code>software-deployment-method: conda</code>
-makes Snakemake activate each rule’s environment.</p>
+id="profilessiteconfig.yaml-scheduler-settings"><code>profiles/&lt;site&gt;/config.yaml</code>
+— scheduler settings</h3>
+<p>This is the only place cluster details live. In
+<code>profiles/longleaf/</code>, <code>default-resources:</code> sets
+the account, partition, wall time, and memory for every job.
+<code>set-resources:</code> sets each rule’s request (the dietJuicer
+pattern). <code>simulateShard</code> is sent to the <code>gpu</code>
+partition with <code>qos: gpu_access</code> and <code>gpu: 1</code>.
+<code>software-deployment-method: conda</code> makes Snakemake activate
+each rule’s environment.</p>
 <h3
 id="chromsimsamplesheet.txt-samples"><code>ChromSimSamplesheet.txt</code>
 — samples</h3>
@@ -659,7 +668,7 @@ walkthrough</li>
 ├── scripts/          — Python simulation, analysis, and utility scripts
 ├── analysis/         — Python modules imported by scripts/run_analysis_all.py
 ├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile) + utils/
-├── profiles/slurm/   — SLURM executor configuration for Snakemake
+├── profiles/         — one folder per compute site (longleaf, local, slurm-template)
 ├── legacy/           — unmaintained code from the lab&#39;s mESC/neuron project (see legacy/README.md)
 ├── tests/            — test suite
 └── output/           — everything the workflow writes (git-ignored; set by outputDir)</code></pre>

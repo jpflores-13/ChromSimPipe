@@ -46,11 +46,14 @@ resolution: 1000   # bp per monomer (also the .cool resolution)
 n_replicates: 3    # independent simulations per condition
 n_shards: 4        # GPU jobs per replicate (total_blocks is split across them)
 
-## ── Software ─────────────────────────────────────────────────────────────────
-## Module versions loaded by ChromSimPipe.sh / unlock.sh.
-pythonVers: '3.12.4'
-condaVers:  '2024.02'
+## ── Compute site ─────────────────────────────────────────────────────────────
+## Folder holding this cluster's Snakemake profile (config.yaml: scheduler,
+## account, partitions, per-rule resources) and env.sh (module loads).
+## Shipped: profiles/longleaf (UNC), profiles/local (no scheduler), and
+## profiles/slurm-template (copy and fill in for any other SLURM cluster).
+hpcProfile: 'profiles/longleaf'
 
+## ── Software ─────────────────────────────────────────────────────────────────
 ## Conda environment for each rule group. Each value may be:
 ##   - an environment file (.yml/.yaml, relative to the repo root):
 ##     Snakemake builds it on the first run

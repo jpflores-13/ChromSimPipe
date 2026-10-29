@@ -6,10 +6,11 @@
 sbatch ChromSimPipe.sh
 ```
 
-`ChromSimPipe.sh` follows the bagPipes / dietJuicer launcher pattern: it loads
-the `python` and `anaconda` modules (versions from the config), builds a venv
-in `env/` from `config/requirements.txt`, and runs Snakemake with the SLURM
-profile. Each rule becomes its own SLURM job.
+`ChromSimPipe.sh` follows the bagPipes / dietJuicer launcher pattern: it
+sources the site's `profiles/<site>/env.sh` (module loads), builds a venv in
+`env/` from `config/requirements.txt`, and runs Snakemake with that site's
+profile (`hpcProfile` in the config). On `profiles/local`, run it with `bash`
+instead of `sbatch`. Each rule becomes its own SLURM job.
 
 ## What happens
 
@@ -32,7 +33,7 @@ getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF
 | `analyzeCondition` | Contact maps, P(s), insulation, APA, comparison with Hi-C |
 | `benchmarkSummary` | Run time / memory of every job in one table |
 
-Resources for each rule are in `profiles/slurm/config.yaml` under
+Resources for each rule are in `profiles/<site>/config.yaml` under
 `set-resources:`.
 
 ## Useful options
@@ -44,6 +45,7 @@ bash ChromSimPipe.sh -n                          # dry run
 sbatch ChromSimPipe.sh --configfile other.yaml   # another (complete) config
 sbatch ChromSimPipe.sh --until validateCTCF      # stop after CTCF setup
 bash ChromSimPipe.sh --conda-create-envs-only    # build envs only
+sbatch ChromSimPipe.sh --profile profiles/<site> # another compute site
 ```
 
 ### After a failed run

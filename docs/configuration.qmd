@@ -39,8 +39,7 @@ resolution:   1000             # bp per monomer
 n_replicates: 3
 n_shards:     4
 
-pythonVers: '3.12.4'           # module load python/<pythonVers>
-condaVers:  '2024.02'          # module load anaconda/<condaVers>
+hpcProfile: 'profiles/longleaf'   # compute site: profiles/<site>/{config.yaml, env.sh}
 condaEnvs:                     # env file, env name, or env path
   sim:  'envs/cohesin_sim.yml'
   ctcf: 'envs/ctcf_extraction.yml'
@@ -134,7 +133,8 @@ with `Hi-C`. Snakemake picks new conditions up automatically.
 
 ## Profiles and SLURM settings
 
-`profiles/slurm/config.yaml` holds cluster defaults and, under
+Each compute site has a folder under `profiles/` (see [Cluster Reference](cluster.qmd)).
+`profiles/longleaf/config.yaml` holds Longleaf's defaults and, under
 `set-resources:`, every rule's request (the dietJuicer pattern — rules carry
 no resources of their own):
 

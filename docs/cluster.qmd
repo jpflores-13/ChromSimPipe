@@ -5,9 +5,44 @@
 `sbatch ChromSimPipe.sh` starts the launcher job. Inside it, Snakemake uses
 `snakemake-executor-plugin-slurm` to submit each rule as its own SLURM job.
 
-## SLURM account and partition
+## Compute sites
 
-All of these are in `profiles/slurm/config.yaml`:
+Everything specific to a compute site lives in one folder under `profiles/`;
+the config names it with `hpcProfile`. The science config and samplesheet do
+not change when you move.
+
+| Folder | For |
+|--------|-----|
+| `profiles/longleaf/` | UNC Longleaf (SLURM) |
+| `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
+| `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
+
+Each folder has two files:
+
+- `env.sh` — sourced by `ChromSimPipe.sh` and `unlock.sh`; makes `python3`
+  (≥ 3.11) and `conda` available (`module load ...`, or
+  `source ~/miniforge3/etc/profile.d/conda.sh`).
+- `config.yaml` — the Snakemake profile: scheduler, account, partitions, and
+  each rule's CPUs / memory / GPU.
+
+To set up a new SLURM cluster:
+
+```bash
+cp -r profiles/slurm-template profiles/<cluster>
+nano profiles/<cluster>/config.yaml   # account, CPU partition, GPU partition (+ QOS if required)
+nano profiles/<cluster>/env.sh        # module loads for python3 and conda
+# then in config/ChromSimConfig.yaml:  hpcProfile: 'profiles/<cluster>'
+sbatch ChromSimPipe.sh
+```
+
+`sinfo -s` lists partitions, `sacctmgr show assoc user=$USER` lists your
+accounts, and `module avail` shows the available software. Without editing the
+config, `--profile profiles/<cluster>` picks a site for a single run. For
+`profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
+
+## SLURM account and partition (Longleaf)
+
+All of these are in `profiles/longleaf/config.yaml`:
 
 | Setting | Value | Where |
 |---------|-------|-------|
@@ -42,8 +77,8 @@ All of these are in `profiles/slurm/config.yaml`:
 
 Each rule declares `conda:` with an entry from `condaEnvs` in the config, and
 the profile sets `software-deployment-method: conda`. Snakemake activates the
-environment inside each job. The launcher's `module load anaconda/<condaVers>`
-puts `conda` on the `PATH` that SLURM jobs inherit.
+environment inside each job. The site's `env.sh` puts `conda` on the `PATH`
+that SLURM jobs inherit.
 
 ## Checking queue status
 

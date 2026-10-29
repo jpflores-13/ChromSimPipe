@@ -2,9 +2,8 @@
 
 ## Prerequisites
 
-- A SLURM cluster with a GPU partition (defaults are for UNC Longleaf)
-- `python` and `anaconda` environment modules (versions set by `pythonVers`
-  and `condaVers` in the config)
+- A SLURM cluster with a GPU partition, or one machine with a GPU
+- `python3` ≥ 3.11 and `conda` (loaded by your site's `profiles/<site>/env.sh`)
 - CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) and `.hic` maps for your samples
 - A genome FASTA with the same chromosome names as the peaks
 
@@ -50,10 +49,11 @@ Edit `config/ChromSimConfig.yaml`. The fields most runs change:
 
 See [Configuration](configuration.qmd) for every field.
 
-## 3. SLURM profile
+## 3. Compute site
 
-Set `slurm_account` in `profiles/slurm/config.yaml`. Per-rule resources are
-under `set-resources:` in the same file.
+Set `hpcProfile` in the config to your site's folder: `profiles/longleaf`
+(UNC), `profiles/local` (no scheduler), or your own copy of
+`profiles/slurm-template`. See [Cluster Reference](cluster.qmd#compute-sites).
 
 ## 4. Conda environments
 
@@ -81,4 +81,4 @@ condaEnvs:
 | `Duplicate sample name` | `fileNamesFrom` columns don't tell rows apart | Add a column to `fileNamesFrom` |
 | `Condition ctcf_type '...' has no CTCF_Peaks` | Condition names a sample that isn't in the samplesheet | Check sample names against `output/{runName}_ChromSimSamplesheet.txt` |
 | `tile_size ... must equal N_MONOMERS + 2*padding` | Locus changed without updating `tiling` | Recompute `tile_size` (and `chrom_size`) |
-| `Error running conda info` | Anaconda module not loaded | Check `condaVers` against `module avail anaconda` |
+| `Error running conda info` | conda not on `PATH` | Fix the conda line in `profiles/<site>/env.sh` |

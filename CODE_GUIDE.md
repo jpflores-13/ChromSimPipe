@@ -76,8 +76,11 @@ building conda environments are all workflow steps.
    refer to samples by those names (`ctcf_type`, `compare_hic`). The
    config also sets the locus, physics, genome, CTCF motif, conda
    environments, and `outputDir`.
-3. **`profiles/slurm/config.yaml`** — your SLURM account, plus each rule's
-   CPUs / memory / GPU under `set-resources:`.
+3. **`profiles/<site>/`** — the compute site, named by `hpcProfile` in the
+   config. `config.yaml` holds the scheduler, account and each rule's
+   CPUs / memory / GPU under `set-resources:`; `env.sh` loads the software.
+   Shipped: `longleaf` (UNC), `local` (no scheduler), and `slurm-template`
+   (copy and fill in for any other SLURM cluster).
 
 ```bash
 sbatch ChromSimPipe.sh        # whole workflow
@@ -188,14 +191,14 @@ does), and one `sbatch` launches it all.
 
 Submit with `sbatch ChromSimPipe.sh`. It:
 
-1. Loads `python/<pythonVers>` and `anaconda/<condaVers>` (both read from
-   the config).
+1. Sources `<hpcProfile>/env.sh`, which makes `python3` and `conda`
+   available on that site (`--profile` overrides `hpcProfile`).
 2. Creates a venv in `env/` (first run only) and installs
    `config/requirements.txt` (Snakemake 8.27.1 + the SLURM executor plugin).
 3. Runs `snakemake -s workflows/ChromSimPipe.snakefile --profile
-   profiles/slurm --configfile <config> --slurm-logdir
-   <outputDir>/logs_slurm -j 100 --rerun-incomplete --keep-going -p
-   --latency-wait 500`.
+   <hpcProfile> --configfile <config> --rerun-incomplete --keep-going -p`,
+   adding `--slurm-logdir <outputDir>/logs_slurm` when the profile uses
+   the SLURM executor.
 
 Any extra arguments go to `snakemake` (`-n` for a dry run,
 `--configfile other.yaml`, `--until validateCTCF`, ...).
@@ -236,8 +239,9 @@ The Snakefile passes the config's path to every script in
 Steps whose real outputs are directories (simulation, merge, analysis)
 are tracked through completion markers in `output/done/`.
 
-### `profiles/slurm/config.yaml` — SLURM executor settings
+### `profiles/<site>/config.yaml` — scheduler settings
 
+This is the only place cluster details live. In `profiles/longleaf/`,
 `default-resources:` sets the account, partition, wall time, and memory for
 every job. `set-resources:` sets each rule's request (the dietJuicer
 pattern). `simulateShard` is sent to the `gpu` partition with
@@ -297,7 +301,7 @@ ChromSimPipe/
 ├── scripts/          — Python simulation, analysis, and utility scripts
 ├── analysis/         — Python modules imported by scripts/run_analysis_all.py
 ├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile) + utils/
-├── profiles/slurm/   — SLURM executor configuration for Snakemake
+├── profiles/         — one folder per compute site (longleaf, local, slurm-template)
 ├── legacy/           — unmaintained code from the lab's mESC/neuron project (see legacy/README.md)
 ├── tests/            — test suite
 └── output/           — everything the workflow writes (git-ignored; set by outputDir)

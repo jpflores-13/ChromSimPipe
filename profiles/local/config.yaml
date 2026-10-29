@@ -1,0 +1,19 @@
+## Run everything on the current machine (a workstation, or one interactive
+## node with a GPU): no scheduler. Start with: bash ChromSimPipe.sh
+cores: all
+software-deployment-method: conda
+latency-wait: 60
+
+## Global limits: at most one simulation per GPU, and the machine's memory.
+resources:
+  - gpu=1
+  - mem_mb=64000
+
+set-resources:
+  simulateShard:
+    gpu: 1
+    mem_mb: 60000
+  mergeShards:
+    mem_mb: 64000
+  analyzeCondition:
+    mem_mb: 64000
