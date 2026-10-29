@@ -53,6 +53,19 @@ n_shards: 4        # GPU jobs per replicate (total_blocks is split across them)
 ## profiles/slurm-template (copy and fill in for any other SLURM cluster).
 hpcProfile: 'profiles/longleaf'
 
+## ── Notifications ────────────────────────────────────────────────────────────
+## Email when the workflow starts, finishes, or fails (one message per event,
+## not per job). Leave email '' for no email. The CHROMSIM_EMAIL environment
+## variable overrides it, which keeps your address out of a shared repo:
+##   export CHROMSIM_EMAIL=you@university.edu   (e.g. in ~/.bashrc)
+notify:
+  email:   ''
+  events:  ['start', 'success', 'error']
+  ## Shell command that sends one message; {subject} and {email} are filled
+  ## in and the message body arrives on stdin. Most clusters have `mail`;
+  ## otherwise e.g. 'sendmail {email}' (put a Subject: line in the body).
+  command: 'mail -s {subject} {email}'
+
 ## ── Software ─────────────────────────────────────────────────────────────────
 ## Conda environment for each rule group. Each value may be:
 ##   - an environment file (.yml/.yaml, relative to the repo root):

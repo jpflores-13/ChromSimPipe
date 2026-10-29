@@ -98,9 +98,46 @@ def compare_mcool(wildcards):
     return [rel(MCOOL_FILES[hic])] if hic else []
 
 
-## Define actions on success
+## Email notifications (notify: in the config; $CHROMSIM_EMAIL overrides the address)
+NOTIFY = config.get("notify") or {}
+EMAIL  = os.environ.get("CHROMSIM_EMAIL") or NOTIFY.get("email") or ""
+
+
+def notify(event, body):
+    """Send one message for a workflow event, if an address and the event are configured."""
+    if not EMAIL or event not in NOTIFY.get("events", []):
+        return
+    import shlex, socket, subprocess
+    subject = f"ChromSimPipe {RUN_NAME}: {event}"
+    body = (f"Run:     {RUN_NAME}\nConfig:  {CONFIGFILE}\nOutput:  {os.path.abspath(OUT)}\n"
+            f"Host:    {socket.gethostname()}\n\n{body}\n")
+    cmd = NOTIFY["command"].format(subject=shlex.quote(subject), email=shlex.quote(EMAIL))
+    try:
+        subprocess.run(cmd, shell=True, input=body, text=True, timeout=60, check=True)
+    except Exception as e:  # a failed email must never fail the workflow
+        print(f"Could not send '{event}' email to {EMAIL}: {e}", file=sys.stderr)
+
+
+def log_tail(path, n=40):
+    try:
+        with open(path) as fh:
+            return "".join(fh.readlines()[-n:])
+    except (OSError, TypeError):
+        return "(Snakemake log unavailable)"
+
+
+## Define actions on start, success, and error
+onstart:
+    notify("start", f"Started. Conditions: {', '.join(COND_NAMES)}")
+
 onsuccess:
     print("ChromSimPipe completed successfully! Wahoo!")
+    notify("success", f"Finished successfully.\nResults: {os.path.abspath(ANA_DIR)}\n"
+                      f"Timings: {os.path.abspath(OUT)}/{RUN_NAME}_benchmarking.tsv")
+
+onerror:
+    notify("error", f"A job failed. Per-job logs: {os.path.abspath(LOG_DIR)}\n"
+                    f"Snakemake log: {log}\n\nLast lines:\n{log_tail(log)}")
 
 
 ##### Define rules #####
