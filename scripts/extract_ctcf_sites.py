@@ -21,6 +21,7 @@ import os
 import sys
 import argparse
 import logging
+import re
 import shutil
 import subprocess
 import tempfile
@@ -199,78 +200,100 @@ def _run_fimo_batch(batch_peaks, genome_fasta, motif_meme, flank, fimo_thresh=1e
         if result.returncode != 0:
             raise RuntimeError(f"FIMO failed: {result.stderr.strip()}")
 
-        best_hits = {}
-        col_map = None
-
-        for line in result.stdout.strip().split("\n"):
-            if not line.strip():
-                continue
-            if line.startswith("motif_id") or line.startswith("#pattern"):
-                col_map = _parse_fimo_header(line.lstrip("#").strip())
-                continue
-            if line.startswith("#"):
-                continue
-
-            fields = line.split("\t")
-
-            if col_map is not None:
-                seq_name = fields[col_map["sequence_name"]] if col_map["sequence_name"] < len(fields) else None
-                strand = fields[col_map["strand"]] if col_map["strand"] < len(fields) else None
-                pvalue_str = fields[col_map["p-value"]] if col_map["p-value"] < len(fields) else None
-            else:
-                if len(fields) < 8:
-                    continue
-                seq_name, strand, pvalue_str = fields[2], fields[5], fields[7]
-
-            if not all([seq_name, strand, pvalue_str]) or strand not in ("+", "-"):
-                continue
-
-            try:
-                pvalue = float(pvalue_str)
-            except ValueError:
-                continue
-
-            bed_name = seq_name.split("::")[0]
-            if bed_name not in name_to_coord:
-                continue
-
-            coord_key = name_to_coord[bed_name]
-            if coord_key not in best_hits or pvalue < best_hits[coord_key][1]:
-                best_hits[coord_key] = (strand, pvalue)
-
-        return best_hits
+        windows = [(c, max(0, summit - flank), summit + flank, (c, summit))
+                   for c, summit in name_to_coord.values()]
+        return _best_hits_from_fimo(result.stdout, name_to_coord, windows)
 
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+_GENOMIC_NAME = re.compile(r"^(?P<chrom>[^:]+):(?P<start>\d+)-(?P<end>\d+)$")
+
+
+def _best_hits_from_fimo(fimo_text, name_to_coord, windows):
+    """
+    Best (lowest p-value) FIMO hit per peak from ``fimo --text`` output.
+
+    Hits are matched back to peaks in whichever form FIMO reports them:
+
+    - ``sequence_name`` is the window name we gave bedtools
+      (``chr1_64248123``, optionally followed by ``::chr1:a-b``), or
+    - ``sequence_name`` is ``chr1:a-b`` with window-relative coordinates, or
+    - ``sequence_name`` is just the chromosome with genome coordinates.
+      FIMO 5.5 does this when the FASTA header carries ``chr:start-end``,
+      which ``bedtools getfasta -name`` (v2.30+) appends.
+
+    ``windows`` is a list of (chrom, start0, end, key) for genome-coordinate
+    matching. Returns {key: (strand, pvalue)}.
+    """
+    best_hits = {}
+    col_map = None
+
+    def keep(key, strand, pvalue):
+        if key not in best_hits or pvalue < best_hits[key][1]:
+            best_hits[key] = (strand, pvalue)
+
+    for line in fimo_text.strip().split("\n"):
+        if not line.strip():
+            continue
+        if line.startswith("motif_id") or line.startswith("#pattern"):
+            col_map = _parse_fimo_header(line.lstrip("#").strip())
+            continue
+        if line.startswith("#") or col_map is None:
+            continue
+
+        fields = line.split("\t")
+        try:
+            seq_name = fields[col_map["sequence_name"]]
+            strand = fields[col_map["strand"]]
+            pvalue = float(fields[col_map["p-value"]])
+            hit_start = int(fields[col_map["start"]])
+            hit_stop = int(fields[col_map["stop"]])
+        except (IndexError, ValueError):
+            continue
+        if strand not in ("+", "-"):
+            continue
+
+        name = seq_name.split("::")[0]
+        if name in name_to_coord:
+            keep(name_to_coord[name], strand, pvalue)
+            continue
+
+        m = _GENOMIC_NAME.match(seq_name)
+        if m:   # chr:a-b header, coordinates relative to the window
+            chrom = m.group("chrom")
+            hit_start += int(m.group("start"))
+            hit_stop += int(m.group("start"))
+        else:   # genome coordinates on the chromosome
+            chrom = seq_name
+
+        for w_chrom, w_start0, w_end, key in windows:
+            if w_chrom == chrom and w_start0 < hit_start and hit_stop <= w_end:
+                keep(key, strand, pvalue)
+
+    return best_hits
+
+
 def _parse_fimo_header(header_line):
-    """Parse FIMO header to find column indices dynamically."""
-    fields = header_line.split("\t")
-    normalized = [f.strip().lower().replace(" ", "_") for f in fields]
-
+    """Map the FIMO --text header to column indices; None if a column is missing."""
+    names = [f.strip().lower().replace(" ", "_") for f in header_line.split("\t")]
+    wanted = {
+        "sequence_name": ("sequence_name", "sequence name"),
+        "strand":        ("strand",),
+        "p-value":       ("p-value", "p_value", "pvalue"),
+        "start":         ("start",),
+        "stop":          ("stop", "end"),
+    }
     col_map = {}
-    for target in ["sequence_name", "strand", "p-value"]:
-        for i, name in enumerate(normalized):
-            if target in name or name == target:
-                col_map[target] = i
+    for key, options in wanted.items():
+        for i, name in enumerate(names):
+            if name in options:
+                col_map[key] = i
                 break
-
-    if len(col_map) == 3:
+    if len(col_map) == len(wanted):
         logger.info(f"  FIMO header parsed: {col_map}")
         return col_map
-
-    for i, name in enumerate(normalized):
-        if "sequence" in name and "sequence_name" not in col_map:
-            col_map["sequence_name"] = i
-        elif name == "strand" and "strand" not in col_map:
-            col_map["strand"] = i
-        elif ("p-val" in name or "pvalue" in name) and "p-value" not in col_map:
-            col_map["p-value"] = i
-
-    if len(col_map) == 3:
-        return col_map
-
     logger.warning(f"  Could not parse FIMO header: {header_line}")
     return None
 
