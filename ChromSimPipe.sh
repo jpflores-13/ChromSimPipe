@@ -4,7 +4,7 @@
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH -c 1
-#SBATCH --mem=4gb
+#SBATCH --mem=16gb    # building the conda envs on a first run needs > 4 GB
 #SBATCH -o "%x-%j.out"
 #SBATCH --mail-type=END,FAIL,TIME_LIMIT_80
 

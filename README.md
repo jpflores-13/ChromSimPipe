@@ -336,6 +336,7 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `Condition ctcf_type '...' has no CTCF_Peaks` | Condition names a sample that isn't in the samplesheet | Sample names come from `fileNamesFrom`; check the spelling |
 | `peaks had no FIMO hit` | `ctcf_motif.unoriented: 'error'` and some peaks lack a motif | Inspect them in `output/logs/orientCTCF_*.err`, or switch to `'drop'` |
 | No emails arrive | `mail` missing or blocked on the cluster | Test `echo test \| mail -s test $CHROMSIM_EMAIL`; change `notify: command:` |
+| Launcher job `OUT_OF_MEMORY` on the first run | Conda environments are built inside the launcher job | Build them once on a compute node: `srun ... --mem=16g --pty bash`, then `bash ChromSimPipe.sh --conda-create-envs-only` |
 | A job failed | — | Its stdout / stderr are in `output/logs/{rule}_{wildcards}.out|.err` |
 
 For the full codebase walkthrough, see [`CODE_GUIDE.md`](CODE_GUIDE.md).

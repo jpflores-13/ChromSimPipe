@@ -80,7 +80,7 @@ Extra arguments to `ChromSimPipe.sh` go straight to `snakemake`.
 bash ChromSimPipe.sh -n                          # dry run
 sbatch ChromSimPipe.sh --configfile other.yaml   # another (complete) config
 sbatch ChromSimPipe.sh --until validateCTCF      # stop after CTCF setup
-bash ChromSimPipe.sh --conda-create-envs-only    # build envs only
+bash ChromSimPipe.sh --conda-create-envs-only    # build envs only (run on a compute node)
 sbatch ChromSimPipe.sh --profile profiles/<site> # another compute site
 ```
 
@@ -136,5 +136,6 @@ squeue -u $USER
 | Snakemake lock error | `bash unlock.sh` then resubmit |
 | CUDA architecture error on GPU nodes | Resubmit — a different node will be allocated |
 | No emails arrive | Test `echo test \| mail -s test $CHROMSIM_EMAIL`; change `notify: command:` |
+| Launcher job `OUT_OF_MEMORY` on the first run | Build the conda environments once on a compute node (`srun ... --mem=16g --pty bash`, then `bash ChromSimPipe.sh --conda-create-envs-only`) |
 | A job failed | Read `output/logs/{rule}_{wildcards}.err` |
 | Parameter changed but nothing reruns | Snakemake tracks the files in `output/done/`; delete the markers for the steps to redo |
