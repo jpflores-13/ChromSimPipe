@@ -1,32 +1,37 @@
 name: cohesin_sim
+## Simulation + Hi-C conversion + analysis. conda-forge and bioconda only:
+## mixing in `defaults` gives inconsistent solves (and Anaconda's channel has
+## licensing terms); set `conda config --set channel_priority strict`.
 channels:
   - conda-forge
   - bioconda
-  - defaults
 dependencies:
   # --- Core ---
   - python=3.10
-  - numpy
+  - numpy<2          # hic2cool and polychrom predate NumPy 2
   - scipy
-  - h5py
-  - pip
+  - h5py             # simulation output (polychrom HDF5Reporter) and merging
+  - pandas           # summary tables
+  - pyyaml           # configs/parameters.py reads the config
 
   # --- OpenMM + CUDA
   # Let conda-forge pick the openmm build that matches the system CUDA.
-  # Do NOT pin cudatoolkit here — Longleaf nodes run CUDA 12.x and the
-  # 11.8 pin is what killed the previous solves.
+  # Do NOT pin cudatoolkit here.
   - openmm
 
   # --- Hi-C data processing ---
-  - cooler        # reads .mcool reference files in analysis/experimental_compare.py and analysis/ps_curve.py
-  - hic2cool      # converts .hic → .cool (convertHic rule)
+  - cooler           # reads .cool files (experimental_compare.py, ps_curve.py)
+  - cooltools        # analysis helpers
+  - hic2cool         # converts .hic → .cool (convertHic rule)
+  - multiprocess     # required by hic2cool but missing from its conda package
 
   # --- Analysis & visualization ---
   - matplotlib
-  - pandas        # summary tables
+  - openpyxl         # Excel output in summarize_analysis.py
 
-  - pyyaml        # configs/parameters.py reads config/ChromSimConfig.yaml
-
-  # --- pip-only packages ---
+  # --- Build tools for polychrom (installed from source by pip) ---
+  - cython
+  - setuptools
+  - pip
   - pip:
-    - git+https://github.com/mirnylab/polychrom.git
+    - git+https://github.com/open2c/polychrom.git
