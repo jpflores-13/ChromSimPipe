@@ -52,7 +52,7 @@ See [Configuration](configuration.qmd) for every field.
 ## 3. Compute site
 
 Set `hpcProfile` in the config to your site's folder: `profiles/longleaf`
-(UNC), `profiles/local` (no scheduler), or your own copy of
+(UNC), `profiles/pioneer` (Case Western), `profiles/local` (no scheduler), or your own copy of
 `profiles/slurm-template`. See [Cluster Reference](cluster.qmd#compute-sites).
 
 ## 4. Conda environments

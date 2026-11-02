@@ -79,7 +79,9 @@ building conda environments are all workflow steps.
 3. **`profiles/<site>/`** — the compute site, named by `hpcProfile` in the
    config. `config.yaml` holds the scheduler, account and each rule's
    CPUs / memory / GPU under `set-resources:`; `env.sh` loads the software.
-   Shipped: `longleaf` (UNC), `local` (no scheduler), and `slurm-template`
+   Shipped: `longleaf` (UNC), `pioneer` (Case Western, with its own
+   `config/ChromSimConfig.pioneer*.yaml` and samplesheet), `local` (no
+   scheduler), and `slurm-template`
    (copy and fill in for any other SLURM cluster).
 
 ```bash
@@ -318,7 +320,7 @@ ChromSimPipe/
 ├── scripts/          — Python simulation, analysis, and utility scripts
 ├── analysis/         — Python modules imported by scripts/run_analysis_all.py
 ├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile) + utils/
-├── profiles/         — one folder per compute site (longleaf, local, slurm-template)
+├── profiles/         — one folder per compute site (longleaf, pioneer, local, slurm-template)
 ├── legacy/           — unmaintained code from the lab's mESC/neuron project (see legacy/README.md)
 ├── tests/            — test suite
 └── output/           — everything the workflow writes (git-ignored; set by outputDir)

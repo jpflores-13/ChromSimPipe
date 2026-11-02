@@ -14,6 +14,7 @@ not change when you move.
 | Folder | For |
 |--------|-----|
 | `profiles/longleaf/` | UNC Longleaf (SLURM) |
+| `profiles/pioneer/` | Case Western Pioneer (SLURM); use with `config/ChromSimConfig.pioneer.yaml` |
 | `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
 | `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
 
@@ -44,6 +45,24 @@ config, `--profile profiles/<cluster>` picks a site for a single run. For
 **Profile status.** None of the shipped profiles has completed a full run yet.
 Run the 9-job test config on a new cluster first.
 :::
+
+### One config per cluster
+
+The data and genome live at different paths on each cluster, so each
+cluster gets its own samplesheet and config, identical in science to the
+main ones. For Pioneer: `ChromSimSamplesheet.pioneer.txt`,
+`config/ChromSimConfig.pioneer.yaml` (full run) and
+`config/ChromSimConfig.pioneer.test.yaml` (9-job test). Replace the
+`<path on Pioneer>` placeholders with real paths before running.
+
+## Pioneer (Case Western)
+
+| Setting | Value | Where |
+|---------|-------|-------|
+| Account | `pjt5_1` (its QOS `gpuext2` applies by default) | `default-resources: slurm_account` |
+| CPU partition | `batch` | `default-resources: slurm_partition` |
+| GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gres: "gpu:1"` | `set-resources: simulateShard` |
+| Software | `module load Miniconda3/23.10.0-1` (Python + conda) | `env.sh` |
 
 ## SLURM account and partition (Longleaf)
 

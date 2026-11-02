@@ -374,9 +374,10 @@ site, named by <code>hpcProfile</code> in the config.
 <code>config.yaml</code> holds the scheduler, account and each rule’s
 CPUs / memory / GPU under <code>set-resources:</code>;
 <code>env.sh</code> loads the software. Shipped: <code>longleaf</code>
-(UNC), <code>local</code> (no scheduler), and
-<code>slurm-template</code> (copy and fill in for any other SLURM
-cluster).</li>
+(UNC), <code>pioneer</code> (Case Western, with its own
+<code>config/ChromSimConfig.pioneer*.yaml</code> and samplesheet),
+<code>local</code> (no scheduler), and <code>slurm-template</code> (copy
+and fill in for any other SLURM cluster).</li>
 </ol>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh        <span class="co"># whole workflow</span></span>
@@ -689,7 +690,7 @@ walkthrough</li>
 ├── scripts/          — Python simulation, analysis, and utility scripts
 ├── analysis/         — Python modules imported by scripts/run_analysis_all.py
 ├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile) + utils/
-├── profiles/         — one folder per compute site (longleaf, local, slurm-template)
+├── profiles/         — one folder per compute site (longleaf, pioneer, local, slurm-template)
 ├── legacy/           — unmaintained code from the lab&#39;s mESC/neuron project (see legacy/README.md)
 ├── tests/            — test suite
 └── output/           — everything the workflow writes (git-ignored; set by outputDir)</code></pre>

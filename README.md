@@ -226,6 +226,7 @@ not change when you move.
 | Folder | For |
 |--------|-----|
 | `profiles/longleaf/` | UNC Longleaf (SLURM) |
+| `profiles/pioneer/` | Case Western Pioneer (SLURM); use with `config/ChromSimConfig.pioneer.yaml` |
 | `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
 | `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
 
@@ -289,6 +290,7 @@ output/
 | `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
 | `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, notifications, compute site |
 | `config/ChromSimConfig.test.yaml` | Small 9-job version of the config for testing a new setup |
+| `config/ChromSimConfig.pioneer*.yaml`, `ChromSimSamplesheet.pioneer.txt` | The same two configs and the samplesheet, pointing at Pioneer's copies of the data |
 | `config/requirements.txt` | Snakemake version for the launcher venv |
 | `profiles/<site>/config.yaml` | Scheduler settings and per-rule resources for one compute site |
 | `profiles/<site>/env.sh` | Module loads for that site |
