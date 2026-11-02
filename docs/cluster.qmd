@@ -52,8 +52,19 @@ The data and genome live at different paths on each cluster, so each
 cluster gets its own samplesheet and config, identical in science to the
 main ones. For Pioneer: `ChromSimSamplesheet.pioneer.txt`,
 `config/ChromSimConfig.pioneer.yaml` (full run) and
-`config/ChromSimConfig.pioneer.test.yaml` (9-job test). Replace the
-`<path on Pioneer>` placeholders with real paths before running.
+`config/ChromSimConfig.pioneer.test.yaml` (9-job test).
+
+On Pioneer, inputs and code live in home and compute output goes to scratch:
+
+| What | Where |
+|------|-------|
+| Peaks, `.hic` maps, genome FASTA | `/home/jxf700/ChromSimPipe_data/` |
+| The clone (and the conda environments Snakemake builds inside it) | home |
+| Miniforge | `$HOME/miniforge3` |
+| `outputDir` (simulations, analysis, logs) | scratch — replace `<your scratch dir>` in both Pioneer configs |
+
+Scratch is purged automatically, so copy `<outputDir>/analysis/` and
+`<outputDir>/*_benchmarking.tsv` back to home when a run finishes.
 
 ## Pioneer (Case Western)
 

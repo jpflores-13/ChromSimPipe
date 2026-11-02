@@ -21,12 +21,15 @@ fileNamesFrom: ['Condition']
 
 ## ── Output ───────────────────────────────────────────────────────────────────
 ## Every file the workflow writes goes under this directory.
-outputDir: 'output_test'
+## Pioneer: inputs live in home, compute output on scratch. Scratch is
+## purged automatically, so copy output/analysis/ (and the benchmarking
+## table) back to home when a run finishes.
+outputDir: '<your scratch dir>/ChromSimPipe_output_test'
 
 ## ── Genome ───────────────────────────────────────────────────────────────────
 ## Genome FASTA used by FIMO to orient CTCF motifs (indexed with samtools faidx
 ## if no .fai is present). Must use the same chromosome names as the peaks.
-genome: '<path on Pioneer>/GRCh38.primary_assembly.genome.fa'
+genome: '/home/jxf700/ChromSimPipe_data/GRCh38.primary_assembly.genome.fa'
 genome_assembly: 'hg38'
 
 ## ── CTCF motif orientation ───────────────────────────────────────────────────
