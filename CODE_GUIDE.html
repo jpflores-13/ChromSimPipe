@@ -380,7 +380,18 @@ cluster).</li>
 </ol>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh        <span class="co"># whole workflow</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> ChromSimPipe.sh <span class="at">-n</span>       <span class="co"># dry run</span></span></code></pre></div>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> ChromSimPipe.sh <span class="at">-n</span>       <span class="co"># dry run</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh <span class="at">--configfile</span> config/ChromSimConfig.test.yaml   <span class="co"># 9-job smoke test</span></span></code></pre></div>
+<p><strong>Test config.</strong>
+<code>config/ChromSimConfig.test.yaml</code> is the same config with one
+condition, one replicate, one shard and 1,000 blocks, written to
+<code>output_test/</code>. Run it first on any new cluster: it touches
+every rule, including one GPU simulation, for a fraction of the cost of
+a full run.</p>
+<p><strong>Email.</strong>
+<code>export CHROMSIM_EMAIL=you@university.edu</code> and the workflow
+emails you when it starts, finishes, or fails (see <code>notify:</code>
+in the config).</p>
 <h3 id="the-central-config-configchromsimconfig.yaml">The central
 config: <code>config/ChromSimConfig.yaml</code></h3>
 <p>This YAML file and the samplesheet are the source of truth for
@@ -593,6 +604,15 @@ samplesheet sample names; <code>{condition}</code> is a condition
 <code>name</code>; <code>{rep}</code> and <code>{shard}</code> expand
 over <code>range(n_replicates)</code> and
 <code>range(n_shards)</code>.</p>
+<p><strong>Notifications.</strong> <code>onstart:</code>,
+<code>onsuccess:</code> and <code>onerror:</code> handlers run once in
+the main Snakemake process and call <code>notify()</code>, which runs
+the <code>notify: command:</code> from the config with the subject and
+address filled in and the message on stdin. The address is
+<code>$CHROMSIM_EMAIL</code>, else <code>notify: email:</code>; with
+neither set, nothing is sent. The error message includes the last 40
+lines of the Snakemake log. Sending is wrapped so a mail failure can
+never fail the run, and handlers do not run on dry runs.</p>
 <p>The Snakefile passes the config’s path to every script in
 <code>$CHROMSIM_CONFIG</code>, so scripts read the same file Snakemake
 was given. Steps whose real outputs are directories (simulation, merge,
@@ -1215,6 +1235,14 @@ column named in <code>fileNamesFrom</code>.</p>
 completed but the merged directory is missing, delete
 <code>output/done/mergeShards_&lt;condition&gt;_rep&lt;N&gt;.done</code>
 and resubmit.</p>
+<p><strong>No emails.</strong> Check <code>$CHROMSIM_EMAIL</code> is set
+in the shell you submit from (sbatch passes it on), and that
+<code>echo test | mail -s test $CHROMSIM_EMAIL</code> works on the
+cluster; otherwise set <code>notify: command:</code> to what does.</p>
+<p><strong>Longleaf module conflict.</strong>
+<code>profiles/longleaf/env.sh</code> loads <code>python</code> and
+<code>anaconda</code>, which Longleaf will not load together. Remove the
+<code>python</code> line before using that profile.</p>
 <p><strong>Where the logs are.</strong> Each job’s stdout / stderr:
 <code>output/logs/&lt;rule&gt;_&lt;wildcards&gt;.out|.err</code>.
 SLURM’s own job logs: <code>output/logs_slurm/</code>. The launcher

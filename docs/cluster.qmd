@@ -40,6 +40,15 @@ accounts, and `module avail` shows the available software. Without editing the
 config, `--profile profiles/<cluster>` picks a site for a single run. For
 `profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
 
+::: {.callout-warning}
+**Profile status.** None of the shipped profiles has completed a full run yet.
+On Longleaf, `profiles/longleaf/env.sh` loads both `python` and `anaconda`,
+which Longleaf's module system refuses to load together; drop the `python`
+line (anaconda provides Python 3.11) before using it. Its GPU rule uses the
+`gpu` partition, which has only a few nodes; `sinfo -s` lists the larger GPU
+partitions, and `slurm_partition` accepts a comma-separated list.
+:::
+
 ## SLURM account and partition (Longleaf)
 
 All of these are in `profiles/longleaf/config.yaml`:

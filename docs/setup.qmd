@@ -73,6 +73,26 @@ condaEnvs:
   ctcf: '~/.local/share/mamba/envs/ctcf_extraction'
 ```
 
+## 5. Email (optional)
+
+```bash
+export CHROMSIM_EMAIL=you@university.edu   # e.g. in ~/.bashrc
+```
+
+You then get one email when a run starts, finishes, or fails. See
+[Running](running.qmd#email-notifications) for the `notify:` options.
+
+## 6. Test the setup
+
+Before the first full run on a new cluster, run the 9-job test config:
+
+```bash
+bash ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml -n
+sbatch ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml
+```
+
+See [Running](running.qmd#test-run-first).
+
 ## Troubleshooting setup
 
 | Symptom | Likely cause | Fix |

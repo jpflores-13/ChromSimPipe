@@ -40,6 +40,10 @@ n_replicates: 3
 n_shards:     4
 
 hpcProfile: 'profiles/longleaf'   # compute site: profiles/<site>/{config.yaml, env.sh}
+notify:                        # emails at workflow start / success / error
+  email:   ''                  # $CHROMSIM_EMAIL overrides
+  events:  ['start', 'success', 'error']
+  command: 'mail -s {subject} {email}'   # body on stdin
 condaEnvs:                     # env file, env name, or env path
   sim:  'envs/cohesin_sim.yml'
   ctcf: 'envs/ctcf_extraction.yml'
@@ -62,6 +66,14 @@ analysis:   {n_jobs, msd, apa, msd_probe, msd_fit, calibration}
 workflow stops instead of silently switching to another engine. Oriented CTCF
 BEDs must exist before simulation; there are no placeholder sites.
 :::
+
+## Other configs
+
+`config/ChromSimConfig.test.yaml` is a complete copy of the main config with
+one condition, `n_replicates: 1`, `n_shards: 1`, `total_blocks: 1000`,
+`warmup_blocks: 400`, and `outputDir: 'output_test'` — a 9-job smoke test.
+Any config passed with `--configfile` must be complete like this one: it
+replaces the default, it is not merged into it.
 
 ## `configs/parameters.py` — exported API
 

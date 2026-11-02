@@ -85,7 +85,16 @@ building conda environments are all workflow steps.
 ```bash
 sbatch ChromSimPipe.sh        # whole workflow
 bash ChromSimPipe.sh -n       # dry run
+sbatch ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml   # 9-job smoke test
 ```
+
+**Test config.** `config/ChromSimConfig.test.yaml` is the same config with
+one condition, one replicate, one shard and 1,000 blocks, written to
+`output_test/`. Run it first on any new cluster: it touches every rule,
+including one GPU simulation, for a fraction of the cost of a full run.
+
+**Email.** `export CHROMSIM_EMAIL=you@university.edu` and the workflow emails
+you when it starts, finishes, or fails (see `notify:` in the config).
 
 ### The central config: `config/ChromSimConfig.yaml`
 
@@ -233,6 +242,14 @@ Every rule has the same parts, following bagPipes:
 Wildcards: `{sampleName}` / `{ctcfType}` are samplesheet sample names;
 `{condition}` is a condition `name`; `{rep}` and `{shard}` expand over
 `range(n_replicates)` and `range(n_shards)`.
+
+**Notifications.** `onstart:`, `onsuccess:` and `onerror:` handlers run once
+in the main Snakemake process and call `notify()`, which runs the
+`notify: command:` from the config with the subject and address filled in
+and the message on stdin. The address is `$CHROMSIM_EMAIL`, else
+`notify: email:`; with neither set, nothing is sent. The error message
+includes the last 40 lines of the Snakemake log. Sending is wrapped so a
+mail failure can never fail the run, and handlers do not run on dry runs.
 
 The Snakefile passes the config's path to every script in
 `$CHROMSIM_CONFIG`, so scripts read the same file Snakemake was given.
@@ -679,6 +696,14 @@ every column named in `fileNamesFrom`.
 `output/sims/merged_*_rep*/` directories exist. If shards completed but the
 merged directory is missing, delete `output/done/mergeShards_<condition>_rep<N>.done`
 and resubmit.
+
+**No emails.** Check `$CHROMSIM_EMAIL` is set in the shell you submit from
+(sbatch passes it on), and that `echo test | mail -s test $CHROMSIM_EMAIL`
+works on the cluster; otherwise set `notify: command:` to what does.
+
+**Longleaf module conflict.** `profiles/longleaf/env.sh` loads `python`
+and `anaconda`, which Longleaf will not load together. Remove the `python`
+line before using that profile.
 
 **Where the logs are.** Each job's stdout / stderr:
 `output/logs/<rule>_<wildcards>.out|.err`. SLURM's own job logs:

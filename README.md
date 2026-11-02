@@ -153,6 +153,42 @@ Any extra arguments are passed to `snakemake` (e.g.
 `bash ChromSimPipe.sh --conda-create-envs-only` builds the environments
 without running anything).
 
+### Test run first
+
+`config/ChromSimConfig.test.yaml` is the full config cut down to a cheap
+end-to-end check: same samplesheet, locus and physics, but one condition, one
+replicate, one shard, and 1,000 blocks instead of 50,000. It is 9 jobs, one of
+them on a GPU, written to `output_test/`. Its results are a smoke test, not
+data.
+
+```bash
+bash   ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml -n                     # dry run
+sbatch ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml --until validateCTCF   # CPU steps only
+sbatch ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml                        # one GPU simulation, end to end
+```
+
+Run it on every new cluster before a full run: it exercises environment
+building, CTCF orientation, GPU access, and the analysis at a small fraction
+of a full run's cost.
+
+### Email notifications
+
+Set an address and the workflow emails you once when it starts, once when it
+finishes, and once if any job fails (not once per job):
+
+```bash
+export CHROMSIM_EMAIL=you@university.edu   # e.g. in ~/.bashrc
+```
+
+The address can also go in `notify: email:` in the config; the environment
+variable keeps it out of a shared repo and wins if both are set.
+`notify: events:` picks which of `start`, `success`, `error` to send, and
+`notify: command:` is the shell command that sends one message (default
+`mail -s {subject} {email}`; use e.g. `sendmail` on clusters without `mail`).
+Check your cluster can send mail with
+`echo test | mail -s test $CHROMSIM_EMAIL`. A failed email never fails the
+workflow.
+
 ### Using a different config
 
 ```bash
@@ -251,7 +287,8 @@ output/
 | `ChromSimPipe.sh` | sbatch entry point — run this to launch the workflow |
 | `unlock.sh` | Release the Snakemake lock after a failed run |
 | `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
-| `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, software versions |
+| `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, notifications, compute site |
+| `config/ChromSimConfig.test.yaml` | Small 9-job version of the config for testing a new setup |
 | `config/requirements.txt` | Snakemake version for the launcher venv |
 | `profiles/<site>/config.yaml` | Scheduler settings and per-rule resources for one compute site |
 | `profiles/<site>/env.sh` | Module loads for that site |
@@ -294,6 +331,7 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `Samplesheet ... has no 'CTCF_Peaks' column` | Header typo, or not tab-separated | Headers must be tab-separated and include `CTCF_Peaks` and `Hi-C` |
 | `Condition ctcf_type '...' has no CTCF_Peaks` | Condition names a sample that isn't in the samplesheet | Sample names come from `fileNamesFrom`; check the spelling |
 | `peaks had no FIMO hit` | `ctcf_motif.unoriented: 'error'` and some peaks lack a motif | Inspect them in `output/logs/orientCTCF_*.err`, or switch to `'drop'` |
+| No emails arrive | `mail` missing or blocked on the cluster | Test `echo test \| mail -s test $CHROMSIM_EMAIL`; change `notify: command:` |
 | A job failed | — | Its stdout / stderr are in `output/logs/{rule}_{wildcards}.out|.err` |
 
 For the full codebase walkthrough, see [`CODE_GUIDE.md`](CODE_GUIDE.md).
