@@ -62,7 +62,7 @@ main ones. For Pioneer: `ChromSimSamplesheet.pioneer.txt`,
 | Account | `pjt5_1` (its QOS `gpuext2` applies by default) | `default-resources: slurm_account` |
 | CPU partition | `batch` | `default-resources: slurm_partition` |
 | GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gres: "gpu:1"` | `set-resources: simulateShard` |
-| Software | `module load Miniconda3/23.10.0-1` (Python + conda) | `env.sh` |
+| Software | your own Miniforge (Pioneer's `Miniconda3` modules ship conda 23.x) | `env.sh` |
 
 ## SLURM account and partition (Longleaf)
 
@@ -75,8 +75,8 @@ All of these are in `profiles/longleaf/config.yaml`:
 | GPU partitions | `l40-gpu,volta-gpu,gpu` (first with a free node) | `set-resources: simulateShard` |
 | GPU QOS | `gpu_access` | `set-resources: simulateShard` |
 
-`env.sh` loads only `anaconda/2024.02`: Longleaf will not load the `python`
-and `anaconda` modules together, and anaconda includes Python 3.11.
+`env.sh` activates your own Miniforge (see [Conda](#conda-version) below):
+Longleaf's `anaconda` modules ship conda 24.1, older than Snakemake needs.
 
 ## Per-rule resource requests
 
@@ -99,6 +99,23 @@ and `anaconda` modules together, and anaconda includes Python 3.11.
 | Each job's stdout / stderr | `output/logs/{rule}_{wildcards}.out` / `.err` |
 | SLURM job logs | `output/logs_slurm/` (`--slurm-logdir` in `ChromSimPipe.sh`) |
 | Per-job run time / memory | `output/benchmarks/`, summarised in `output/{runName}_benchmarking.tsv` |
+
+## Conda version {#conda-version}
+
+Snakemake 8.27 requires conda 24.7.1 or newer and stops with
+`Conda must be version 24.7.1 or later` otherwise. Neither Longleaf's
+`anaconda` modules (24.1) nor Pioneer's `Miniconda3` modules (23.x) are new
+enough, so both profiles use a Miniforge you install once per cluster:
+
+```bash
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+bash Miniforge3-Linux-x86_64.sh -b -p $HOME/miniforge3
+rm -rf env        # the launcher's venv, if it was built with another Python
+```
+
+`env.sh` activates it (set `CHROMSIM_CONDA_ROOT` to use another location).
+The rule environments themselves are built inside the repo
+(`.snakemake/conda/`), so keep the clone on storage that is not purged.
 
 ## Conda environments in SLURM jobs
 

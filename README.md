@@ -82,7 +82,9 @@ length in monomers + 2 × `padding`).
 
 - A SLURM cluster with a GPU partition, or one machine with a GPU (see
   [Running on a different cluster](#running-on-a-different-cluster))
-- `python3` ≥ 3.11 and `conda` (loaded by your site's `profiles/<site>/env.sh`)
+- `python3` ≥ 3.11 and `conda` ≥ 24.7.1 (loaded by your site's `profiles/<site>/env.sh`;
+  on Longleaf and Pioneer, a one-time Miniforge install in `$HOME/miniforge3`:
+  see `profiles/longleaf/env.sh`)
 - CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) and `.hic` maps for your samples
 - A genome FASTA with the same chromosome names as the peaks
 
@@ -137,7 +139,7 @@ and a config, then `sbatch` one launcher.
     sbatch ChromSimPipe.sh
     ```
 
-    `ChromSimPipe.sh` sources the site's `env.sh` (module loads), builds a
+    `ChromSimPipe.sh` sources the site's `env.sh` (software setup), builds a
     venv from `config/requirements.txt`, and runs Snakemake with the site's
     profile. Each rule becomes its own SLURM job; the conda
     environments in `condaEnvs:` are built by Snakemake on first use.

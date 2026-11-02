@@ -1241,6 +1241,12 @@ and resubmit.</p>
 in the shell you submit from (sbatch passes it on), and that
 <code>echo test | mail -s test $CHROMSIM_EMAIL</code> works on the
 cluster; otherwise set <code>notify: command:</code> to what does.</p>
+<p><strong><code>Conda must be version 24.7.1 or later</code>.</strong>
+The cluster’s conda is older than Snakemake 8.27 accepts (true of
+Longleaf’s and Pioneer’s modules). Install Miniforge once
+(<code>bash Miniforge3-Linux-x86_64.sh -b -p $HOME/miniforge3</code>),
+delete the launcher’s <code>env/</code> folder, and rerun; the shipped
+<code>env.sh</code> files activate it.</p>
 <p><strong><code>Cannot load module ... because these module(s) are loaded</code>.</strong>
 Some clusters (Longleaf among them) refuse to load a <code>python</code>
 module and an <code>anaconda</code> module together. Load only the conda

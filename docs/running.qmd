@@ -7,7 +7,7 @@ sbatch ChromSimPipe.sh
 ```
 
 `ChromSimPipe.sh` follows the bagPipes / dietJuicer launcher pattern: it
-sources the site's `profiles/<site>/env.sh` (module loads), builds a venv in
+sources the site's `profiles/<site>/env.sh` (software setup), builds a venv in
 `env/` from `config/requirements.txt`, and runs Snakemake with that site's
 profile (`hpcProfile` in the config). On `profiles/local`, run it with `bash`
 instead of `sbatch`. Each rule becomes its own SLURM job.
