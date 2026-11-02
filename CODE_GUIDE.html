@@ -625,10 +625,11 @@ id="profilessiteconfig.yaml-scheduler-settings"><code>profiles/&lt;site&gt;/conf
 <code>profiles/longleaf/</code>, <code>default-resources:</code> sets
 the account, partition, wall time, and memory for every job.
 <code>set-resources:</code> sets each rule’s request (the dietJuicer
-pattern). <code>simulateShard</code> is sent to the <code>gpu</code>
-partition with <code>qos: gpu_access</code> and <code>gpu: 1</code>.
-<code>software-deployment-method: conda</code> makes Snakemake activate
-each rule’s environment.</p>
+pattern). <code>simulateShard</code> is sent to whichever of
+<code>l40-gpu</code>, <code>volta-gpu</code> or <code>gpu</code> has a
+free node first, with <code>qos: gpu_access</code> and
+<code>gpu: 1</code>. <code>software-deployment-method: conda</code>
+makes Snakemake activate each rule’s environment.</p>
 <h3
 id="chromsimsamplesheet.txt-samples"><code>ChromSimSamplesheet.txt</code>
 — samples</h3>
@@ -1239,10 +1240,11 @@ and resubmit.</p>
 in the shell you submit from (sbatch passes it on), and that
 <code>echo test | mail -s test $CHROMSIM_EMAIL</code> works on the
 cluster; otherwise set <code>notify: command:</code> to what does.</p>
-<p><strong>Longleaf module conflict.</strong>
-<code>profiles/longleaf/env.sh</code> loads <code>python</code> and
-<code>anaconda</code>, which Longleaf will not load together. Remove the
-<code>python</code> line before using that profile.</p>
+<p><strong><code>Cannot load module ... because these module(s) are loaded</code>.</strong>
+Some clusters (Longleaf among them) refuse to load a <code>python</code>
+module and an <code>anaconda</code> module together. Load only the conda
+distribution in that site’s <code>env.sh</code>; it brings its own
+Python.</p>
 <p><strong>Where the logs are.</strong> Each job’s stdout / stderr:
 <code>output/logs/&lt;rule&gt;_&lt;wildcards&gt;.out|.err</code>.
 SLURM’s own job logs: <code>output/logs_slurm/</code>. The launcher

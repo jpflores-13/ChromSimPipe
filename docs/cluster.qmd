@@ -42,11 +42,7 @@ config, `--profile profiles/<cluster>` picks a site for a single run. For
 
 ::: {.callout-warning}
 **Profile status.** None of the shipped profiles has completed a full run yet.
-On Longleaf, `profiles/longleaf/env.sh` loads both `python` and `anaconda`,
-which Longleaf's module system refuses to load together; drop the `python`
-line (anaconda provides Python 3.11) before using it. Its GPU rule uses the
-`gpu` partition, which has only a few nodes; `sinfo -s` lists the larger GPU
-partitions, and `slurm_partition` accepts a comma-separated list.
+Run the 9-job test config on a new cluster first.
 :::
 
 ## SLURM account and partition (Longleaf)
@@ -57,8 +53,11 @@ All of these are in `profiles/longleaf/config.yaml`:
 |---------|-------|-------|
 | Account | `rc_dphansti_pi` | `default-resources: slurm_account` |
 | Default partition | `general` | `default-resources: slurm_partition` |
-| GPU partition | `gpu` | `set-resources: simulateShard` |
+| GPU partitions | `l40-gpu,volta-gpu,gpu` (first with a free node) | `set-resources: simulateShard` |
 | GPU QOS | `gpu_access` | `set-resources: simulateShard` |
+
+`env.sh` loads only `anaconda/2024.02`: Longleaf will not load the `python`
+and `anaconda` modules together, and anaconda includes Python 3.11.
 
 ## Per-rule resource requests
 
@@ -68,7 +67,7 @@ All of these are in `profiles/longleaf/config.yaml`:
 | `getMotif` | general | 1 | 1 GB | 15 min | — |
 | `orientCTCF` | general | 2 | 16 GB | 1 h | — |
 | `validateCTCF` | general | 1 | 4 GB | 15 min | — |
-| `simulateShard` | **gpu** | 4 | 60 GB | 12 h | **1** |
+| `simulateShard` | **l40-gpu, volta-gpu, gpu** | 4 | 60 GB | 12 h | **1** |
 | `mergeShards` | general | 4 | 64 GB | 2 h | — |
 | `analyzeCondition` | general | 4 | 64 GB | 6 h | — |
 | `benchmarkSummary` | general | 1 | 2 GB | 15 min | — |

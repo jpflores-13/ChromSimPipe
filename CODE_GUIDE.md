@@ -261,8 +261,8 @@ are tracked through completion markers in `output/done/`.
 This is the only place cluster details live. In `profiles/longleaf/`,
 `default-resources:` sets the account, partition, wall time, and memory for
 every job. `set-resources:` sets each rule's request (the dietJuicer
-pattern). `simulateShard` is sent to the `gpu` partition with
-`qos: gpu_access` and `gpu: 1`. `software-deployment-method: conda` makes
+pattern). `simulateShard` is sent to whichever of `l40-gpu`, `volta-gpu`
+or `gpu` has a free node first, with `qos: gpu_access` and `gpu: 1`. `software-deployment-method: conda` makes
 Snakemake activate each rule's environment.
 
 ### `ChromSimSamplesheet.txt` — samples
@@ -701,9 +701,10 @@ and resubmit.
 (sbatch passes it on), and that `echo test | mail -s test $CHROMSIM_EMAIL`
 works on the cluster; otherwise set `notify: command:` to what does.
 
-**Longleaf module conflict.** `profiles/longleaf/env.sh` loads `python`
-and `anaconda`, which Longleaf will not load together. Remove the `python`
-line before using that profile.
+**`Cannot load module ... because these module(s) are loaded`.** Some
+clusters (Longleaf among them) refuse to load a `python` module and an
+`anaconda` module together. Load only the conda distribution in that site's
+`env.sh`; it brings its own Python.
 
 **Where the logs are.** Each job's stdout / stderr:
 `output/logs/<rule>_<wildcards>.out|.err`. SLURM's own job logs:

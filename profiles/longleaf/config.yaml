@@ -30,7 +30,7 @@ set-resources:
     mem_mb: 4000
   simulateShard:
     runtime: 720
-    slurm_partition: gpu
+    slurm_partition: "l40-gpu,volta-gpu,gpu"   # first one with a free node; `sinfo -s` lists GPU partitions
     qos: gpu_access
     gpu: 1
     cpus_per_task: 4
