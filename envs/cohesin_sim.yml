@@ -15,9 +15,12 @@ dependencies:
   - pyyaml           # configs/parameters.py reads the config
 
   # --- OpenMM + CUDA
-  # Let conda-forge pick the openmm build that matches the system CUDA.
-  # Do NOT pin cudatoolkit here.
+  # CUDA 12: CUDA 13 dropped Pascal (GTX 10xx) and Volta (V100) GPUs, so a
+  # CUDA 13 OpenMM fails on those nodes with "nvrtc: invalid value for
+  # --gpu-architecture". CUDA 12 runs on Pascal through Ada/Hopper (needs an
+  # NVIDIA driver >= 525). Do NOT pin the old `cudatoolkit` package.
   - openmm
+  - cuda-version=12
 
   # --- Hi-C data processing ---
   - cooler           # reads .cool files (experimental_compare.py, ps_curve.py)
