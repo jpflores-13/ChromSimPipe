@@ -33,7 +33,7 @@ set-resources:
   simulateShard:
     runtime: 720
     slurm_partition: gpu          # 39 nodes, 114 GPUs
-    gres: "gpu:1"
+    gres: "'gpu:1'"     # inner quotes: Snakemake evaluates resource values as Python
     cpus_per_task: 4
     mem_mb: 60000
   mergeShards:
