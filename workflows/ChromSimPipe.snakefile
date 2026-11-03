@@ -75,6 +75,10 @@ MOTIF = config["ctcf_motif"]
 MOTIF_MEME = (os.path.expanduser(MOTIF["meme"]) if MOTIF.get("meme")
               else f"{MOTIF_DIR}/{MOTIF['jaspar_id']}.meme")
 
+## Rules call "$CONDA_PREFIX/bin/python" (the rule's conda env) rather than a
+## bare `python`: in cluster jobs another interpreter (e.g. the launcher's
+## venv) can come first on PATH and lacks the env's packages.
+
 wildcard_constraints:
     rep   = r"\d+",
     shard = r"\d+"
@@ -207,7 +211,7 @@ rule orientCTCF:
     conda: ENV_CTCF
     shell:
         """
-        python scripts/extract_ctcf_sites.py \
+        "$CONDA_PREFIX/bin/python" scripts/extract_ctcf_sites.py \
             --bed {input.peaks} \
             --region {params.region} \
             --genome {input.genome} \
@@ -236,7 +240,7 @@ rule validateCTCF:
     conda: ENV_SIM
     shell:
         """
-        CHROMSIM_CONFIG={params.configfile} python scripts/validate_ctcf.py 1> {log.out} 2> {log.err}
+        CHROMSIM_CONFIG={params.configfile} "$CONDA_PREFIX/bin/python" scripts/validate_ctcf.py 1> {log.out} 2> {log.err}
         touch {output.done}
         """
 
@@ -259,7 +263,7 @@ rule simulateShard:
     conda: ENV_SIM
     shell:
         """
-        CHROMSIM_CONFIG={params.configfile} python scripts/run_simulation_shard.py \
+        CHROMSIM_CONFIG={params.configfile} "$CONDA_PREFIX/bin/python" scripts/run_simulation_shard.py \
             --condition {wildcards.condition} \
             --replicate {wildcards.rep} \
             --shard-index {wildcards.shard} \
@@ -289,7 +293,7 @@ rule mergeShards:
     conda: ENV_SIM
     shell:
         """
-        CHROMSIM_CONFIG={params.configfile} python scripts/merge_shards.py \
+        CHROMSIM_CONFIG={params.configfile} "$CONDA_PREFIX/bin/python" scripts/merge_shards.py \
             --condition {wildcards.condition} \
             --replicate {wildcards.rep} \
             --n-shards {params.n_shards} \
@@ -322,7 +326,7 @@ rule analyzeCondition:
     shell:
         """
         mkdir -p {params.out_dir}
-        CHROMSIM_CONFIG={params.configfile} python scripts/run_analysis_all.py \
+        CHROMSIM_CONFIG={params.configfile} "$CONDA_PREFIX/bin/python" scripts/run_analysis_all.py \
             --results-dir {params.sim_dir} \
             --output-dir {params.out_dir} \
             --condition {wildcards.condition} \
@@ -346,5 +350,5 @@ rule benchmarkSummary:
     conda: ENV_SIM
     shell:
         """
-        python workflows/utils/benchmarking.py {params.bench_dir} {output} 2> {log.err}
+        "$CONDA_PREFIX/bin/python" workflows/utils/benchmarking.py {params.bench_dir} {output} 2> {log.err}
         """
