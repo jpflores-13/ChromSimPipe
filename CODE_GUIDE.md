@@ -238,7 +238,8 @@ Every rule has the same parts, following bagPipes:
 - `log:` — stdout / stderr to `output/logs/{rule}_{wildcards}.out|.err`
 - `benchmark:` — `output/benchmarks/{rule}_{wildcards}.tsv` (wall time,
   memory), summarised in `output/{runName}_benchmarking.tsv`
-- `conda:` — an entry from `condaEnvs` in the config
+- `conda:` — an entry from `condaEnvs` in the config; the shell runs scripts
+  with `"$CONDA_PREFIX/bin/python"`, that environment's own interpreter
 - `params:` — every value read from the config; nothing is typed in
 
 Wildcards: `{sampleName}` / `{ctcfType}` are samplesheet sample names;
@@ -675,10 +676,15 @@ Longleaf.
 ## Common pitfalls
 
 **CUDA architecture error.** `openmm.OpenMMException: nvrtc: error: invalid
-value for --gpu-architecture (-arch)` means the OpenMM/CUDA in `cohesin_sim`
-was compiled for a different GPU microarchitecture than the allocated node.
-Usually resolves by resubmitting (different node) or reinstalling OpenMM
-with a CUDA toolkit that matches the target GPU.
+value for --gpu-architecture (-arch)` means the environment's CUDA cannot
+compile for the allocated GPU. CUDA 13 dropped Pascal (GTX 10xx) and Volta
+(V100); `envs/cohesin_sim.yml` pins `cuda-version=12` for this reason. Check
+with `conda list -p <env> | grep cuda-version` and rebuild if it says 13.
+
+**No Hi-C comparison in the analysis output.** The analysis catches errors in
+each step, logs a warning and continues, so check
+`output/logs/analyzeCondition_*.err` for `WARNING`. A missing normalization
+column (`no 'KR' normalization`) is fixed with `analysis.hic_balance`.
 
 **Snakemake lock error after a failed run.** Run `bash unlock.sh`, then
 resubmit.

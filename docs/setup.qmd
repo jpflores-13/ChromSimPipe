@@ -61,11 +61,20 @@ Set `hpcProfile` in the config to your site's folder: `profiles/longleaf`
 
 `condaEnvs` in the config tells Snakemake which environment each rule runs in.
 By default these are the files in `envs/`, which Snakemake builds on first
-use. To build them ahead of the first real run:
+use. Build them once per cluster before the first run, on a compute node
+(the build needs more memory than login nodes or the launcher job allow,
+and takes ~30 min):
 
 ```bash
+srun -N 1 -n 1 -c 4 --mem=16g -t 3:00:00 --pty /bin/bash   # add -p <partition>
 bash ChromSimPipe.sh --conda-create-envs-only
+exit
 ```
+
+`envs/cohesin_sim.yml` pins `cuda-version=12` (CUDA 13 does not support
+Pascal or Volta GPUs) and `numpy<2`, and uses only conda-forge and bioconda.
+Editing an env file gives it a new hash, so Snakemake builds a fresh
+environment; delete the old one under `.snakemake/conda/` to free space.
 
 To reuse environments you already built, give their name or path instead:
 

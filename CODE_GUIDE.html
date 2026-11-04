@@ -596,7 +596,9 @@ figures</td>
 memory), summarised in
 <code>output/{runName}_benchmarking.tsv</code></li>
 <li><code>conda:</code> — an entry from <code>condaEnvs</code> in the
-config</li>
+config; the shell runs scripts with
+<code>"$CONDA_PREFIX/bin/python"</code>, that environment’s own
+interpreter</li>
 <li><code>params:</code> — every value read from the config; nothing is
 typed in</li>
 </ul>
@@ -1215,10 +1217,18 @@ that only the scripts read).</li>
 <h2 id="common-pitfalls">Common pitfalls</h2>
 <p><strong>CUDA architecture error.</strong>
 <code>openmm.OpenMMException: nvrtc: error: invalid value for --gpu-architecture (-arch)</code>
-means the OpenMM/CUDA in <code>cohesin_sim</code> was compiled for a
-different GPU microarchitecture than the allocated node. Usually
-resolves by resubmitting (different node) or reinstalling OpenMM with a
-CUDA toolkit that matches the target GPU.</p>
+means the environment’s CUDA cannot compile for the allocated GPU. CUDA
+13 dropped Pascal (GTX 10xx) and Volta (V100);
+<code>envs/cohesin_sim.yml</code> pins <code>cuda-version=12</code> for
+this reason. Check with
+<code>conda list -p &lt;env&gt; | grep cuda-version</code> and rebuild
+if it says 13.</p>
+<p><strong>No Hi-C comparison in the analysis output.</strong> The
+analysis catches errors in each step, logs a warning and continues, so
+check <code>output/logs/analyzeCondition_*.err</code> for
+<code>WARNING</code>. A missing normalization column
+(<code>no 'KR' normalization</code>) is fixed with
+<code>analysis.hic_balance</code>.</p>
 <p><strong>Snakemake lock error after a failed run.</strong> Run
 <code>bash unlock.sh</code>, then resubmit.</p>
 <p><strong><code>ModuleNotFoundError: configs</code> or

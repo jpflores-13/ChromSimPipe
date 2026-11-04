@@ -134,7 +134,9 @@ squeue -u $USER
 | Symptom | Fix |
 |---------|-----|
 | Snakemake lock error | `bash unlock.sh` then resubmit |
-| CUDA architecture error on GPU nodes | Resubmit — a different node will be allocated |
+| `nvrtc: error: invalid value for --gpu-architecture` | The env has CUDA 13, which dropped Pascal/Volta GPUs; the env file pins CUDA 12, so rebuild the env on a compute node |
+| `convertHic` ends in `TIMEOUT` | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` |
+| `no 'KR' normalization in ...cool` | Set `analysis.hic_balance` to a column it lists, or `False` |
 | No emails arrive | Test `echo test \| mail -s test $CHROMSIM_EMAIL`; change `notify: command:` |
 | Launcher job `OUT_OF_MEMORY` on the first run | Build the conda environments once on a compute node (`srun ... --mem=16g --pty bash`, then `bash ChromSimPipe.sh --conda-create-envs-only`) |
 | A job failed | Read `output/logs/{rule}_{wildcards}.err` |
