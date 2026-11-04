@@ -107,10 +107,15 @@ and a config, then `sbatch` one launcher.
    are required columns (write `NA` if a sample has no file of that kind);
    every other column is metadata:
 
-    | Project | Cell_Type | Condition  | CTCF_Peaks                  | Hi-C                     |
-    |---------|-----------|------------|-----------------------------|--------------------------|
-    | STRS    | HEK293T   | condition1 | /path/to/control.narrowPeak | /path/to/control.hic     |
-    | STRS    | HEK293T   | condition2 | /path/to/sorbitol.narrowPeak| /path/to/sorbitol.hic    |
+    | Project | Cell_Type | Condition  | CTCF_Peaks                | Hi-C                 |
+    |---------|-----------|------------|---------------------------|----------------------|
+    | STRS    | HEK293T   | condition1 | data/control.narrowPeak   | data/control.hic     |
+    | STRS    | HEK293T   | condition2 | data/sorbitol.narrowPeak  | data/sorbitol.hic    |
+
+   Relative paths resolve against the repo root, so one samplesheet works on
+   every cluster. Link each cluster's copies of the files (and the genome
+   FASTA) into `data/` once; see [Input data](#input-data). Absolute paths
+   also work.
 
 3. Edit `config/ChromSimConfig.yaml`. `fileNamesFrom` lists the samplesheet
    columns joined to name each sample; conditions refer to samples by that
@@ -120,7 +125,7 @@ and a config, then `sbatch` one launcher.
     samplesheet: 'ChromSimSamplesheet.txt'
     fileNamesFrom: ['Condition']      # → sample names condition1, condition2
     outputDir: 'output'
-    genome: '/path/to/genome.fa'      # FIMO motif orientation
+    genome: 'data/GRCh38.primary_assembly.genome.fa'   # FIMO motif orientation
     ...
     conditions:
       - name:        cond1_baseline
@@ -129,9 +134,10 @@ and a config, then `sbatch` one launcher.
         ...
     ```
 
-4. Pick your compute site with `hpcProfile` in the config (default
-   `profiles/longleaf`). For another cluster, see
-   [Running on a different cluster](#running-on-a-different-cluster).
+4. Pick your compute site. The default is `hpcProfile: 'profiles/longleaf'`
+   in the config; on any other cluster set `CHROMSIM_PROFILE` once in
+   `~/.bashrc` (see
+   [Running on a different cluster](#running-on-a-different-cluster)).
 
 5. Submit the workflow:
 
@@ -143,6 +149,25 @@ and a config, then `sbatch` one launcher.
     venv from `config/requirements.txt`, and runs Snakemake with the site's
     profile. Each rule becomes its own SLURM job; the conda
     environments in `condaEnvs:` are built by Snakemake on first use.
+
+### Input data
+
+The shipped samplesheet and config name their inputs as `data/<file>`. On
+each cluster, link that cluster's copies into `data/` once, from the repo
+root:
+
+```bash
+SRC=/path/to/this/clusters/data
+ln -s "$SRC"/STRS_HEK293_eGFP-YAP_CTCF_cont_0h_peaks.narrowPeak    data/
+ln -s "$SRC"/STRS_HEK293_eGFP-YAP_CTCF_sorbitol_1h_peaks.narrowPeak data/
+ln -s "$SRC"/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic  data/
+ln -s "$SRC"/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic data/
+ln -s /path/to/GRCh38.primary_assembly.genome.fa                    data/
+ls -lL data/
+```
+
+Links take no space, and everything in `data/` except its README is
+git-ignored. [`data/README.md`](data/README.md) has the details.
 
 ### Dry run first
 
@@ -160,7 +185,8 @@ without running anything).
 `config/ChromSimConfig.test.yaml` is the full config cut down to a cheap
 end-to-end check: same samplesheet, locus and physics, but one condition, one
 replicate, one shard, and 1,000 blocks instead of 50,000. It is 9 jobs, one of
-them on a GPU, written to `output_test/`. Its results are a smoke test, not
+them on a GPU, written to `output_test/` (under `$CHROMSIM_OUTPUT_ROOT` if
+set). Its results are a smoke test, not
 data.
 
 ```bash
@@ -221,14 +247,27 @@ sbatch ChromSimPipe.sh       # --rerun-incomplete is on by default
 
 ## Running on a different cluster
 
-Everything specific to a compute site lives in one folder under `profiles/`;
-the config names it with `hpcProfile`. The science config and samplesheet do
-not change when you move.
+Everything specific to a compute site lives in one folder under `profiles/`.
+The config, samplesheet and test config are the same on every cluster; what
+differs is set once per cluster, outside git:
+
+| Setting | How | Example (Pioneer) |
+|---------|-----|-------------------|
+| Compute profile | `export CHROMSIM_PROFILE=...` in `~/.bashrc` | `profiles/pioneer` |
+| Where output goes | `export CHROMSIM_OUTPUT_ROOT=...` in `~/.bashrc` (unset: the repo folder) | `/scratch/pioneer/users/$USER/ChromSimPipe` |
+| Input files | symbolic links in `data/` ([Input data](#input-data)) | links to `~/ChromSimPipe_data/*` |
+
+The profile is chosen by, in order: `--profile` on the command line,
+`$CHROMSIM_PROFILE`, then `hpcProfile` in the config (default
+`profiles/longleaf`). A relative `outputDir` (`output`, `output_test`) goes
+under `$CHROMSIM_OUTPUT_ROOT`; an absolute one is used as written. Open a new
+shell (or `source ~/.bashrc`) after editing `~/.bashrc`, then submit as usual:
+the SLURM jobs inherit these variables.
 
 | Folder | For |
 |--------|-----|
 | `profiles/longleaf/` | UNC Longleaf (SLURM) |
-| `profiles/pioneer/` | Case Western Pioneer (SLURM); use with `config/ChromSimConfig.pioneer.yaml` |
+| `profiles/pioneer/` | Case Western Pioneer (SLURM) |
 | `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
 | `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
 
@@ -246,20 +285,22 @@ To set up a new SLURM cluster:
 cp -r profiles/slurm-template profiles/<cluster>
 nano profiles/<cluster>/config.yaml   # account, CPU partition, GPU partition (+ QOS if required)
 nano profiles/<cluster>/env.sh        # module loads for python3 and conda
-# then in config/ChromSimConfig.yaml:  hpcProfile: 'profiles/<cluster>'
+echo 'export CHROMSIM_PROFILE=profiles/<cluster>' >> ~/.bashrc
+source ~/.bashrc
 sbatch ChromSimPipe.sh
 ```
 
 `sinfo -s` lists partitions, `sacctmgr show assoc user=$USER` lists your
-accounts, and `module avail` shows the available software. Without editing the
-config, `--profile profiles/<cluster>` picks a site for a single run. For
+accounts, and `module avail` shows the available software.
+`--profile profiles/<cluster>` picks a site for a single run. For
 `profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
 
 ---
 
 ## Output structure
 
-Everything is written under `outputDir` (default `output/`):
+Everything is written under `outputDir` (default `output/` in the repo folder,
+or under `$CHROMSIM_OUTPUT_ROOT` when that is set):
 
 ```
 output/
@@ -292,7 +333,7 @@ output/
 | `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
 | `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, notifications, compute site |
 | `config/ChromSimConfig.test.yaml` | Small 9-job version of the config for testing a new setup |
-| `config/ChromSimConfig.pioneer*.yaml`, `ChromSimSamplesheet.pioneer.txt` | The same two configs and the samplesheet, pointing at Pioneer's copies of the data |
+| `data/` | Input files for a run, linked in per cluster (git-ignored except `data/README.md`) |
 | `config/requirements.txt` | Snakemake version for the launcher venv |
 | `profiles/<site>/config.yaml` | Scheduler settings and per-rule resources for one compute site |
 | `profiles/<site>/env.sh` | Module loads for that site |
@@ -332,6 +373,9 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `CUDA not available` | GPU job on wrong partition | Check `simulateShard` under `set-resources:` in `profiles/<site>/config.yaml` |
 | `sim_run.engine is 'polychrom' but it cannot be imported` | Sim env missing polychrom | Rebuild the `condaEnvs.sim` environment |
 | Snakemake lock error | Previous run crashed | `bash unlock.sh`, then resubmit |
+| `MissingInputException` naming a `data/...` file | That file is not linked into `data/` on this cluster, or the link is broken | `ls -lL data/`; add or fix the link ([Input data](#input-data)) |
+| Output appears in the repo folder instead of scratch | `CHROMSIM_OUTPUT_ROOT` not set in the shell that ran `sbatch` | `echo $CHROMSIM_OUTPUT_ROOT`; add the export to `~/.bashrc`, `source ~/.bashrc`, resubmit |
+| Jobs go to the wrong cluster's partitions or account | `CHROMSIM_PROFILE` not set, so the config default (`profiles/longleaf`) was used | `echo $CHROMSIM_PROFILE`; set it in `~/.bashrc` or pass `--profile` |
 | `Samplesheet ... has no 'CTCF_Peaks' column` | Header typo, or not tab-separated | Headers must be tab-separated and include `CTCF_Peaks` and `Hi-C` |
 | `Condition ctcf_type '...' has no CTCF_Peaks` | Condition names a sample that isn't in the samplesheet | Sample names come from `fileNamesFrom`; check the spelling |
 | `peaks had no FIMO hit` | `ctcf_motif.unoriented: 'error'` and some peaks lack a motif | Inspect them in `output/logs/orientCTCF_*.err`, or switch to `'drop'` |
@@ -343,7 +387,7 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `no 'KR' normalization in ...cool` | The `.cool` has a different normalization column | Set `analysis.hic_balance` to one it lists (`weight`, `VC`, ...) or `False` for raw counts |
 | `convertHic` ends in `TIMEOUT` | Large `.hic`: a 3.7 GB map takes ~1.6 h | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` (default 480 min) |
 | `UCSC gene fetch failed ... timed out` | Compute nodes have no internet | Harmless: figures are drawn without the gene track |
-| A job failed | - | Its stdout / stderr are in `output/logs/{rule}_{wildcards}.out|.err` |
+| A job failed | - | Its stdout / stderr are in `<outputDir>/logs/{rule}_{wildcards}.out|.err` |
 
 For a description of every script, see [`CODE_GUIDE.md`](CODE_GUIDE.md).
 

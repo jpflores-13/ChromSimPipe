@@ -14,6 +14,9 @@
 ##   CTCF_Peaks - CTCF peak file (narrowPeak/BED); 'NA' if this sample has none
 ##   Hi-C       - .hic map to compare simulations against; 'NA' if none
 ## Every other column is free-form metadata (Project, Cell_Type, Condition, ...).
+## Relative paths resolve against the repo root. The shipped samplesheet uses
+## data/<file> so it works on every cluster: link each cluster's copies into
+## data/ (see data/README.md).
 samplesheet: 'ChromSimSamplesheet.txt'
 
 ## Columns joined with '_' to build each sample's name. Conditions below refer
@@ -21,13 +24,16 @@ samplesheet: 'ChromSimSamplesheet.txt'
 fileNamesFrom: ['Condition']
 
 ## Output
-## Every file the workflow writes goes under this directory.
+## Every file the workflow writes goes under this directory. A relative path
+## goes under $CHROMSIM_OUTPUT_ROOT if set (e.g. a scratch directory, exported
+## in ~/.bashrc), else under the repo root.
 outputDir: 'output_test'
 
 ## Genome
 ## Genome FASTA used by FIMO to orient CTCF motifs (indexed with samtools faidx
 ## if no .fai is present). Must use the same chromosome names as the peaks.
-genome: '/proj/phanstiel_lab/Reference/human/hg38/fasta/GRCh38.primary_assembly.genome.fa'
+## Linked into data/ on each cluster, like the samplesheet files.
+genome: 'data/GRCh38.primary_assembly.genome.fa'
 genome_assembly: 'hg38'
 
 ## CTCF motif orientation
@@ -53,8 +59,10 @@ n_shards: 1        # GPU jobs per replicate (total_blocks is split across them)
 ## Compute site
 ## Folder holding this cluster's Snakemake profile (config.yaml: scheduler,
 ## account, partitions, per-rule resources) and env.sh (module loads).
-## Shipped: profiles/longleaf (UNC), profiles/local (no scheduler), and
-## profiles/slurm-template (copy and fill in for any other SLURM cluster).
+## Shipped: profiles/longleaf (UNC), profiles/pioneer (Case Western),
+## profiles/local (no scheduler), and profiles/slurm-template (copy and fill
+## in for any other SLURM cluster). This is the default; on other clusters set
+## CHROMSIM_PROFILE (e.g. in ~/.bashrc) or pass --profile to ChromSimPipe.sh.
 hpcProfile: 'profiles/longleaf'
 
 ## Notifications

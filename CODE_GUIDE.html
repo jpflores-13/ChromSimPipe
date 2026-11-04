@@ -348,7 +348,9 @@ building conda environments are all workflow steps.</p>
 <li><strong><code>ChromSimSamplesheet.txt</code></strong>: one
 tab-separated row per sample. The required columns are
 <code>CTCF_Peaks</code> and <code>Hi-C</code> (<code>NA</code> when a
-sample has no file of that kind); all other columns are metadata.</li>
+sample has no file of that kind); all other columns are metadata. Paths
+are <code>data/&lt;file&gt;</code>: each cluster links its own copies
+into <code>data/</code>, so one samplesheet serves every cluster.</li>
 <li><strong><code>config/ChromSimConfig.yaml</code></strong>:
 <code>fileNamesFrom</code> names the samplesheet columns joined with
 <code>_</code> to name each sample. Conditions refer to samples by those
@@ -356,14 +358,18 @@ names (<code>ctcf_type</code>, <code>compare_hic</code>). The config
 also sets the locus, physics, genome, CTCF motif, conda environments,
 and <code>outputDir</code>.</li>
 <li><strong><code>profiles/&lt;site&gt;/</code></strong>: the compute
-site, named by <code>hpcProfile</code> in the config.
-<code>config.yaml</code> holds the scheduler, account and each rule’s
-CPUs / memory / GPU under <code>set-resources:</code>;
+site, chosen by <code>--profile</code>, then
+<code>$CHROMSIM_PROFILE</code>, then <code>hpcProfile</code> in the
+config. <code>config.yaml</code> holds the scheduler, account and each
+rule’s CPUs / memory / GPU under <code>set-resources:</code>;
 <code>env.sh</code> loads the software. Shipped: <code>longleaf</code>
-(UNC), <code>pioneer</code> (Case Western, with its own
-<code>config/ChromSimConfig.pioneer*.yaml</code> and samplesheet),
-<code>local</code> (no scheduler), and <code>slurm-template</code> (copy
-and fill in for any other SLURM cluster).</li>
+(UNC), <code>pioneer</code> (Case Western), <code>local</code> (no
+scheduler), and <code>slurm-template</code> (copy and fill in for any
+other SLURM cluster).</li>
+<li><strong>Per-cluster environment variables</strong> (in
+<code>~/.bashrc</code>, outside git): <code>CHROMSIM_PROFILE</code>
+picks the profile and <code>CHROMSIM_OUTPUT_ROOT</code> is the folder a
+relative <code>outputDir</code> goes under (e.g. scratch).</li>
 </ol>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh        <span class="co"># whole workflow</span></span>
@@ -491,16 +497,19 @@ id="chromsimpipe.sh-sbatch-entry-point"><code>ChromSimPipe.sh</code>:
 sbatch entry point</h3>
 <p>Submit with <code>sbatch ChromSimPipe.sh</code>. It:</p>
 <ol type="1">
-<li>Sources <code>&lt;hpcProfile&gt;/env.sh</code>, which makes
-<code>python3</code> and <code>conda</code> available on that site
-(<code>--profile</code> overrides <code>hpcProfile</code>).</li>
+<li>Picks the profile (<code>--profile</code>, else
+<code>$CHROMSIM_PROFILE</code>, else <code>hpcProfile</code>) and
+sources its <code>env.sh</code>, which makes <code>python3</code> and
+<code>conda</code> available on that site.</li>
 <li>Creates a venv in <code>env/</code> (first run only) and installs
 <code>config/requirements.txt</code> (Snakemake 8.27.1 + the SLURM
 executor plugin).</li>
 <li>Runs
 <code>snakemake -s workflows/ChromSimPipe.snakefile --profile    &lt;hpcProfile&gt; --configfile &lt;config&gt; --rerun-incomplete --keep-going -p</code>,
 adding <code>--slurm-logdir &lt;outputDir&gt;/logs_slurm</code> when the
-profile uses the SLURM executor.</li>
+profile uses the SLURM executor (<code>&lt;outputDir&gt;</code> resolved
+the same way as in <code>configs/parameters.py</code>, including
+<code>$CHROMSIM_OUTPUT_ROOT</code>).</li>
 </ol>
 <p>Any extra arguments go to <code>snakemake</code> (<code>-n</code> for
 a dry run, <code>--configfile other.yaml</code>,
@@ -623,15 +632,19 @@ makes Snakemake activate each rule’s environment.</p>
 <h3
 id="chromsimsamplesheet.txt-samples"><code>ChromSimSamplesheet.txt</code>:
 samples</h3>
-<pre><code>Project  Cell_Type  Condition   CTCF_Peaks                    Hi-C
-STRS     HEK293T    condition1  /path/to/control.narrowPeak   /path/to/control.hic
-STRS     HEK293T    condition2  /path/to/sorbitol.narrowPeak  /path/to/sorbitol.hic</code></pre>
+<pre><code>Project  Cell_Type  Condition   CTCF_Peaks                Hi-C
+STRS     HEK293T    condition1  data/control.narrowPeak   data/control.hic
+STRS     HEK293T    condition2  data/sorbitol.narrowPeak  data/sorbitol.hic</code></pre>
+<p>Relative paths resolve against the repo root, so
+<code>data/...</code> works on any cluster that has linked its files
+into <code>data/</code> (see <code>data/README.md</code>).</p>
 <p>With <code>fileNamesFrom: ['Condition']</code> the samples are
 <code>condition1</code> and <code>condition2</code>. Metadata values
 shared by every row (<code>STRS</code>, <code>HEK293T</code>) form the
 run name, <code>STRS_HEK293T</code>, used for run-level files. The
 workflow writes the parsed samplesheet, with a <code>sampleName</code>
-column, to <code>output/{runName}_ChromSimSamplesheet.txt</code>.</p>
+column, to
+<code>&lt;outputDir&gt;/{runName}_ChromSimSamplesheet.txt</code>.</p>
 <hr />
 <h2 id="reading-order">Reading order</h2>
 <p>Sections are ordered by pipeline stage:</p>
@@ -663,6 +676,7 @@ something looks wrong</li>
 <pre><code>ChromSimPipe/
 ├── ChromSimPipe.sh   sbatch launcher
 ├── ChromSimSamplesheet.txt  one row per sample (edit before first run)
+├── data/             input files, linked in per cluster (git-ignored except README.md)
 ├── config/           ChromSimConfig.yaml + requirements.txt (edit before first run)
 ├── configs/          parameters.py (reads the config + samplesheet; single source of truth)
 ├── envs/             conda environment specs used by the rules
@@ -672,7 +686,8 @@ something looks wrong</li>
 ├── profiles/         one folder per compute site (longleaf, pioneer, local, slurm-template)
 ├── legacy/           unmaintained code from the lab&#39;s mESC/neuron project (see legacy/README.md)
 ├── tests/            test suite
-└── output/           everything the workflow writes (git-ignored; set by outputDir)</code></pre>
+└── output/           everything the workflow writes (git-ignored; set by outputDir,
+                      or under $CHROMSIM_OUTPUT_ROOT when set)</code></pre>
 <h2 id="configuration-configsparameters.py">1. Configuration:
 <code>configs/parameters.py</code></h2>
 <p><strong>Purpose.</strong> This file is the runtime source of truth
@@ -691,9 +706,14 @@ in <code>ChromSimConfig.yaml</code>. For the included STRS example:
 hg38, chr1:64,210,000–66,170,000 → 1,960 monomers at 1
 kb/monomer.</p></li>
 <li><p><strong>Samples and outputs</strong> (<code>SAMPLES</code>,
-<code>RUN_NAME</code>, <code>OUTPUT_DIR</code>, <code>PATHS</code>).
+<code>RUN_NAME</code>, <code>OUTPUT_ROOT</code>,
+<code>OUTPUT_DIR</code>, <code>PATHS</code>, <code>GENOME</code>).
 Sample names, metadata and input files from the samplesheet; every
-output directory under <code>outputDir</code>.</p></li>
+output directory under <code>outputDir</code>. Input paths (samplesheet
+files, <code>genome</code>) resolve against the repo root; a relative
+<code>outputDir</code> resolves against <code>OUTPUT_ROOT</code>, which
+is <code>$CHROMSIM_OUTPUT_ROOT</code> if set, else the repo
+root.</p></li>
 <li><p><strong>Polymer physics</strong> (<code>POLYMER</code> dict).
 Bond lengths, bending stiffness (<code>angle_force</code>), confinement
 density, integration tolerance, GPU platform. Rarely changed between

@@ -17,8 +17,12 @@
 ##   sbatch ChromSimPipe.sh --configfile other.yaml # use a different config
 ##   sbatch ChromSimPipe.sh --profile profiles/<site>   # override hpcProfile
 ##
-## The compute site is the hpcProfile folder named in the config: its
-## env.sh loads software, its config.yaml tells Snakemake how to run jobs.
+## The compute site is a profile folder: its env.sh loads software, its
+## config.yaml tells Snakemake how to run jobs. It is chosen by, in order:
+## --profile, $CHROMSIM_PROFILE, then hpcProfile in the config.
+## Per-cluster settings that stay out of git (e.g. in ~/.bashrc):
+##   export CHROMSIM_PROFILE=profiles/pioneer       # this cluster's profile
+##   export CHROMSIM_OUTPUT_ROOT=/scratch/...       # where a relative outputDir goes
 ## Any other arguments are passed straight to snakemake.
 
 ## Exit if any command fails
@@ -38,8 +42,14 @@ done
 
 ## Read a top-level scalar from the config, e.g. cfg outputDir
 cfg() { sed -nE "s/^$1:[[:space:]]*['\"]?([^'\"#[:space:]]+).*/\1/p" "${CONFIG}" | head -1; }
-PROFILE="${PROFILE:-$(cfg hpcProfile)}"
+PROFILE="${PROFILE:-${CHROMSIM_PROFILE:-$(cfg hpcProfile)}}"
 PROFILE="${PROFILE%/}"
+
+## Output directory, resolved the same way as configs/parameters.py
+OUTDIR="$(cfg outputDir)"
+OUTDIR="${OUTDIR:-output}"
+OUTDIR="${OUTDIR/#\~/$HOME}"
+[[ "${OUTDIR}" = /* ]] || OUTDIR="${CHROMSIM_OUTPUT_ROOT:-$PWD}/${OUTDIR}"
 
 ## Load this site's software (python3, conda)
 source "${PROFILE}/env.sh"
@@ -52,7 +62,7 @@ python3 -m pip install -q -r config/requirements.txt
 ## SLURM job logs (only for profiles that use the SLURM executor)
 EXTRA=()
 if grep -qE "^executor:[[:space:]]*slurm" "${PROFILE}/config.yaml"; then
-    SLURM_LOGS="$(cfg outputDir)/logs_slurm"
+    SLURM_LOGS="${OUTDIR}/logs_slurm"
     mkdir -p "${SLURM_LOGS}"
     EXTRA+=(--slurm-logdir "${SLURM_LOGS}" --max-jobs-per-second 5 --max-status-checks-per-second 0.5)
 fi

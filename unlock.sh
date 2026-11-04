@@ -6,6 +6,8 @@
 ## Usage:
 ##   bash unlock.sh                                       # default config
 ##   bash unlock.sh --configfile other.yaml --profile profiles/<site>
+## The profile is chosen as in ChromSimPipe.sh: --profile, $CHROMSIM_PROFILE,
+## then hpcProfile in the config.
 
 ## Exit if any command fails
 set -e
@@ -21,7 +23,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 cfg() { sed -nE "s/^$1:[[:space:]]*['\"]?([^'\"#[:space:]]+).*/\1/p" "${CONFIG}" | head -1; }
-PROFILE="${PROFILE:-$(cfg hpcProfile)}"
+PROFILE="${PROFILE:-${CHROMSIM_PROFILE:-$(cfg hpcProfile)}}"
 
 ## Load this site's software
 source "${PROFILE%/}/env.sh"

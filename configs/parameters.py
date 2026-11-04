@@ -3,9 +3,15 @@ Simulation parameters loader - reads config/ChromSimConfig.yaml and the
 samplesheet it names. Nothing here is hard-coded: every value comes from the
 config (set CHROMSIM_CONFIG=/path/to/config.yaml to use another file).
 
+Relative paths in the config and samplesheet are resolved against the repo
+root, so one samplesheet pointing at data/... works on every cluster (each
+cluster links its own files into data/). A relative outputDir is resolved
+against $CHROMSIM_OUTPUT_ROOT when that is set (e.g. a scratch directory),
+else against the repo root.
+
 Public API used by the Snakefile and scripts:
 
-    CONFIG_PATH, REPO_ROOT, OUTPUT_DIR, PATHS
+    CONFIG_PATH, REPO_ROOT, OUTPUT_ROOT, OUTPUT_DIR, PATHS, GENOME
     ACTIVE_LOCUS, LOCI, CHROM, REGION_START, REGION_END, RESOLUTION, N_MONOMERS
     POLYMER, SMC_BOND, TILING, SIM_RUN, N_REPLICATES, N_SHARDS
     SAMPLES, SIMULATION_CONDITIONS, ALL_PARAM_SETS
@@ -43,6 +49,21 @@ def _repo_path(path):
     """Expand ~ and resolve a config path relative to the repo root."""
     path = _os.path.expanduser(str(path))
     return path if _os.path.isabs(path) else _os.path.join(REPO_ROOT, path)
+
+
+def _output_path(path):
+    """Resolve outputDir: absolute as given, else under OUTPUT_ROOT."""
+    path = _os.path.expanduser(str(path))
+    return path if _os.path.isabs(path) else _os.path.join(OUTPUT_ROOT, path)
+
+
+# Where a relative outputDir goes: $CHROMSIM_OUTPUT_ROOT (set per cluster,
+# e.g. in ~/.bashrc, for a scratch filesystem) or the repo root.
+OUTPUT_ROOT = _os.path.abspath(_os.path.expanduser(
+    _os.environ.get("CHROMSIM_OUTPUT_ROOT") or REPO_ROOT))
+
+# Genome FASTA (relative paths resolve against the repo root, e.g. data/...)
+GENOME = _repo_path(_cfg["genome"])
 
 
 # =============================================================================
@@ -147,7 +168,7 @@ if SIM_RUN["engine"] not in _ENGINES:
 # =============================================================================
 # OUTPUT LAYOUT (everything under outputDir)
 # =============================================================================
-OUTPUT_DIR = _repo_path(_cfg.get("outputDir", "output"))
+OUTPUT_DIR = _output_path(_cfg.get("outputDir", "output"))
 PATHS = dict(
     mcool      = _os.path.join(OUTPUT_DIR, "mcool"),
     ctcf       = _os.path.join(OUTPUT_DIR, "ctcf"),

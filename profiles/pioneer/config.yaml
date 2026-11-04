@@ -1,5 +1,6 @@
 ## Case Western Pioneer (SLURM). Values from `sinfo -s`, `sacctmgr show assoc`
 ## and `scontrol show partition` on the Pioneer login nodes.
+## Select it on Pioneer with `export CHROMSIM_PROFILE=profiles/pioneer` in ~/.bashrc.
 executor: slurm
 jobs: 100
 latency-wait: 500

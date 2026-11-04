@@ -38,7 +38,7 @@ sys.path.insert(0, os.getcwd())
 from configs.parameters import (
     SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, CTCF_BEDS,
     HIC_FILES, MCOOL_FILES, PATHS, SAMPLES, RUN_NAME,
-    REGION, N_REPLICATES, N_SHARDS, ANALYSIS, LOCUS_TAG, GENOME_ASSEMBLY,
+    REGION, N_REPLICATES, N_SHARDS, ANALYSIS, LOCUS_TAG, GENOME_ASSEMBLY, GENOME,
 )
 
 
@@ -195,7 +195,7 @@ if not MOTIF.get("meme"):
 rule orientCTCF:
     input:
         peaks  = lambda wildcards: CTCF_PEAKS[wildcards.ctcfType],
-        genome = config["genome"],
+        genome = rel(GENOME),
         motif  = MOTIF_MEME
     output:
         bed = f"{CTCF_DIR}/ctcf_oriented_{GENOME_ASSEMBLY}_{{ctcfType}}_{LOCUS_TAG}.bed"
