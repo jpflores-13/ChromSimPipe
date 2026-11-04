@@ -1,5 +1,6 @@
 ## Template for any SLURM cluster. Copy this folder (e.g. to profiles/<cluster>/),
-## fill in the <...> values, and set hpcProfile in config/ChromSimConfig.yaml.
+## fill in the <...> values, and select it on that cluster with
+## `export CHROMSIM_PROFILE=profiles/<cluster>` in ~/.bashrc (or --profile).
 ## `sinfo -s` lists partitions; `sacctmgr show assoc user=$USER` lists accounts.
 executor: slurm
 jobs: 100

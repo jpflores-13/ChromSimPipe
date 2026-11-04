@@ -3,7 +3,9 @@
 
 # Generated data and results (large files, not for version control)
 output/
-data/
+output_test/
+data/*
+!data/README.md
 results/
 *-[0-9]*.out
 

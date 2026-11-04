@@ -7,14 +7,13 @@
 
 ## Compute sites
 
-Everything specific to a compute site lives in one folder under `profiles/`;
-the config names it with `hpcProfile`. The science config and samplesheet do
-not change when you move.
+Everything specific to a compute site lives in one folder under `profiles/`.
+The config, test config and samplesheet are the same on every cluster.
 
 | Folder | For |
 |--------|-----|
 | `profiles/longleaf/` | UNC Longleaf (SLURM) |
-| `profiles/pioneer/` | Case Western Pioneer (SLURM); use with `config/ChromSimConfig.pioneer.yaml` |
+| `profiles/pioneer/` | Case Western Pioneer (SLURM) |
 | `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
 | `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
 
@@ -32,38 +31,58 @@ To set up a new SLURM cluster:
 cp -r profiles/slurm-template profiles/<cluster>
 nano profiles/<cluster>/config.yaml   # account, CPU partition, GPU partition (+ QOS if required)
 nano profiles/<cluster>/env.sh        # module loads for python3 and conda
-# then in config/ChromSimConfig.yaml:  hpcProfile: 'profiles/<cluster>'
+echo 'export CHROMSIM_PROFILE=profiles/<cluster>' >> ~/.bashrc
+source ~/.bashrc
 sbatch ChromSimPipe.sh
 ```
 
 `sinfo -s` lists partitions, `sacctmgr show assoc user=$USER` lists your
-accounts, and `module avail` shows the available software. Without editing the
-config, `--profile profiles/<cluster>` picks a site for a single run. For
+accounts, and `module avail` shows the available software.
+`--profile profiles/<cluster>` picks a site for a single run. For
 `profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
 
 ::: {.callout-warning}
 **Profile status.** The 9-job test config has run end to end on Longleaf
-(GPU simulation included). Pioneer has completed the CTCF steps with results
-identical to Longleaf's. No full 36-job run has been made yet. Run the test
-config on any new cluster first.
+(GPU simulation included). On Pioneer the test has completed the CTCF steps
+(identical to Longleaf's), the GPU simulation (V100) and the merge. Run the
+test config on any new cluster first.
 :::
 
-### One config per cluster
+### Per-cluster settings
 
-The data and genome live at different paths on each cluster, so each
-cluster gets its own samplesheet and config, identical in science to the
-main ones. For Pioneer: `ChromSimSamplesheet.pioneer.txt`,
-`config/ChromSimConfig.pioneer.yaml` (full run) and
-`config/ChromSimConfig.pioneer.test.yaml` (9-job test).
+Three things differ between clusters. All are set once per cluster and stay
+out of git, so the same config and samplesheet run everywhere:
+
+| Setting | How | Used by |
+|---------|-----|---------|
+| Compute profile | `export CHROMSIM_PROFILE=profiles/<cluster>` in `~/.bashrc` | `ChromSimPipe.sh`, `unlock.sh` |
+| Output location | `export CHROMSIM_OUTPUT_ROOT=/path/to/scratch/ChromSimPipe` in `~/.bashrc` | every rule (via `configs/parameters.py`) and the launcher's SLURM log folder |
+| Input files | symbolic links in `data/` named as in the samplesheet | the samplesheet and `genome` |
+
+The profile is chosen by `--profile`, then `$CHROMSIM_PROFILE`, then
+`hpcProfile` in the config (default `profiles/longleaf`). A relative
+`outputDir` goes under `$CHROMSIM_OUTPUT_ROOT`, or under the repo folder if
+it is unset; an absolute `outputDir` is used as written. SLURM jobs inherit
+the environment of the shell that ran `sbatch`, so open a new shell (or
+`source ~/.bashrc`) after editing it. Linking the inputs is described in
+`data/README.md`.
 
 On Pioneer, inputs and code live in home and compute output goes to scratch:
 
 | What | Where |
 |------|-------|
-| Peaks, `.hic` maps, genome FASTA | `/home/jxf700/ChromSimPipe_data/` |
+| Peaks, `.hic` maps, genome FASTA | a folder in home, linked into `data/` |
 | The clone (and the conda environments Snakemake builds inside it) | home |
 | Miniforge | `$HOME/miniforge3` |
-| `outputDir` (simulations, analysis, logs) | scratch; replace `<your scratch dir>` in both Pioneer configs |
+| Output (simulations, analysis, logs) | scratch, via `CHROMSIM_OUTPUT_ROOT` |
+
+```bash
+cat >> ~/.bashrc <<'EOS'
+export CHROMSIM_PROFILE=profiles/pioneer
+export CHROMSIM_OUTPUT_ROOT=/scratch/pioneer/users/$USER/ChromSimPipe
+EOS
+source ~/.bashrc
+```
 
 Scratch is purged automatically, so copy `<outputDir>/analysis/` and
 `<outputDir>/*_benchmarking.tsv` back to home when a run finishes.
@@ -109,9 +128,12 @@ Longleaf's `anaconda` modules ship conda 24.1, older than Snakemake needs.
 | Log | Path |
 |-----|------|
 | Launcher (main Snakemake process) | `ChromSimPipe-{jobid}.out` |
-| Each job's stdout / stderr | `output/logs/{rule}_{wildcards}.out` / `.err` |
-| SLURM job logs | `output/logs_slurm/` (`--slurm-logdir` in `ChromSimPipe.sh`) |
-| Per-job run time / memory | `output/benchmarks/`, summarised in `output/{runName}_benchmarking.tsv` |
+| Each job's stdout / stderr | `<outputDir>/logs/{rule}_{wildcards}.out` / `.err` |
+| SLURM job logs | `<outputDir>/logs_slurm/` (`--slurm-logdir` in `ChromSimPipe.sh`) |
+| Per-job run time / memory | `<outputDir>/benchmarks/`, summarised in `<outputDir>/{runName}_benchmarking.tsv` |
+
+`<outputDir>` is `output/` (or `output_test/`) in the repo folder, or under
+`$CHROMSIM_OUTPUT_ROOT` when that is set.
 
 ## Conda version {#conda-version}
 

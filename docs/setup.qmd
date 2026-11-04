@@ -24,14 +24,37 @@ Two columns are required; the rest are free-form metadata:
 | anything else | metadata (`Project`, `Cell_Type`, `Condition`, ...) |
 
 ```
-Project  Cell_Type  Condition   CTCF_Peaks                    Hi-C
-STRS     HEK293T    condition1  /path/to/control.narrowPeak   /path/to/control.hic
-STRS     HEK293T    condition2  /path/to/sorbitol.narrowPeak  /path/to/sorbitol.hic
+Project  Cell_Type  Condition   CTCF_Peaks                Hi-C
+STRS     HEK293T    condition1  data/control.narrowPeak   data/control.hic
+STRS     HEK293T    condition2  data/sorbitol.narrowPeak  data/sorbitol.hic
 ```
+
+Relative paths resolve against the repo root; absolute paths also work.
+Using `data/<file>` lets one samplesheet serve every cluster: each cluster
+links its own copies into `data/` (next section).
 
 `fileNamesFrom` in the config lists the columns joined with `_` to name each
 sample (the bagPipes convention). With `fileNamesFrom: ['Condition']` the
 samples above are `condition1` and `condition2`.
+
+### Linking the input files
+
+On each cluster, link the files named in the samplesheet, and the genome
+FASTA named by `genome`, into `data/` once, from the repo root:
+
+```bash
+SRC=/path/to/this/clusters/data
+ln -s "$SRC"/STRS_HEK293_eGFP-YAP_CTCF_cont_0h_peaks.narrowPeak    data/
+ln -s "$SRC"/STRS_HEK293_eGFP-YAP_CTCF_sorbitol_1h_peaks.narrowPeak data/
+ln -s "$SRC"/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic  data/
+ln -s "$SRC"/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic data/
+ln -s /path/to/GRCh38.primary_assembly.genome.fa                    data/
+ls -lL data/
+```
+
+A link takes no space, so the large files stay where they are. `ls -lL`
+follows the links and reports any that are broken. Everything in `data/`
+except `data/README.md` is git-ignored.
 
 ## 2. Config
 
@@ -40,7 +63,7 @@ Edit `config/ChromSimConfig.yaml`. The fields most runs change:
 | Field | What to set |
 |-------|-------------|
 | `samplesheet`, `fileNamesFrom` | Samplesheet path and naming columns |
-| `outputDir` | Where every output goes (default `output`) |
+| `outputDir` | Where every output goes (default `output`; a relative path goes under `$CHROMSIM_OUTPUT_ROOT` if set) |
 | `genome`, `genome_assembly` | FASTA for FIMO and its assembly name |
 | `ctcf_motif` | JASPAR motif ID (or a local MEME file), FIMO threshold, flank, what to do with unoriented peaks |
 | `locus` | Simulated window |
@@ -53,9 +76,19 @@ See [Configuration](configuration.qmd) for every field.
 
 ## 3. Compute site
 
-Set `hpcProfile` in the config to your site's folder: `profiles/longleaf`
-(UNC), `profiles/pioneer` (Case Western), `profiles/local` (no scheduler), or your own copy of
-`profiles/slurm-template`. See [Cluster Reference](cluster.qmd#compute-sites).
+Pick your site's profile folder: `profiles/longleaf` (UNC, the config's
+default `hpcProfile`), `profiles/pioneer` (Case Western), `profiles/local`
+(no scheduler), or your own copy of `profiles/slurm-template`. On any
+cluster other than the default, set it once in `~/.bashrc`, together with
+where output should go:
+
+```bash
+echo 'export CHROMSIM_PROFILE=profiles/pioneer' >> ~/.bashrc
+echo 'export CHROMSIM_OUTPUT_ROOT=/scratch/pioneer/users/$USER/ChromSimPipe' >> ~/.bashrc
+source ~/.bashrc
+```
+
+See [Cluster Reference](cluster.qmd#per-cluster-settings).
 
 ## 4. Conda environments
 

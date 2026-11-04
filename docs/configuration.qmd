@@ -24,7 +24,7 @@ samplesheet:   'ChromSimSamplesheet.txt'
 fileNamesFrom: ['Condition']   # columns joined with '_' to name samples
 outputDir:     'output'
 
-genome:          '/path/to/genome.fa'
+genome:          'data/GRCh38.primary_assembly.genome.fa'
 genome_assembly: 'hg38'
 
 ctcf_motif:
@@ -72,6 +72,25 @@ workflow stops instead of silently switching to another engine. Oriented CTCF
 BEDs must exist before simulation; there are no placeholder sites.
 :::
 
+## Paths and environment variables
+
+Relative paths in the config and samplesheet (`samplesheet`, `genome`,
+`CTCF_Peaks`, `Hi-C`, env files) resolve against the repo root, so the
+shipped `data/<file>` paths work on any cluster that links its files into
+`data/`. `outputDir` is the exception: a relative one resolves against
+`$CHROMSIM_OUTPUT_ROOT` when that is set.
+
+Settings that differ per user or per cluster are environment variables,
+typically exported in `~/.bashrc`, so they stay out of the shared repo:
+
+| Variable | Effect | Default |
+|----------|--------|---------|
+| `CHROMSIM_PROFILE` | Compute profile folder (`--profile` overrides it) | `hpcProfile` in the config |
+| `CHROMSIM_OUTPUT_ROOT` | Folder a relative `outputDir` goes under (e.g. scratch) | the repo folder |
+| `CHROMSIM_EMAIL` | Address for start / finish / failure emails | `notify: email:` in the config |
+| `CHROMSIM_CONDA_ROOT` | Miniforge location, used by the shipped `env.sh` files | `$HOME/miniforge3` |
+| `CHROMSIM_CONFIG` | Config file `configs/parameters.py` reads; set by the workflow for every job | `config/ChromSimConfig.yaml` |
+
 ## Other configs
 
 `config/ChromSimConfig.test.yaml` is a complete copy of the main config with
@@ -86,6 +105,7 @@ replaces the default, it is not merged into it.
 from configs.parameters import (
     CONFIG_PATH,           # str: the config being used
     OUTPUT_DIR, PATHS,     # str, dict: output root and its subdirectories
+    GENOME,                # str: genome FASTA, resolved against the repo root
     SAMPLES,               # dict: sample name -> {metadata, ctcf_peaks, hic}
     RUN_NAME,              # str: metadata shared by every sample, '_'-joined
     ACTIVE_LOCUS, LOCI,    # locus key and definition
