@@ -105,7 +105,7 @@ def check_results(results_dir):
                 status += f" ({len(empty)} empty)"
 
             print(f"  {name}")
-            print(f"    Replicates: {rep_nums}  —  {status}")
+            print(f"    Replicates: {rep_nums}  -  {status}")
             for r in reps:
                 marker = "OK" if r["has_conformations"] else "EMPTY"
                 print(f"      rep{r['rep']:2d}: {r['n_files']:4d} files  [{marker}]")

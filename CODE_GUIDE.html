@@ -233,19 +233,15 @@
 <body>
 <header id="title-block-header">
 <h1 class="title">ChromSimPipe Code Guide</h1>
-<p class="subtitle">End-to-end walkthrough of the cohesin loop-extrusion
-simulation codebase</p>
+<p class="subtitle">Cohesin loop-extrusion simulation codebase</p>
 <p class="date">2026</p>
 </header>
 <nav id="TOC" role="doc-toc">
 <ul>
-<li><a href="#code_guide-what-every-file-in-this-repo-actually-does"
-id="toc-code_guide-what-every-file-in-this-repo-actually-does">CODE_GUIDE:
-What Every File in This Repo Actually Does</a>
+<li><a href="#chromsimpipe-code-guide"
+id="toc-chromsimpipe-code-guide">ChromSimPipe code guide</a>
 <ul>
-<li><a href="#quick-start-and-codebase-walkthrough"
-id="toc-quick-start-and-codebase-walkthrough">Quick-Start and Codebase
-Walkthrough</a></li>
+<li><a href="#overview" id="toc-overview">Overview</a></li>
 <li><a href="#the-snakemake-pipeline-files"
 id="toc-the-snakemake-pipeline-files">The Snakemake pipeline
 files</a></li>
@@ -269,28 +265,18 @@ id="toc-post-simulation-analysis">6. Post-simulation analysis</a></li>
 <li><a href="#legacy-cluster-scripts-legacycluster"
 id="toc-legacy-cluster-scripts-legacycluster">Legacy cluster scripts
 (<code>legacy/cluster/</code>)</a></li>
-<li><a href="#conventions-youll-see-everywhere"
-id="toc-conventions-youll-see-everywhere">Conventions you’ll see
-everywhere</a></li>
+<li><a href="#conventions" id="toc-conventions">Conventions</a></li>
 <li><a href="#common-pitfalls" id="toc-common-pitfalls">Common
 pitfalls</a></li>
 </ul></li>
 </ul>
 </nav>
-<h1
-id="code_guide-what-every-file-in-this-repo-actually-does">CODE_GUIDE:
-What Every File in This Repo Actually Does</h1>
-<p>This is a plain-language walkthrough of the whole codebase. It is
-written for people who don’t read Python and want to understand,
-end-to-end, what runs, what each script produces, and how the files feed
-into each other.</p>
-<p>If you just want to run the pipeline, see <a
-href="README.md"><code>README.md</code></a>. Come back here when you
-need to know <em>why</em> a step exists, what an output file contains,
-or where a specific variable is set.</p>
+<h1 id="chromsimpipe-code-guide">ChromSimPipe code guide</h1>
+<p>What each part of the codebase does, what it reads and writes, and
+how the steps connect. For running the pipeline, see <a
+href="README.md"><code>README.md</code></a>.</p>
 <hr />
-<h2 id="quick-start-and-codebase-walkthrough">Quick-Start and Codebase
-Walkthrough</h2>
+<h2 id="overview">Overview</h2>
 <h3 id="what-this-pipeline-does">What this pipeline does</h3>
 <p>ChromSimPipe is a physics-based simulation framework for testing
 mechanistic hypotheses about 3D chromatin organisation. Given CTCF
@@ -299,8 +285,8 @@ different parameter conditions and compares the resulting contact maps
 to experimental Hi-C.</p>
 <p>The included example (STRS project, Flores et al. 2026) asks:
 <strong>can we explain the stress-induced changes in Hi-C contact maps
-purely from what we can measure — changes in CTCF binding and cohesin
-dynamics — without invoking anything we can’t observe?</strong></p>
+purely from what we can measure (changes in CTCF binding and cohesin
+dynamics), without invoking anything we can’t observe?</strong></p>
 <p>The simulation models cohesin loop extrusion: cohesin rings load onto
 chromatin and extrude DNA into loops, stalling when they encounter CTCF
 sites oriented the right way. Where cohesins stall and how long they
@@ -356,20 +342,20 @@ Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertH
 <h3 id="setup-and-launch">Setup and launch</h3>
 <p>The workflow follows the PhanstielLab Snakemake pattern (bagPipes,
 dietJuicer): edit a samplesheet and a config, then submit one launcher.
-There is no separate setup script — converting Hi-C, orienting CTCF, and
+There is no separate setup script: converting Hi-C, orienting CTCF, and
 building conda environments are all workflow steps.</p>
 <ol type="1">
-<li><strong><code>ChromSimSamplesheet.txt</code></strong> — one
+<li><strong><code>ChromSimSamplesheet.txt</code></strong>: one
 tab-separated row per sample. The required columns are
 <code>CTCF_Peaks</code> and <code>Hi-C</code> (<code>NA</code> when a
 sample has no file of that kind); all other columns are metadata.</li>
-<li><strong><code>config/ChromSimConfig.yaml</code></strong> —
+<li><strong><code>config/ChromSimConfig.yaml</code></strong>:
 <code>fileNamesFrom</code> names the samplesheet columns joined with
 <code>_</code> to name each sample. Conditions refer to samples by those
 names (<code>ctcf_type</code>, <code>compare_hic</code>). The config
 also sets the locus, physics, genome, CTCF motif, conda environments,
 and <code>outputDir</code>.</li>
-<li><strong><code>profiles/&lt;site&gt;/</code></strong> — the compute
+<li><strong><code>profiles/&lt;site&gt;/</code></strong>: the compute
 site, named by <code>hpcProfile</code> in the config.
 <code>config.yaml</code> holds the scheduler, account and each rule’s
 CPUs / memory / GPU under <code>set-resources:</code>;
@@ -429,7 +415,7 @@ extraction: <code>scripts/extract_ctcf_sites.py</code></h3>
 <p>Your <code>.narrowPeak</code> file has peak coordinates but no strand
 information. Orientation matters because a <code>+</code> CTCF site
 blocks a cohesin arm moving leftward, while a <code>−</code> site blocks
-one moving rightward — so a convergent pair (<code>+</code> on the left,
+one moving rightward. A convergent pair (<code>+</code> on the left,
 <code>−</code> on the right) creates a stably anchored loop, while a
 divergent pair does not.</p>
 <p>This script:</p>
@@ -479,17 +465,17 @@ counted later, in the analysis.</li>
 </ol>
 <h3 id="the-analysis-analysis">The analysis: <code>analysis/</code></h3>
 <ul>
-<li><strong><code>contact_maps.py</code></strong> — accumulates saved
+<li><strong><code>contact_maps.py</code></strong>: accumulates saved
 conformations into a 2D contact frequency matrix using
 <code>scipy.spatial.cKDTree</code> for fast distance lookups. This is
 the simulated analogue of a Hi-C contact map.</li>
-<li><strong><code>ps_curve.py</code></strong> — computes P(s): contact
+<li><strong><code>ps_curve.py</code></strong>: computes P(s): contact
 probability as a function of genomic separation. The shape of this curve
 is the primary comparison metric against real Hi-C.</li>
-<li><strong><code>experimental_compare.py</code></strong> — loads your
+<li><strong><code>experimental_compare.py</code></strong>: loads your
 <code>.cool</code> file via <code>cooler</code> and extracts the same
 locus at the configured resolution.</li>
-<li><strong><code>msd_two_point.py</code></strong> — tracks mean-squared
+<li><strong><code>msd_two_point.py</code></strong>: tracks mean-squared
 displacement of specific monomer pairs over time (the in-silico analogue
 of live-cell imaging).</li>
 </ul>
@@ -500,8 +486,9 @@ PhanstielLab pipelines: a samplesheet plus a config drive everything,
 every rule writes its own log and benchmark, rules carry no cluster
 resources (the profile does), and one <code>sbatch</code> launches it
 all.</p>
-<h3 id="chromsimpipe.sh-sbatch-entry-point"><code>ChromSimPipe.sh</code>
-— sbatch entry point</h3>
+<h3
+id="chromsimpipe.sh-sbatch-entry-point"><code>ChromSimPipe.sh</code>:
+sbatch entry point</h3>
 <p>Submit with <code>sbatch ChromSimPipe.sh</code>. It:</p>
 <ol type="1">
 <li>Sources <code>&lt;hpcProfile&gt;/env.sh</code>, which makes
@@ -518,15 +505,15 @@ profile uses the SLURM executor.</li>
 <p>Any extra arguments go to <code>snakemake</code> (<code>-n</code> for
 a dry run, <code>--configfile other.yaml</code>,
 <code>--until validateCTCF</code>, …).</p>
-<h3 id="unlock.sh-release-lock-after-failure"><code>unlock.sh</code> —
+<h3 id="unlock.sh-release-lock-after-failure"><code>unlock.sh</code>:
 release lock after failure</h3>
 <p>Snakemake writes a <code>.snakemake/locks/</code> directory while
 running. If the job dies without cleanup, the lock persists and the next
 run refuses to start. <code>bash unlock.sh</code> runs
 <code>snakemake --unlock</code> against the workflow to clear it.</p>
 <h3
-id="workflowschromsimpipe.snakefile-the-dag"><code>workflows/ChromSimPipe.snakefile</code>
-— the DAG</h3>
+id="workflowschromsimpipe.snakefile-the-dag"><code>workflows/ChromSimPipe.snakefile</code>:
+the DAG</h3>
 <table>
 <colgroup>
 <col style="width: 23%" />
@@ -561,23 +548,23 @@ at <code>resolution</code></td>
 <tr class="even">
 <td><code>validateCTCF</code></td>
 <td>once</td>
-<td><code>validate_ctcf.py</code> — sanity-checks all BED files</td>
+<td><code>validate_ctcf.py</code>: sanity-checks all BED files</td>
 </tr>
 <tr class="odd">
 <td><code>simulateShard</code></td>
 <td>condition × replicate × shard (GPU)</td>
-<td><code>run_simulation_shard.py</code> — 36 jobs with the example
+<td><code>run_simulation_shard.py</code>: 36 jobs with the example
 config</td>
 </tr>
 <tr class="even">
 <td><code>mergeShards</code></td>
 <td>condition × replicate</td>
-<td><code>merge_shards.py</code> — concatenates shard HDF5 streams</td>
+<td><code>merge_shards.py</code>: concatenates shard HDF5 streams</td>
 </tr>
 <tr class="odd">
 <td><code>analyzeCondition</code></td>
 <td>per condition</td>
-<td><code>run_analysis_all.py</code> — contact maps, P(s), APA,
+<td><code>run_analysis_all.py</code>: contact maps, P(s), APA,
 figures</td>
 </tr>
 <tr class="even">
@@ -589,17 +576,17 @@ figures</td>
 </table>
 <p>Every rule has the same parts, following bagPipes:</p>
 <ul>
-<li><code>log:</code> — stdout / stderr to
+<li><code>log:</code>: stdout / stderr to
 <code>output/logs/{rule}_{wildcards}.out|.err</code></li>
-<li><code>benchmark:</code> —
+<li><code>benchmark:</code>:
 <code>output/benchmarks/{rule}_{wildcards}.tsv</code> (wall time,
 memory), summarised in
 <code>output/{runName}_benchmarking.tsv</code></li>
-<li><code>conda:</code> — an entry from <code>condaEnvs</code> in the
+<li><code>conda:</code>: an entry from <code>condaEnvs</code> in the
 config; the shell runs scripts with
 <code>"$CONDA_PREFIX/bin/python"</code>, that environment’s own
 interpreter</li>
-<li><code>params:</code> — every value read from the config; nothing is
+<li><code>params:</code>: every value read from the config; nothing is
 typed in</li>
 </ul>
 <p>Wildcards: <code>{sampleName}</code> / <code>{ctcfType}</code> are
@@ -622,8 +609,8 @@ was given. Steps whose real outputs are directories (simulation, merge,
 analysis) are tracked through completion markers in
 <code>output/done/</code>.</p>
 <h3
-id="profilessiteconfig.yaml-scheduler-settings"><code>profiles/&lt;site&gt;/config.yaml</code>
-— scheduler settings</h3>
+id="profilessiteconfig.yaml-scheduler-settings"><code>profiles/&lt;site&gt;/config.yaml</code>:
+scheduler settings</h3>
 <p>This is the only place cluster details live. In
 <code>profiles/longleaf/</code>, <code>default-resources:</code> sets
 the account, partition, wall time, and memory for every job.
@@ -634,8 +621,8 @@ free node first, with <code>qos: gpu_access</code> and
 <code>gpu: 1</code>. <code>software-deployment-method: conda</code>
 makes Snakemake activate each rule’s environment.</p>
 <h3
-id="chromsimsamplesheet.txt-samples"><code>ChromSimSamplesheet.txt</code>
-— samples</h3>
+id="chromsimsamplesheet.txt-samples"><code>ChromSimSamplesheet.txt</code>:
+samples</h3>
 <pre><code>Project  Cell_Type  Condition   CTCF_Peaks                    Hi-C
 STRS     HEK293T    condition1  /path/to/control.narrowPeak   /path/to/control.hic
 STRS     HEK293T    condition2  /path/to/sorbitol.narrowPeak  /path/to/sorbitol.hic</code></pre>
@@ -647,55 +634,45 @@ workflow writes the parsed samplesheet, with a <code>sampleName</code>
 column, to <code>output/{runName}_ChromSimSamplesheet.txt</code>.</p>
 <hr />
 <h2 id="reading-order">Reading order</h2>
-<p>Everything here is organised by pipeline stage, top-down:</p>
+<p>Sections are ordered by pipeline stage:</p>
 <ol type="1">
 <li><a href="#the-snakemake-pipeline-files">The Snakemake pipeline
-files</a> — <strong>start here</strong></li>
-<li><a href="#project-layout">Project layout</a> — what each folder is
+files</a>: <strong>start here</strong></li>
+<li><a href="#project-layout">Project layout</a>: what each folder is
 for</li>
-<li><a href="#1-configuration-configsparameterspy">Configuration</a> —
+<li><a href="#1-configuration-configsparameterspy">Configuration</a>:
 the single file that controls every simulation</li>
-<li><a href="#2-hi-c-data-preparation">Hi-C data preparation</a> —
+<li><a href="#2-hi-c-data-preparation">Hi-C data preparation</a>:
 turning experimental data into comparison matrices</li>
-<li><a href="#3-ctcf-annotation">CTCF annotation</a> — turning
+<li><a href="#3-ctcf-annotation">CTCF annotation</a>: turning
 CUT&amp;Tag peaks into oriented barrier lists</li>
-<li><a href="#4-the-lef-dynamics-engine">The LEF dynamics engine</a> —
+<li><a href="#4-the-lef-dynamics-engine">The LEF dynamics engine</a>:
 the loop-extrusion simulator</li>
-<li><a href="#5-running-simulations">Running simulations</a> — the
-shard, merge, and single-run entry points</li>
-<li><a href="#6-post-simulation-analysis">Post-simulation analysis</a> —
+<li><a href="#5-running-simulations">Running simulations</a>: the shard,
+merge, and single-run entry points</li>
+<li><a href="#6-post-simulation-analysis">Post-simulation analysis</a>:
 contact maps, P(s), APA, MSD, calibration</li>
 <li><a href="#legacy-cluster-scripts-legacycluster">Legacy cluster
-scripts</a> — old sbatch wrappers (superseded by ChromSimPipe.sh)</li>
-<li><a href="#conventions-youll-see-everywhere">Conventions you’ll see
-everywhere</a> — monomers, tiling, output directory names</li>
-<li><a href="#common-pitfalls">Common pitfalls</a> — what to check when
+scripts</a>: old sbatch wrappers (superseded by ChromSimPipe.sh)</li>
+<li><a href="#conventions">Conventions</a>: monomers, tiling, output
+directory names</li>
+<li><a href="#common-pitfalls">Common pitfalls</a>: what to check when
 something looks wrong</li>
 </ol>
-<p>Every script section follows the same format:</p>
-<ul>
-<li><strong>File</strong> — path in the repo</li>
-<li><strong>Purpose</strong> — one-sentence summary</li>
-<li><strong>Inputs</strong> — command-line flags and files read</li>
-<li><strong>Outputs</strong> — files written, with exact paths</li>
-<li><strong>How to run it</strong> — example command</li>
-<li><strong>What it does, step by step</strong> — plain-language
-walkthrough</li>
-</ul>
 <h2 id="project-layout">Project layout</h2>
 <pre><code>ChromSimPipe/
-├── ChromSimPipe.sh   — sbatch launcher
-├── ChromSimSamplesheet.txt — one row per sample (edit before first run)
-├── config/           — ChromSimConfig.yaml + requirements.txt (edit before first run)
-├── configs/          — parameters.py (reads the config + samplesheet; single source of truth)
-├── envs/             — conda environment specs used by the rules
-├── scripts/          — Python simulation, analysis, and utility scripts
-├── analysis/         — Python modules imported by scripts/run_analysis_all.py
-├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile) + utils/
-├── profiles/         — one folder per compute site (longleaf, pioneer, local, slurm-template)
-├── legacy/           — unmaintained code from the lab&#39;s mESC/neuron project (see legacy/README.md)
-├── tests/            — test suite
-└── output/           — everything the workflow writes (git-ignored; set by outputDir)</code></pre>
+├── ChromSimPipe.sh   sbatch launcher
+├── ChromSimSamplesheet.txt  one row per sample (edit before first run)
+├── config/           ChromSimConfig.yaml + requirements.txt (edit before first run)
+├── configs/          parameters.py (reads the config + samplesheet; single source of truth)
+├── envs/             conda environment specs used by the rules
+├── scripts/          Python simulation, analysis, and utility scripts
+├── analysis/         Python modules imported by scripts/run_analysis_all.py
+├── workflows/        Snakemake DAG (ChromSimPipe.snakefile) + utils/
+├── profiles/         one folder per compute site (longleaf, pioneer, local, slurm-template)
+├── legacy/           unmaintained code from the lab&#39;s mESC/neuron project (see legacy/README.md)
+├── tests/            test suite
+└── output/           everything the workflow writes (git-ignored; set by outputDir)</code></pre>
 <h2 id="configuration-configsparameters.py">1. Configuration:
 <code>configs/parameters.py</code></h2>
 <p><strong>Purpose.</strong> This file is the runtime source of truth
@@ -722,14 +699,14 @@ Bond lengths, bending stiffness (<code>angle_force</code>), confinement
 density, integration tolerance, GPU platform. Rarely changed between
 projects.</p></li>
 <li><p><strong>LEF ↔︎ polymer bonds</strong> (<code>SMC_BOND</code>). How
-stiff the cohesin “ring” is in 3D — how strongly it pulls the two loop
-flanks together.</p></li>
+stiff the cohesin “ring” is in 3D, i.e. how strongly it pulls the two
+loop flanks together.</p></li>
 <li><p><strong>CTCF tracks</strong> (<code>CTCF_TYPES</code>,
 <code>CTCF_PEAKS</code>, <code>CTCF_BEDS</code>). One oriented BED per
 <code>ctcf_type</code> used by a condition, under
 <code>output/ctcf/</code>. At import time,
 <code>load_ctcf_from_bed()</code> reads each file into
-<code>CTCF_SITES_BY_TYPE[type]</code> — monomer indices with
+<code>CTCF_SITES_BY_TYPE[type]</code>: monomer indices with
 <code>+1</code> / <code>−1</code> orientation labels. Type names are
 samplesheet sample names, so any number of CTCF samples is
 supported.</p></li>
@@ -754,20 +731,20 @@ polymer length (~70,000 monomers).</p></li>
 <li><p><strong>Analysis</strong> (<code>ANALYSIS</code>,
 <code>MSD_PROBE</code>, <code>MSD_FIT</code>, <code>CALIBRATION</code>).
 Worker count, APA window, MSD probes and fits, and how to map simulation
-units → physical units — all from the <code>analysis:</code>
+units → physical units. All come from the <code>analysis:</code>
 block.</p></li>
 </ul>
-<p><strong>Helper functions you’ll see called elsewhere:</strong></p>
+<p><strong>Helper functions:</strong></p>
 <ul>
-<li><code>get_condition(name)</code> — look up one entry in
+<li><code>get_condition(name)</code>: look up one entry in
 <code>SIMULATION_CONDITIONS</code>.</li>
-<li><code>list_conditions()</code> — list all condition names.</li>
-<li><code>get_ctcf_arrays(ctcf_type)</code> — returns
+<li><code>list_conditions()</code>: list all condition names.</li>
+<li><code>get_ctcf_arrays(ctcf_type)</code>: returns
 <code>(positions, orientations)</code> for the untiled locus; raises if
 that sample’s BED has not been made.</li>
-<li><code>get_tiled_ctcf_arrays(ctcf_type)</code> — same but repeated
+<li><code>get_tiled_ctcf_arrays(ctcf_type)</code>: same but repeated
 across the tiled polymer (what the simulations actually use).</li>
-<li><code>load_ctcf_from_bed(path)</code> — read a BED6 file and return
+<li><code>load_ctcf_from_bed(path)</code>: read a BED6 file and return
 <code>(positions, orientations)</code> as monomer-index arrays.</li>
 </ul>
 <h2 id="hi-c-data-preparation">2. Hi-C data preparation</h2>
@@ -801,7 +778,7 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--assembly</span> hg38 <span class="dt">\</span></span>
 <span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--fimo-thresh</span> 1e-3 <span class="at">--flank</span> 100 <span class="at">--unoriented</span> drop <span class="at">--resolution</span> 1000 <span class="dt">\</span></span>
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output</span> output/ctcf/ctcf_oriented_hg38_condition1_chr1_64210000_66170000.bed</span></code></pre></div>
-<p><strong>Output:</strong> BED6 — one row per peak with a FIMO hit;
+<p><strong>Output:</strong> BED6, one row per peak with a FIMO hit;
 column 6 (<code>+</code>/<code>−</code>) is the motif strand.</p>
 <h3
 id="scriptsvalidate_ctcf.py"><code>scripts/validate_ctcf.py</code></h3>
@@ -826,24 +803,24 @@ only cohesin did” scenarios.</p>
 <h3
 id="scriptslef_dynamics.py"><code>scripts/lef_dynamics.py</code></h3>
 <p><strong>Purpose.</strong> A lightweight 1D Python simulator for
-loop-extruding factors (cohesins). No 3D physics — just: where are the
-cohesins on the lattice, where are they stalled, where do they jump when
-they unbind.</p>
+loop-extruding factors (cohesins). No 3D physics, just where the
+cohesins are on the lattice, where they stall, and where they reload
+after unbinding.</p>
 <p><strong>Class: <code>LEFSimulator</code>.</strong> Constructor
 arguments:</p>
 <ul>
-<li><code>N</code> — lattice length in monomers.</li>
-<li><code>n_lefs</code> — how many cohesins to place.</li>
-<li><code>lifetime</code> — mean number of steps a cohesin stays bound
+<li><code>N</code>: lattice length in monomers.</li>
+<li><code>n_lefs</code>: how many cohesins to place.</li>
+<li><code>lifetime</code>: mean number of steps a cohesin stays bound
 before unbinding
 (<code>unbind probability per step = 1/lifetime</code>).</li>
-<li><code>ctcf_positions</code>, <code>ctcf_orientations</code> — from
+<li><code>ctcf_positions</code>, <code>ctcf_orientations</code>: from
 <code>get_ctcf_arrays</code>.</li>
-<li><code>ctcf_capture</code> — probability of stalling when a cohesin
+<li><code>ctcf_capture</code>: probability of stalling when a cohesin
 arm moves onto a CTCF site with the blocking orientation.</li>
-<li><code>ctcf_release</code> — probability per step that a stalled
+<li><code>ctcf_release</code>: probability per step that a stalled
 cohesin lets go.</li>
-<li><code>rng_seed</code> — for reproducibility.</li>
+<li><code>rng_seed</code>: for reproducibility.</li>
 </ul>
 <p><strong>What each <code>step()</code> call does.</strong></p>
 <ol type="1">
@@ -864,16 +841,16 @@ flag as stalled.</li>
 escape.</li>
 </ul></li>
 </ol>
-<p><strong>Public methods you’ll see used.</strong></p>
+<p><strong>Public methods.</strong></p>
 <ul>
-<li><code>get_bonds()</code> — list of <code>(left, right)</code> tuples
+<li><code>get_bonds()</code>: list of <code>(left, right)</code> tuples
 of current cohesin-bridged monomer pairs. Fed to polychrom as harmonic
 SMC bonds.</li>
-<li><code>get_bond_arrays()</code> — same but as two parallel NumPy
+<li><code>get_bond_arrays()</code>: same but as two parallel NumPy
 arrays.</li>
-<li><code>get_loop_sizes()</code> — current loop lengths (in
+<li><code>get_loop_sizes()</code>: current loop lengths (in
 monomers).</li>
-<li><code>run(n_steps)</code> — convenience: step <code>n_steps</code>
+<li><code>run(n_steps)</code>: convenience: step <code>n_steps</code>
 times, return the list of per-step bond lists.</li>
 </ul>
 <p><strong>Output variables you should know.</strong> After a
@@ -883,7 +860,7 @@ times, return the list of per-step bond lists.</li>
 <code>right_stalled[i]</code>, <code>occupied[pos]</code>.</p>
 <h2 id="running-simulations">5. Running simulations</h2>
 <h3 id="a.-scriptsrun_simulation_shard.py-the-snakemake-entry-point">5a.
-<code>scripts/run_simulation_shard.py</code> — the Snakemake entry
+<code>scripts/run_simulation_shard.py</code>: the Snakemake entry
 point</h3>
 <p>This is what every <code>simulateShard</code> SLURM job calls (36
 jobs with the example config: 3 conditions × 3 replicates × 4
@@ -929,8 +906,8 @@ params + CTCF track.</td>
 </tr>
 <tr class="odd">
 <td><code>--shard-index-offset M</code></td>
-<td>Add <code>M</code> to shard index — use to extend existing runs
-without overwriting.</td>
+<td>Add <code>M</code> to shard index, to extend existing runs without
+overwriting.</td>
 </tr>
 </tbody>
 </table>
@@ -947,8 +924,8 @@ fetch tiled CTCF arrays.</li>
 <li>Warm up <code>LEFSimulator</code> for <code>warmup_blocks</code>
 steps (throw away).</li>
 <li><strong>Pre-compute</strong> all LEF bond states for every block in
-advance — the 1D dynamics are independent of 3D physics, so doing this
-up front lets the polychrom loop replay bonds from a list.</li>
+advance. The 1D dynamics are independent of 3D physics, so doing this up
+front lets the polychrom loop replay bonds from a list.</li>
 <li>Register all unique bond pairs as <code>harmonic_bonds</code> at
 <code>k=0</code>; flip <code>k</code> each block (~10× faster than
 adding/removing bonds).</li>
@@ -968,7 +945,7 @@ the analysis expects. Writes <code>merge_metadata.json</code> recording
 which shard IDs contributed.</p>
 <pre><code>--condition, --replicate, --n-shards, --results-dir</code></pre>
 <h3 id="c.-scriptsrun_simulation.py-single-run-local-testing">5c.
-<code>scripts/run_simulation.py</code> — single-run / local testing</h3>
+<code>scripts/run_simulation.py</code>: single-run / local testing</h3>
 <p>One-shot simulation without sharding. Useful for local testing or
 LEF-only sanity checks:</p>
 <div class="sourceCode" id="cb8"><pre
@@ -1175,16 +1152,15 @@ the full DAG on Longleaf.</p>
 <h3 id="afterok-vs-afterany"><code>afterok</code> vs
 <code>afterany</code></h3>
 <ul>
-<li><code>--dependency=afterok:&lt;JID&gt;</code> — fire only if
-upstream finished with exit 0. Use between pipeline stages where failure
-upstream makes the next stage meaningless.</li>
-<li><code>--dependency=afterany:&lt;JID&gt;</code> — fire regardless of
+<li><code>--dependency=afterok:&lt;JID&gt;</code>: fire only if upstream
+finished with exit 0. Use between pipeline stages where failure upstream
+makes the next stage meaningless.</li>
+<li><code>--dependency=afterany:&lt;JID&gt;</code>: fire regardless of
 how upstream ended. Use for resume-chain links meant to recover from
 wall-time TIMEOUTs. <code>submit_analysis_resume_chain.sh</code> uses
 this pattern.</li>
 </ul>
-<h2 id="conventions-youll-see-everywhere">Conventions you’ll see
-everywhere</h2>
+<h2 id="conventions">Conventions</h2>
 <ul>
 <li><strong>Monomer = <code>resolution</code> bp (1 kb by
 default).</strong> Monomer index <code>i</code> covers
@@ -1219,10 +1195,16 @@ that only the scripts read).</li>
 <code>openmm.OpenMMException: nvrtc: error: invalid value for --gpu-architecture (-arch)</code>
 means the environment’s CUDA cannot compile for the allocated GPU. CUDA
 13 dropped Pascal (GTX 10xx) and Volta (V100);
-<code>envs/cohesin_sim.yml</code> pins <code>cuda-version=12</code> for
-this reason. Check with
+<code>envs/cohesin_sim.yml</code> pins <code>cuda-version=12.4</code>
+for this reason. Check with
 <code>conda list -p &lt;env&gt; | grep cuda-version</code> and rebuild
 if it says 13.</p>
+<p><strong><code>CUDA_ERROR_UNSUPPORTED_PTX_VERSION</code>.</strong> The
+environment’s CUDA is newer than the GPU node’s NVIDIA driver supports.
+<code>nvidia-smi</code> on a GPU node prints “CUDA Version”, the most
+the driver supports; <code>cuda-version</code> in
+<code>envs/cohesin_sim.yml</code> must not exceed it (12.4 needs a
+driver of 550 or newer).</p>
 <p><strong>No Hi-C comparison in the analysis output.</strong> The
 analysis catches errors in each step, logs a warning and continues, so
 check <code>output/logs/analyzeCondition_*.err</code> for

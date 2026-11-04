@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # ==============================================================================
-# ChromSimPipe — cohesin loop-extrusion simulation workflow
+# ChromSimPipe - cohesin loop-extrusion simulation workflow
 #
 # Run with:  sbatch ChromSimPipe.sh
 #
@@ -10,12 +10,15 @@
 # samplesheet it names. configs/parameters.py parses both; this file only
 # wires the rules together.
 #
-#   convertHic (per Hi-C sample) ─────────────────────────────┐
-#   getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF  │
-#                    ─► simulateShard (condition × rep × shard, GPU)
-#                    ─► mergeShards (condition × rep)         │
-#                    ─► analyzeCondition (condition) ◄────────┘
-#                    ─► benchmarkSummary
+#   Rules, in order:
+#     convertHic        per Hi-C sample
+#     getMotif          once
+#     orientCTCF        per CTCF sample
+#     validateCTCF      once
+#     simulateShard     per condition x replicate x shard (GPU)
+#     mergeShards       per condition x replicate
+#     analyzeCondition  per condition (needs convertHic output)
+#     benchmarkSummary  once
 # ==============================================================================
 
 import os

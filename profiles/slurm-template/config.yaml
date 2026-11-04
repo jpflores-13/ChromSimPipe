@@ -33,8 +33,8 @@ set-resources:
   simulateShard:
     runtime: 720
     slurm_partition: <gpu partition>
-    gpu: 1                          # becomes --gpus=1; if your site wants --gres, use
-                                    # gres: "'gpu:1'" instead (keep both quote pairs)
+    gpu: 1                          # becomes --gpus=1. Prefer this: on Pioneer a
+                                    # gres: "'gpu:1'" request was never submitted.
     # qos: <gpu qos>                # only if your site requires a QOS for GPUs
     cpus_per_task: 4
     mem_mb: 60000

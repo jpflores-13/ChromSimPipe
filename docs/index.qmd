@@ -82,7 +82,7 @@ for comparison. See Yang et al. 2023 *Nat Commun* for details.
 
 ## References
 
-- Flores et al. 2026 — STRS paper. GEO: GSE310051 (Hi-C), GSE310047 (CUT&Tag).
+- Flores et al. 2026, STRS paper. GEO: GSE310051 (Hi-C), GSE310047 (CUT&Tag).
 - Fudenberg et al., *Cell Reports* **15**:2038–2049 (2016). Canonical loop-extrusion model.
 - Banigan et al., *eLife* **9**:e53558 (2020). LEF dynamics and CTCF barriers.
 - Gabriele et al., *Science* **376**:496–501 (2022). Live-cell cohesin imaging (parameter source).

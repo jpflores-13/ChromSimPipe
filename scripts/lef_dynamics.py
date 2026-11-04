@@ -178,7 +178,7 @@ class LEFSimulator:
                 else:
                     pass  # at boundary
             else:
-                # Stalled at CTCF — release with small probability
+                # Stalled at CTCF - release with small probability
                 if self.rng.random() < self.ctcf_release:
                     self.left_stalled[i] = False
 

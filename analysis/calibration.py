@@ -9,11 +9,11 @@ one frame. This module produces that mapping.
 
 Two anchor strategies, selectable at runtime
 --------------------------------------------
-* ``"hic"`` — match the simulation P(s) curve to an experimental Hi-C
+* ``"hic"`` - match the simulation P(s) curve to an experimental Hi-C
   P(s) at a chosen reference separation. Works whenever you already have
   a Bonev mcool sitting on disk; no microscopy required.
 
-* ``"msd"`` — Gabriele/Fbn2 formulas: match the steady-state plateau and
+* ``"msd"`` - Gabriele/Fbn2 formulas: match the steady-state plateau and
   short-time diffusivity of the two-point MSD between simulation and
   experiment to solve for dx_sim (nm) and dt_sim (s). Needs a microscopy
   MSD curve for the same genomic separation.

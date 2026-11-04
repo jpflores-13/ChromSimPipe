@@ -20,10 +20,10 @@ not change when you move.
 
 Each folder has two files:
 
-- `env.sh` — sourced by `ChromSimPipe.sh` and `unlock.sh`; makes `python3`
+- `env.sh`: sourced by `ChromSimPipe.sh` and `unlock.sh`; makes `python3`
   (≥ 3.11) and `conda` available (`module load ...`, or
   `source ~/miniforge3/etc/profile.d/conda.sh`).
-- `config.yaml` — the Snakemake profile: scheduler, account, partitions, and
+- `config.yaml`: the Snakemake profile: scheduler, account, partitions, and
   each rule's CPUs / memory / GPU.
 
 To set up a new SLURM cluster:
@@ -63,7 +63,7 @@ On Pioneer, inputs and code live in home and compute output goes to scratch:
 | Peaks, `.hic` maps, genome FASTA | `/home/jxf700/ChromSimPipe_data/` |
 | The clone (and the conda environments Snakemake builds inside it) | home |
 | Miniforge | `$HOME/miniforge3` |
-| `outputDir` (simulations, analysis, logs) | scratch — replace `<your scratch dir>` in both Pioneer configs |
+| `outputDir` (simulations, analysis, logs) | scratch; replace `<your scratch dir>` in both Pioneer configs |
 
 Scratch is purged automatically, so copy `<outputDir>/analysis/` and
 `<outputDir>/*_benchmarking.tsv` back to home when a run finishes.
@@ -74,7 +74,7 @@ Scratch is purged automatically, so copy `<outputDir>/analysis/` and
 |---------|-------|-------|
 | Account | `pjt5_1` (its QOS `gpuext2` applies by default) | `default-resources: slurm_account` |
 | CPU partition | `batch` | `default-resources: slurm_partition` |
-| GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gres: "gpu:1"` | `set-resources: simulateShard` |
+| GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gpu: 1` (`--gpus=1`) | `set-resources: simulateShard` |
 | Software | your own Miniforge (Pioneer's `Miniconda3` modules ship conda 23.x) | `env.sh` |
 
 ## SLURM account and partition (Longleaf)
@@ -95,14 +95,14 @@ Longleaf's `anaconda` modules ship conda 24.1, older than Snakemake needs.
 
 | Rule | Partition | CPUs | RAM | Wall time | GPU |
 |------|-----------|------|-----|-----------|-----|
-| `convertHic` | general | 4 | 32 GB | 8 h | — |
-| `getMotif` | general | 1 | 1 GB | 15 min | — |
-| `orientCTCF` | general | 2 | 16 GB | 1 h | — |
-| `validateCTCF` | general | 1 | 4 GB | 15 min | — |
+| `convertHic` | general | 4 | 32 GB | 8 h | - |
+| `getMotif` | general | 1 | 1 GB | 15 min | - |
+| `orientCTCF` | general | 2 | 16 GB | 1 h | - |
+| `validateCTCF` | general | 1 | 4 GB | 15 min | - |
 | `simulateShard` | **l40-gpu, volta-gpu, gpu** | 4 | 60 GB | 12 h | **1** |
-| `mergeShards` | general | 4 | 64 GB | 2 h | — |
-| `analyzeCondition` | general | 4 | 64 GB | 6 h | — |
-| `benchmarkSummary` | general | 1 | 2 GB | 15 min | — |
+| `mergeShards` | general | 4 | 64 GB | 2 h | - |
+| `analyzeCondition` | general | 4 | 64 GB | 6 h | - |
+| `benchmarkSummary` | general | 1 | 2 GB | 15 min | - |
 
 ## Log file locations
 

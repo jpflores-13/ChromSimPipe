@@ -1,6 +1,6 @@
 ---
 title: "ChromSimPipe Code Guide"
-subtitle: "End-to-end walkthrough of the cohesin loop-extrusion simulation codebase"
+subtitle: "Cohesin loop-extrusion simulation codebase"
 date: "2026"
 geometry: "margin=1in"
 fontsize: 11pt
@@ -9,19 +9,14 @@ toc-depth: 2
 colorlinks: true
 ---
 
-# CODE_GUIDE: What Every File in This Repo Actually Does
+# ChromSimPipe code guide
 
-This is a plain-language walkthrough of the whole codebase. It is written for
-people who don't read Python and want to understand, end-to-end, what runs,
-what each script produces, and how the files feed into each other.
-
-If you just want to run the pipeline, see [`README.md`](README.md). Come
-back here when you need to know *why* a step exists, what an output file
-contains, or where a specific variable is set.
+What each part of the codebase does, what it reads and writes, and how the
+steps connect. For running the pipeline, see [`README.md`](README.md).
 
 ---
 
-## Quick-Start and Codebase Walkthrough
+## Overview
 
 ### What this pipeline does
 
@@ -32,7 +27,7 @@ and compares the resulting contact maps to experimental Hi-C.
 
 The included example (STRS project, Flores et al. 2026) asks: **can we explain
 the stress-induced changes in Hi-C contact maps purely from what we can measure
-— changes in CTCF binding and cohesin dynamics — without invoking anything
+(changes in CTCF binding and cohesin dynamics), without invoking anything
 we can't observe?**
 
 The simulation models cohesin loop extrusion: cohesin rings load onto
@@ -65,18 +60,18 @@ Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertH
 
 The workflow follows the PhanstielLab Snakemake pattern (bagPipes,
 dietJuicer): edit a samplesheet and a config, then submit one launcher.
-There is no separate setup script — converting Hi-C, orienting CTCF, and
+There is no separate setup script: converting Hi-C, orienting CTCF, and
 building conda environments are all workflow steps.
 
-1. **`ChromSimSamplesheet.txt`** — one tab-separated row per sample. The
+1. **`ChromSimSamplesheet.txt`**: one tab-separated row per sample. The
    required columns are `CTCF_Peaks` and `Hi-C` (`NA` when a sample has
    no file of that kind); all other columns are metadata.
-2. **`config/ChromSimConfig.yaml`** — `fileNamesFrom` names the
+2. **`config/ChromSimConfig.yaml`**: `fileNamesFrom` names the
    samplesheet columns joined with `_` to name each sample. Conditions
    refer to samples by those names (`ctcf_type`, `compare_hic`). The
    config also sets the locus, physics, genome, CTCF motif, conda
    environments, and `outputDir`.
-3. **`profiles/<site>/`** — the compute site, named by `hpcProfile` in the
+3. **`profiles/<site>/`**: the compute site, named by `hpcProfile` in the
    config. `config.yaml` holds the scheduler, account and each rule's
    CPUs / memory / GPU under `set-resources:`; `env.sh` loads the software.
    Shipped: `longleaf` (UNC), `pioneer` (Case Western, with its own
@@ -131,7 +126,7 @@ comparison. All three numbers are in the `tiling:` block.
 
 Your `.narrowPeak` file has peak coordinates but no strand information.
 Orientation matters because a `+` CTCF site blocks a cohesin arm moving
-leftward, while a `−` site blocks one moving rightward — so a convergent
+leftward, while a `−` site blocks one moving rightward. A convergent
 pair (`+` on the left, `−` on the right) creates a stably anchored loop,
 while a divergent pair does not.
 
@@ -178,15 +173,15 @@ This is where polychrom (OpenMM on GPU) runs. For each block:
 
 ### The analysis: `analysis/`
 
-- **`contact_maps.py`** — accumulates saved conformations into a 2D contact
+- **`contact_maps.py`**: accumulates saved conformations into a 2D contact
   frequency matrix using `scipy.spatial.cKDTree` for fast distance lookups.
   This is the simulated analogue of a Hi-C contact map.
-- **`ps_curve.py`** — computes P(s): contact probability as a function of
+- **`ps_curve.py`**: computes P(s): contact probability as a function of
   genomic separation. The shape of this curve is the primary comparison
   metric against real Hi-C.
-- **`experimental_compare.py`** — loads your `.cool` file via `cooler`
+- **`experimental_compare.py`**: loads your `.cool` file via `cooler`
   and extracts the same locus at the configured resolution.
-- **`msd_two_point.py`** — tracks mean-squared displacement of specific
+- **`msd_two_point.py`**: tracks mean-squared displacement of specific
   monomer pairs over time (the in-silico analogue of live-cell imaging).
 
 ---
@@ -198,7 +193,7 @@ pipelines: a samplesheet plus a config drive everything, every rule writes
 its own log and benchmark, rules carry no cluster resources (the profile
 does), and one `sbatch` launches it all.
 
-### `ChromSimPipe.sh` — sbatch entry point
+### `ChromSimPipe.sh`: sbatch entry point
 
 Submit with `sbatch ChromSimPipe.sh`. It:
 
@@ -214,33 +209,33 @@ Submit with `sbatch ChromSimPipe.sh`. It:
 Any extra arguments go to `snakemake` (`-n` for a dry run,
 `--configfile other.yaml`, `--until validateCTCF`, ...).
 
-### `unlock.sh` — release lock after failure
+### `unlock.sh`: release lock after failure
 
 Snakemake writes a `.snakemake/locks/` directory while running. If the job
 dies without cleanup, the lock persists and the next run refuses to start.
 `bash unlock.sh` runs `snakemake --unlock` against the workflow to clear it.
 
-### `workflows/ChromSimPipe.snakefile` — the DAG
+### `workflows/ChromSimPipe.snakefile`: the DAG
 
 | Rule | Runs | What it does |
 |------|------|--------------|
 | `convertHic` | per Hi-C sample | `hic2cool convert` `.hic` → `.cool` at `resolution` |
 | `getMotif` | once | `wget` the JASPAR motif (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | per CTCF sample used by a condition | `extract_ctcf_sites.py` |
-| `validateCTCF` | once | `validate_ctcf.py` — sanity-checks all BED files |
-| `simulateShard` | condition × replicate × shard (GPU) | `run_simulation_shard.py` — 36 jobs with the example config |
-| `mergeShards` | condition × replicate | `merge_shards.py` — concatenates shard HDF5 streams |
-| `analyzeCondition` | per condition | `run_analysis_all.py` — contact maps, P(s), APA, figures |
+| `validateCTCF` | once | `validate_ctcf.py`: sanity-checks all BED files |
+| `simulateShard` | condition × replicate × shard (GPU) | `run_simulation_shard.py`: 36 jobs with the example config |
+| `mergeShards` | condition × replicate | `merge_shards.py`: concatenates shard HDF5 streams |
+| `analyzeCondition` | per condition | `run_analysis_all.py`: contact maps, P(s), APA, figures |
 | `benchmarkSummary` | once | `workflows/utils/benchmarking.py` |
 
 Every rule has the same parts, following bagPipes:
 
-- `log:` — stdout / stderr to `output/logs/{rule}_{wildcards}.out|.err`
-- `benchmark:` — `output/benchmarks/{rule}_{wildcards}.tsv` (wall time,
+- `log:`: stdout / stderr to `output/logs/{rule}_{wildcards}.out|.err`
+- `benchmark:`: `output/benchmarks/{rule}_{wildcards}.tsv` (wall time,
   memory), summarised in `output/{runName}_benchmarking.tsv`
-- `conda:` — an entry from `condaEnvs` in the config; the shell runs scripts
+- `conda:`: an entry from `condaEnvs` in the config; the shell runs scripts
   with `"$CONDA_PREFIX/bin/python"`, that environment's own interpreter
-- `params:` — every value read from the config; nothing is typed in
+- `params:`: every value read from the config; nothing is typed in
 
 Wildcards: `{sampleName}` / `{ctcfType}` are samplesheet sample names;
 `{condition}` is a condition `name`; `{rep}` and `{shard}` expand over
@@ -259,7 +254,7 @@ The Snakefile passes the config's path to every script in
 Steps whose real outputs are directories (simulation, merge, analysis)
 are tracked through completion markers in `output/done/`.
 
-### `profiles/<site>/config.yaml` — scheduler settings
+### `profiles/<site>/config.yaml`: scheduler settings
 
 This is the only place cluster details live. In `profiles/longleaf/`,
 `default-resources:` sets the account, partition, wall time, and memory for
@@ -268,7 +263,7 @@ pattern). `simulateShard` is sent to whichever of `l40-gpu`, `volta-gpu`
 or `gpu` has a free node first, with `qos: gpu_access` and `gpu: 1`. `software-deployment-method: conda` makes
 Snakemake activate each rule's environment.
 
-### `ChromSimSamplesheet.txt` — samples
+### `ChromSimSamplesheet.txt`: samples
 
 ```
 Project  Cell_Type  Condition   CTCF_Peaks                    Hi-C
@@ -286,45 +281,36 @@ the parsed samplesheet, with a `sampleName` column, to
 
 ## Reading order
 
-Everything here is organised by pipeline stage, top-down:
+Sections are ordered by pipeline stage:
 
-1. [The Snakemake pipeline files](#the-snakemake-pipeline-files) — **start here**
-2. [Project layout](#project-layout) — what each folder is for
-3. [Configuration](#1-configuration-configsparameterspy) — the single file that controls every simulation
-4. [Hi-C data preparation](#2-hi-c-data-preparation) — turning experimental data into comparison matrices
-5. [CTCF annotation](#3-ctcf-annotation) — turning CUT&Tag peaks into oriented barrier lists
-6. [The LEF dynamics engine](#4-the-lef-dynamics-engine) — the loop-extrusion simulator
-7. [Running simulations](#5-running-simulations) — the shard, merge, and single-run entry points
-8. [Post-simulation analysis](#6-post-simulation-analysis) — contact maps, P(s), APA, MSD, calibration
-9. [Legacy cluster scripts](#legacy-cluster-scripts-legacycluster) — old sbatch wrappers (superseded by ChromSimPipe.sh)
-10. [Conventions you'll see everywhere](#conventions-youll-see-everywhere) — monomers, tiling, output directory names
-11. [Common pitfalls](#common-pitfalls) — what to check when something looks wrong
-
-Every script section follows the same format:
-
-- **File** — path in the repo
-- **Purpose** — one-sentence summary
-- **Inputs** — command-line flags and files read
-- **Outputs** — files written, with exact paths
-- **How to run it** — example command
-- **What it does, step by step** — plain-language walkthrough
+1. [The Snakemake pipeline files](#the-snakemake-pipeline-files): **start here**
+2. [Project layout](#project-layout): what each folder is for
+3. [Configuration](#1-configuration-configsparameterspy): the single file that controls every simulation
+4. [Hi-C data preparation](#2-hi-c-data-preparation): turning experimental data into comparison matrices
+5. [CTCF annotation](#3-ctcf-annotation): turning CUT&Tag peaks into oriented barrier lists
+6. [The LEF dynamics engine](#4-the-lef-dynamics-engine): the loop-extrusion simulator
+7. [Running simulations](#5-running-simulations): the shard, merge, and single-run entry points
+8. [Post-simulation analysis](#6-post-simulation-analysis): contact maps, P(s), APA, MSD, calibration
+9. [Legacy cluster scripts](#legacy-cluster-scripts-legacycluster): old sbatch wrappers (superseded by ChromSimPipe.sh)
+10. [Conventions](#conventions): monomers, tiling, output directory names
+11. [Common pitfalls](#common-pitfalls): what to check when something looks wrong
 
 ## Project layout
 
 ```
 ChromSimPipe/
-├── ChromSimPipe.sh   — sbatch launcher
-├── ChromSimSamplesheet.txt — one row per sample (edit before first run)
-├── config/           — ChromSimConfig.yaml + requirements.txt (edit before first run)
-├── configs/          — parameters.py (reads the config + samplesheet; single source of truth)
-├── envs/             — conda environment specs used by the rules
-├── scripts/          — Python simulation, analysis, and utility scripts
-├── analysis/         — Python modules imported by scripts/run_analysis_all.py
-├── workflows/        — Snakemake DAG (ChromSimPipe.snakefile) + utils/
-├── profiles/         — one folder per compute site (longleaf, pioneer, local, slurm-template)
-├── legacy/           — unmaintained code from the lab's mESC/neuron project (see legacy/README.md)
-├── tests/            — test suite
-└── output/           — everything the workflow writes (git-ignored; set by outputDir)
+├── ChromSimPipe.sh   sbatch launcher
+├── ChromSimSamplesheet.txt  one row per sample (edit before first run)
+├── config/           ChromSimConfig.yaml + requirements.txt (edit before first run)
+├── configs/          parameters.py (reads the config + samplesheet; single source of truth)
+├── envs/             conda environment specs used by the rules
+├── scripts/          Python simulation, analysis, and utility scripts
+├── analysis/         Python modules imported by scripts/run_analysis_all.py
+├── workflows/        Snakemake DAG (ChromSimPipe.snakefile) + utils/
+├── profiles/         one folder per compute site (longleaf, pioneer, local, slurm-template)
+├── legacy/           unmaintained code from the lab's mESC/neuron project (see legacy/README.md)
+├── tests/            test suite
+└── output/           everything the workflow writes (git-ignored; set by outputDir)
 ```
 
 ## 1. Configuration: `configs/parameters.py`
@@ -351,11 +337,11 @@ unchanged when config values change.
   Rarely changed between projects.
 
 - **LEF ↔ polymer bonds** (`SMC_BOND`). How stiff the cohesin "ring" is in
-  3D — how strongly it pulls the two loop flanks together.
+  3D, i.e. how strongly it pulls the two loop flanks together.
 
 - **CTCF tracks** (`CTCF_TYPES`, `CTCF_PEAKS`, `CTCF_BEDS`). One oriented BED
   per `ctcf_type` used by a condition, under `output/ctcf/`. At import time,
-  `load_ctcf_from_bed()` reads each file into `CTCF_SITES_BY_TYPE[type]` —
+  `load_ctcf_from_bed()` reads each file into `CTCF_SITES_BY_TYPE[type]`:
   monomer indices with `+1` / `−1` orientation labels. Type names are
   samplesheet sample names, so any number of CTCF samples is supported.
 
@@ -376,17 +362,17 @@ unchanged when config values change.
 
 - **Analysis** (`ANALYSIS`, `MSD_PROBE`, `MSD_FIT`, `CALIBRATION`). Worker
   count, APA window, MSD probes and fits, and how to map simulation units →
-  physical units — all from the `analysis:` block.
+  physical units. All come from the `analysis:` block.
 
-**Helper functions you'll see called elsewhere:**
+**Helper functions:**
 
-- `get_condition(name)` — look up one entry in `SIMULATION_CONDITIONS`.
-- `list_conditions()` — list all condition names.
-- `get_ctcf_arrays(ctcf_type)` — returns `(positions, orientations)` for the
+- `get_condition(name)`: look up one entry in `SIMULATION_CONDITIONS`.
+- `list_conditions()`: list all condition names.
+- `get_ctcf_arrays(ctcf_type)`: returns `(positions, orientations)` for the
   untiled locus; raises if that sample's BED has not been made.
-- `get_tiled_ctcf_arrays(ctcf_type)` — same but repeated across the tiled
+- `get_tiled_ctcf_arrays(ctcf_type)`: same but repeated across the tiled
   polymer (what the simulations actually use).
-- `load_ctcf_from_bed(path)` — read a BED6 file and return
+- `load_ctcf_from_bed(path)`: read a BED6 file and return
   `(positions, orientations)` as monomer-index arrays.
 
 ## 2. Hi-C data preparation
@@ -423,7 +409,7 @@ python scripts/extract_ctcf_sites.py \
     --output output/ctcf/ctcf_oriented_hg38_condition1_chr1_64210000_66170000.bed
 ```
 
-**Output:** BED6 — one row per peak with a FIMO hit; column 6 (`+`/`−`)
+**Output:** BED6, one row per peak with a FIMO hit; column 6 (`+`/`−`)
 is the motif strand.
 
 ### `scripts/validate_ctcf.py`
@@ -453,20 +439,20 @@ testing "CTCF binding didn't change, only cohesin did" scenarios.
 ### `scripts/lef_dynamics.py`
 
 **Purpose.** A lightweight 1D Python simulator for loop-extruding
-factors (cohesins). No 3D physics — just: where are the cohesins on the
-lattice, where are they stalled, where do they jump when they unbind.
+factors (cohesins). No 3D physics, just where the cohesins are on the
+lattice, where they stall, and where they reload after unbinding.
 
 **Class: `LEFSimulator`.** Constructor arguments:
 
-- `N` — lattice length in monomers.
-- `n_lefs` — how many cohesins to place.
-- `lifetime` — mean number of steps a cohesin stays bound before
+- `N`: lattice length in monomers.
+- `n_lefs`: how many cohesins to place.
+- `lifetime`: mean number of steps a cohesin stays bound before
   unbinding (`unbind probability per step = 1/lifetime`).
-- `ctcf_positions`, `ctcf_orientations` — from `get_ctcf_arrays`.
-- `ctcf_capture` — probability of stalling when a cohesin arm moves
+- `ctcf_positions`, `ctcf_orientations`: from `get_ctcf_arrays`.
+- `ctcf_capture`: probability of stalling when a cohesin arm moves
   onto a CTCF site with the blocking orientation.
-- `ctcf_release` — probability per step that a stalled cohesin lets go.
-- `rng_seed` — for reproducibility.
+- `ctcf_release`: probability per step that a stalled cohesin lets go.
+- `rng_seed`: for reproducibility.
 
 **What each `step()` call does.**
 
@@ -482,13 +468,13 @@ lattice, where are they stalled, where do they jump when they unbind.
    - Right arm (moves rightward): mirror logic.
    - If already stalled on CTCF, roll `< ctcf_release` to escape.
 
-**Public methods you'll see used.**
+**Public methods.**
 
-- `get_bonds()` — list of `(left, right)` tuples of current cohesin-bridged
+- `get_bonds()`: list of `(left, right)` tuples of current cohesin-bridged
   monomer pairs. Fed to polychrom as harmonic SMC bonds.
-- `get_bond_arrays()` — same but as two parallel NumPy arrays.
-- `get_loop_sizes()` — current loop lengths (in monomers).
-- `run(n_steps)` — convenience: step `n_steps` times, return the list
+- `get_bond_arrays()`: same but as two parallel NumPy arrays.
+- `get_loop_sizes()`: current loop lengths (in monomers).
+- `run(n_steps)`: convenience: step `n_steps` times, return the list
   of per-step bond lists.
 
 **Output variables you should know.** After a `step()`, these arrays
@@ -497,7 +483,7 @@ reflect the current state: `left_pos[i]`, `right_pos[i]`, `ages[i]`,
 
 ## 5. Running simulations
 
-### 5a. `scripts/run_simulation_shard.py` — the Snakemake entry point
+### 5a. `scripts/run_simulation_shard.py`: the Snakemake entry point
 
 This is what every `simulateShard` SLURM job calls (36 jobs with the
 example config: 3 conditions × 3 replicates × 4 shards).
@@ -512,7 +498,7 @@ example config: 3 conditions × 3 replicates × 4 shards).
 | `--n-shards K` | Total shards per replicate (default 4). |
 | `--gpu I` | CUDA device index. |
 | `--output DIR` | Output base directory (the workflow passes `output/sims`). |
-| `--shard-index-offset M` | Add `M` to shard index — use to extend existing runs without overwriting. |
+| `--shard-index-offset M` | Add `M` to shard index, to extend existing runs without overwriting. |
 
 Shard output goes to `<output>/<params_name>_ctcf-<ctcf_type>_rep<r>_shard<i>/`.
 
@@ -524,7 +510,7 @@ Shard output goes to `<output>/<params_name>_ctcf-<ctcf_type>_rep<r>_shard<i>/`.
 2. Build the tiled polymer (`N = TILING["chrom_size"]`), fetch tiled CTCF
    arrays.
 3. Warm up `LEFSimulator` for `warmup_blocks` steps (throw away).
-4. **Pre-compute** all LEF bond states for every block in advance — the 1D
+4. **Pre-compute** all LEF bond states for every block in advance. The 1D
    dynamics are independent of 3D physics, so doing this up front lets the
    polychrom loop replay bonds from a list.
 5. Register all unique bond pairs as `harmonic_bonds` at `k=0`; flip `k`
@@ -545,7 +531,7 @@ which shard IDs contributed.
 --condition, --replicate, --n-shards, --results-dir
 ```
 
-### 5c. `scripts/run_simulation.py` — single-run / local testing
+### 5c. `scripts/run_simulation.py`: single-run / local testing
 
 One-shot simulation without sharding. Useful for local testing or LEF-only
 sanity checks:
@@ -643,14 +629,14 @@ Longleaf.
 
 ### `afterok` vs `afterany`
 
-- `--dependency=afterok:<JID>` — fire only if upstream finished with exit 0.
+- `--dependency=afterok:<JID>`: fire only if upstream finished with exit 0.
   Use between pipeline stages where failure upstream makes the next stage
   meaningless.
-- `--dependency=afterany:<JID>` — fire regardless of how upstream ended.
+- `--dependency=afterany:<JID>`: fire regardless of how upstream ended.
   Use for resume-chain links meant to recover from wall-time TIMEOUTs.
   `submit_analysis_resume_chain.sh` uses this pattern.
 
-## Conventions you'll see everywhere
+## Conventions
 
 - **Monomer = `resolution` bp (1 kb by default).** Monomer index `i` covers
   `REGION_START + i * RESOLUTION` to `REGION_START + (i+1) * RESOLUTION`.
@@ -678,8 +664,13 @@ Longleaf.
 **CUDA architecture error.** `openmm.OpenMMException: nvrtc: error: invalid
 value for --gpu-architecture (-arch)` means the environment's CUDA cannot
 compile for the allocated GPU. CUDA 13 dropped Pascal (GTX 10xx) and Volta
-(V100); `envs/cohesin_sim.yml` pins `cuda-version=12` for this reason. Check
+(V100); `envs/cohesin_sim.yml` pins `cuda-version=12.4` for this reason. Check
 with `conda list -p <env> | grep cuda-version` and rebuild if it says 13.
+
+**`CUDA_ERROR_UNSUPPORTED_PTX_VERSION`.** The environment's CUDA is newer than
+the GPU node's NVIDIA driver supports. `nvidia-smi` on a GPU node prints
+"CUDA Version", the most the driver supports; `cuda-version` in
+`envs/cohesin_sim.yml` must not exceed it (12.4 needs a driver of 550 or newer).
 
 **No Hi-C comparison in the analysis output.** The analysis catches errors in
 each step, logs a warning and continues, so check

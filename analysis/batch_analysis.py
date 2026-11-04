@@ -213,7 +213,7 @@ def plot_multipanel_figure(results, output_path):
     fig.colorbar(im, cax=cbar_ax, label="log2(contact freq)")
 
     locus_label = LOCI[ACTIVE_LOCUS].get("label") or ACTIVE_LOCUS
-    fig.suptitle(f"Simulated contact maps — {locus_label} "
+    fig.suptitle(f"Simulated contact maps - {locus_label} "
                  f"({CHROM}:{REGION_START / 1e6:.2f}–{REGION_END / 1e6:.2f} Mb)",
                  fontsize=12, fontweight="bold", y=1.01)
     plt.savefig(output_path, dpi=200, bbox_inches="tight")
@@ -250,7 +250,7 @@ def plot_ps_comparison(results_dirs, output_path):
     ax.set_yscale("log")
     ax.set_xlabel("Genomic distance (kb)")
     ax.set_ylabel("Contact probability P(s)")
-    ax.set_title("P(s) curves — all conditions")
+    ax.set_title("P(s) curves - all conditions")
     ax.legend(fontsize=7, loc="upper right")
     ax.grid(True, alpha=0.3)
     plt.tight_layout()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-P(s) contact probability curve analysis — Hansen-lab-style.
+P(s) contact probability curve analysis - Hansen-lab-style.
 
 This module is a thin, self-contained re-export of the P(s) machinery that
 used to live inside contact_maps.py, plus a few convenience helpers for
@@ -63,7 +63,7 @@ def compute_ps_curve(
     resolution: int = 1000,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Compute P(s) — contact probability versus genomic distance — from a dense
+    Compute P(s) - contact probability versus genomic distance - from a dense
     contact matrix by averaging each diagonal.
 
     Parameters
@@ -239,7 +239,7 @@ def compute_ps_from_cooler(
     if region is not None:
         mat = clr.matrix(balance=balance).fetch(region)
     else:
-        # Largest cis block — pick the longest chromosome
+        # Largest cis block - pick the longest chromosome
         chromsizes = clr.chromsizes
         chrom = str(chromsizes.idxmax())
         mat = clr.matrix(balance=balance).fetch(chrom)

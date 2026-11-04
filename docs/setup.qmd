@@ -4,7 +4,7 @@
 
 - A SLURM cluster with a GPU partition, or one machine with a GPU
 - `python3` ≥ 3.11 and `conda` ≥ 24.7.1 (loaded by your site's `profiles/<site>/env.sh`;
-  on Longleaf and Pioneer, a one-time Miniforge install — see
+  on Longleaf and Pioneer, a one-time Miniforge install; see
   [Cluster Reference](cluster.qmd#conda-version))
 - CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) and `.hic` maps for your samples
 - A genome FASTA with the same chromosome names as the peaks
@@ -71,7 +71,7 @@ bash ChromSimPipe.sh --conda-create-envs-only
 exit
 ```
 
-`envs/cohesin_sim.yml` pins `cuda-version=12` (CUDA 13 does not support
+`envs/cohesin_sim.yml` pins `cuda-version=12.4` (CUDA 13 does not support
 Pascal or Volta GPUs) and `numpy<2`, and uses only conda-forge and bioconda.
 Editing an env file gives it a new hash, so Snakemake builds a fresh
 environment; delete the old one under `.snakemake/conda/` to free space.

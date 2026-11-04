@@ -114,14 +114,14 @@ def call_motif_orientation(peaks, genome_fasta, motif_meme, flank=100,
 
     has_strand = all(p["strand"] in ("+", "-") for p in peaks)
     if has_strand:
-        logger.info("  BED file already has strand info — using directly")
+        logger.info("  BED file already has strand info - using directly")
         for p in peaks:
             p["orientation"] = +1 if p["strand"] == "+" else -1
         return peaks
 
     for tool in ["bedtools", "fimo"]:
         if shutil.which(tool) is None:
-            raise RuntimeError(f"{tool} not found on PATH — check the ctcf conda env")
+            raise RuntimeError(f"{tool} not found on PATH - check the ctcf conda env")
 
     logger.info(f"  Calling motif orientation with FIMO on {len(peaks)} peaks "
                 f"(±{flank} bp windows)...")
@@ -305,7 +305,7 @@ def _parse_fimo_header(header_line):
 def write_oriented_bed(peaks, output_path, assembly, motif_name):
     """Write all oriented peaks as BED6."""
     with open(output_path, "w") as f:
-        f.write(f"# CTCF peaks with motif orientation (FIMO {motif_name}) — {assembly}\n")
+        f.write(f"# CTCF peaks with motif orientation (FIMO {motif_name}) - {assembly}\n")
         f.write("# chrom\tstart\tend\tname\tscore\tstrand\n")
         for p in peaks:
             strand = "+" if p.get("orientation", +1) == +1 else "-"

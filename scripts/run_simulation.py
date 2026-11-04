@@ -89,7 +89,7 @@ def initialize_polymer(N: int, density: float = 0.2) -> np.ndarray:
         from polychrom.starting_conformations import grow_cubic
         return grow_cubic(N, int(N**0.5))
     except ImportError:
-        logger.warning("polychrom not installed — using simple random walk initialization")
+        logger.warning("polychrom not installed - using simple random walk initialization")
         # Simple confined random walk fallback
         R = (3 * N / (4 * np.pi * density)) ** (1.0 / 3)
         coords = np.zeros((N, 3))
@@ -131,7 +131,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
     """
     if force_lef_only:
         HAS_POLYCHROM = False
-        logger.info("force_lef_only=True — skipping 3D polymer, writing LEF data only")
+        logger.info("force_lef_only=True - skipping 3D polymer, writing LEF data only")
     else:
         try:
             import polychrom
@@ -351,7 +351,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
             bond_to_ind[bond] = ind
 
         # --- Create the OpenMM context ---
-        # Skip energy minimisation on resume — the loaded conformation is
+        # Skip energy minimisation on resume - the loaded conformation is
         # already a relaxed post-MD state.
         if not should_resume:
             sim.local_energy_minimization()
@@ -449,7 +449,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
 
     else:
         # =====================================================================
-        # LEF-ONLY SIMULATION (no polychrom — generate contact maps from 1D)
+        # LEF-ONLY SIMULATION (no polychrom - generate contact maps from 1D)
         # =====================================================================
         logger.info("Running LEF-only simulation (no 3D polymer)...")
 
@@ -510,7 +510,7 @@ def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: s
 
     This is the recommended fallback if polychrom is not installed.
     Note: this path writes a single conformations.h5 file (not per-block),
-    so resume is not implemented here — the flag is accepted but ignored
+    so resume is not implemented here - the flag is accepted but ignored
     with a warning, so callers don't need to branch.
     """
     if resume:

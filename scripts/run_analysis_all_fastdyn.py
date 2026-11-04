@@ -3,7 +3,7 @@
 Fast-polymer-dynamics variant of ``run_analysis_all.py``.
 
 Identical CLI, identical on-disk outputs, identical Phase 1 / Phase 2 /
-Phase 3 / Phase 4 orchestration — the **only** difference is that the
+Phase 3 / Phase 4 orchestration - the **only** difference is that the
 polymer-dynamics block inside ``_run_msd_and_dynamics`` is replaced with
 a single file-parallel pass provided by
 ``analysis.polymer_dynamics_parallel.compute_dynamics_batch``.
@@ -21,7 +21,7 @@ worker pattern already used for contact-map extraction, so the
 polymer-dynamics block drops from ~2 h to ~10 min per condition.
 
 It does NOT touch ``scripts/run_analysis_all.py`` or
-``analysis/polymer_dynamics.py`` — both remain available for regression
+``analysis/polymer_dynamics.py`` - both remain available for regression
 comparison.
 
 Usage
@@ -57,7 +57,7 @@ Failure mode
 If a trajectory has no ``block_files`` populated (legacy
 ``conformations.h5``, non-polychrom source), the batched function
 automatically falls back to the sequential implementations in
-``analysis/polymer_dynamics.py`` — so no data shape is regressed, and
+``analysis/polymer_dynamics.py`` - so no data shape is regressed, and
 the output artefacts remain the same.
 """
 
@@ -79,7 +79,7 @@ if os.path.join(_REPO_ROOT, "analysis") not in sys.path:
 import numpy as np
 
 # Importing run_analysis_all gives us access to its helpers, its CLI, and
-# — critically — its module globals dict, which is the namespace Python
+# - critically - its module globals dict, which is the namespace Python
 # consults when `_run_msd_and_dynamics` is referenced bare inside
 # `analyze_one_replicate` / `pool_replicates`. Monkey-patching an entry
 # in that dict is enough to redirect every call.
@@ -141,7 +141,7 @@ def _run_msd_and_dynamics_fastdyn(
     polymer-dynamics block runs file-parallel via
     ``polymer_dynamics_parallel.compute_dynamics_batch``.
     """
-    # Short-circuit on empty / LEF-only inputs — matches the original.
+    # Short-circuit on empty / LEF-only inputs - matches the original.
     if conformations is None:
         logger.info(f"    [MSD skipped: no 3D conformations for {display_name}]")
         return {"msd_curves": {}, "calibration": None,
@@ -173,7 +173,7 @@ def _run_msd_and_dynamics_fastdyn(
     logger.info(f"    [MSD] {cell_type}: {len(pairs)} pair(s) "
                 f"{list(zip(labels, pairs))}")
 
-    # ── Two-point MSD per pair (unchanged) ──────────────────────────────
+    # Two-point MSD per pair (unchanged)
     if do_msd:
         for (idx_a, idx_b), label in zip(pairs, labels):
             try:
@@ -204,7 +204,7 @@ def _run_msd_and_dynamics_fastdyn(
             except Exception as e:                                    # noqa: BLE001
                 logger.warning(f"    [MSD] overlay failed: {e}")
 
-    # ── Polymer-dynamics diagnostics (single file-parallel pass) ────────
+    # Polymer-dynamics diagnostics (single file-parallel pass)
     if do_polymer_dynamics:
         n_jobs = _get_dyn_njobs()
         logger.info(
@@ -301,7 +301,7 @@ def _run_msd_and_dynamics_fastdyn(
                 out=out,
             )
 
-    # ── Physical-units calibration (unchanged) ──────────────────────────
+    # Physical-units calibration (unchanged)
     calib = None
     try:
         hic_cfg = CALIBRATION["hic"]
@@ -447,9 +447,9 @@ def _sequential_polymer_dynamics_fallback(
 # Python resolves bare names (`_run_msd_and_dynamics(...)`) inside a
 # function by consulting the defining module's globals at call time. By
 # overwriting that attribute on the already-imported ``run_analysis_all``
-# module we redirect every call site — both Phase 1's per-replicate path
+# module we redirect every call site - both Phase 1's per-replicate path
 # (``analyze_one_replicate``) and Phase 2's pooled path
-# (``pool_replicates``) — without touching the original file.
+# (``pool_replicates``) - without touching the original file.
 ram._run_msd_and_dynamics = _run_msd_and_dynamics_fastdyn
 
 

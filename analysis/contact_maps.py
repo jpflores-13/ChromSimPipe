@@ -29,7 +29,7 @@ import numpy as np
 # ---------------------------------------------------------------------------
 try:
     from scipy.spatial import cKDTree  # scipy < 1.14 (and broken installs that happen to still expose it)
-except ImportError:  # pragma: no cover — exercised only on scipy >= 1.14
+except ImportError:  # pragma: no cover - exercised only on scipy >= 1.14
     from scipy.spatial import KDTree as cKDTree
 from typing import Optional, Tuple
 
@@ -105,7 +105,7 @@ def _extract_tiles_file_parallel(
     """File-parallel contact-map accumulator.
 
     Each worker gets one block_file path and returns a (N_locus, N_locus)
-    partial map. The parent only sums those partials — no trajectory data
+    partial map. The parent only sums those partials - no trajectory data
     ever enters the parent heap.
 
     This is the structural fix recommended in the Hansen-lab post-mortem
@@ -186,7 +186,7 @@ def compute_contact_map_from_conformations(
     n_jobs : int
         Number of parallel workers (default 1 = serial).
     n_frames : int, optional
-        Total frame count — used only for progress logging when conformations
+        Total frame count - used only for progress logging when conformations
         is a generator (its length cannot be known upfront).
 
     Returns
@@ -211,7 +211,7 @@ def compute_contact_map_from_conformations(
                                    chunksize=100):
                 if contact_map is None:
                     # First frame: infer N from pairs or wait for next frame
-                    # We need N — peek ahead by tracking coords shape externally.
+                    # We need N - peek ahead by tracking coords shape externally.
                     # N is injected via the wrapper below.
                     pass
                 if pairs is not None and contact_map is not None and len(pairs) > 0:
@@ -234,7 +234,7 @@ def compute_contact_map_from_conformations(
                 logger.info(f"  Frame {frame_count}{total_str}")
 
     if contact_map is None or frame_count == 0:
-        raise RuntimeError("No frames processed — conformations iterable was empty.")
+        raise RuntimeError("No frames processed - conformations iterable was empty.")
 
     contact_map /= frame_count
     return contact_map
@@ -322,7 +322,7 @@ def extract_tiles_and_average(
     more data per simulation frame (N = n_tiles from TILING config).
 
     Memory-efficient: tiles are yielded lazily one at a time from the
-    conformations iterable — the full tile list is never materialised in RAM.
+    conformations iterable - the full tile list is never materialised in RAM.
     With 4000 frames × 28 tiles this saves ~5.4 GB compared to building a list.
 
     Parameters
@@ -349,7 +349,7 @@ def extract_tiles_and_average(
     # Preferred path: file-parallel (Hansen-lab pattern).
     # When the input carries a list of polychrom blocks_*.h5 paths, hand
     # the file list to workers and let them read their own data. Parent
-    # heap stays ~0 regardless of trajectory length — no frame ever lives
+    # heap stays ~0 regardless of trajectory length - no frame ever lives
     # in the parent, so fork() CoW inheritance can't amplify.
     # ------------------------------------------------------------------
     block_files = getattr(conformations, "block_files", None)
@@ -479,7 +479,7 @@ class ConformationStream:
                 self._head = next(iter(self))
             return self._head
         raise IndexError(
-            f"ConformationStream[{idx}] not supported — only [0] is cached. "
+            f"ConformationStream[{idx}] not supported - only [0] is cached. "
             f"Iterate with `for f in stream`, or materialise with list(stream).")
 
     def __repr__(self):
@@ -526,8 +526,8 @@ def load_conformations_h5(sim_dir: str):
     not the full trajectory.
 
     Supports the same on-disk formats as before:
-      1. Polychrom HDF5Reporter format (blocks_*.h5) — preferred
-      2. Raw conformations.h5 (frame_0, frame_1, ...) — legacy/OpenMM fallback
+      1. Polychrom HDF5Reporter format (blocks_*.h5) - preferred
+      2. Raw conformations.h5 (frame_0, frame_1, ...) - legacy/OpenMM fallback
       3. Returns None if only LEF-only contact maps are present
     """
     import h5py
@@ -536,7 +536,7 @@ def load_conformations_h5(sim_dir: str):
     # --- Polychrom HDF5Reporter format (blocks_*.h5) ---
     # We intentionally bypass polychrom.hdf5_format.load_URI here: that helper
     # opens and closes each HDF5 file per frame (100k opens for a 100k-frame
-    # trajectory), which is both slow and — more importantly — appeared to
+    # trajectory), which is both slow and - more importantly - appeared to
     # prevent the HDF5 library cache from being released between calls,
     # producing apparent "memory leaks" during streaming tile extraction.
     # By iterating each block file exactly once (open → read all its frames →
@@ -610,12 +610,12 @@ def load_lef_contact_map(sim_dir: str) -> Optional[np.ndarray]:
 
 def compute_ps_curve(contact_map: np.ndarray, resolution: int = 1000) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Compute P(s) — contact probability as a function of genomic distance.
+    Compute P(s) - contact probability as a function of genomic distance.
 
     Vectorised via np.diagonal: each diagonal of the contact map corresponds
     to a fixed genomic separation, so we just average each diagonal.
     This replaces an O(N²) Python double loop with N fast C-level mean calls
-    — ~40× faster for N=2000.
+    - ~40× faster for N=2000.
 
     Parameters
     ----------
@@ -632,7 +632,7 @@ def compute_ps_curve(contact_map: np.ndarray, resolution: int = 1000) -> Tuple[n
         Average contact probability at each distance.
     """
     N = contact_map.shape[0]
-    # np.diagonal(k) returns a read-only view of the k-th diagonal — no copy.
+    # np.diagonal(k) returns a read-only view of the k-th diagonal - no copy.
     ps = np.array([np.mean(np.diagonal(contact_map, offset=d)) for d in range(N)])
     distances = np.arange(N) * resolution
     return distances, ps
@@ -652,7 +652,7 @@ def fit_ps_powerlaw(
     Fit P(s) with a piecewise power law in log-log space.
 
     Mirny-lab / Gassler-style log-log fit (NOT a direct port of any
-    Hansen-lab routine — their ``looptools.calculate_and_save_avg_Ps_curve``
+    Hansen-lab routine - their ``looptools.calculate_and_save_avg_Ps_curve``
     in github.com/ahansenlab/AbsQuant_analysis_code wraps
     ``cooltools.expected_cis`` and does not extract a power-law exponent):
       - Region 1 (s < lower_bound): 6th-degree polynomial in log-log space
@@ -681,10 +681,10 @@ def fit_ps_powerlaw(
     Returns
     -------
     fit : dict
-        'exponent'       : float — power law exponent alpha (P(s) ~ s^-alpha)
-        'log_intercept'  : float — intercept of the log-log linear fit
-        'coeffs_region1' : np.ndarray — polynomial coefficients (short range)
-        'coeffs_region2' : np.ndarray — [slope, intercept] of log-log linear fit
+        'exponent'       : float - power law exponent alpha (P(s) ~ s^-alpha)
+        'log_intercept'  : float - intercept of the log-log linear fit
+        'coeffs_region1' : np.ndarray - polynomial coefficients (short range)
+        'coeffs_region2' : np.ndarray - [slope, intercept] of log-log linear fit
         'lower_bound_bp' : int
         'upper_bound_bp' : int
     """
@@ -701,14 +701,14 @@ def fit_ps_powerlaw(
         "upper_bound_bp": upper_bound_bp,
     }
 
-    # Region 1: short range — 6th-degree polynomial in log-log
+    # Region 1: short range - 6th-degree polynomial in log-log
     mask1 = d_valid < lower_bound_bp
     if mask1.sum() > 7:
         fit["coeffs_region1"] = np.polyfit(log_d[mask1], log_p[mask1], deg=6).tolist()
     else:
         fit["coeffs_region1"] = None
 
-    # Region 2: power-law range — linear fit in log-log
+    # Region 2: power-law range - linear fit in log-log
     mask2 = (d_valid >= lower_bound_bp) & (d_valid < upper_bound_bp)
     if mask2.sum() > 2:
         coeffs2 = np.polyfit(log_d[mask2], log_p[mask2], deg=1)
@@ -752,7 +752,7 @@ def extract_ps_metrics(
     """
     metrics = {}
 
-    # ── Contact probability at standard distances ────────────────────
+    # Contact probability at standard distances
     for label, target_bp in [("10kb", 10_000), ("50kb", 50_000),
                              ("100kb", 100_000), ("200kb", 200_000),
                              ("500kb", 500_000), ("1Mb", 1_000_000)]:
@@ -760,15 +760,15 @@ def extract_ps_metrics(
         if 0 <= idx < len(ps):
             metrics[f"P(s={label})"] = float(ps[idx])
 
-    # ── Power law fit ────────────────────────────────────────────────
+    # Power law fit
     fit = fit_ps_powerlaw(distances, ps)
     if fit["exponent"] is not None:
         metrics["ps_exponent_2_30kb"] = fit["exponent"]
         metrics["ps_log_intercept"] = fit["log_intercept"]
 
-    # ── Local log-log slope at several distances ─────────────────────
+    # Local log-log slope at several distances
     # dlog(P)/dlog(s) computed as finite difference on the log-log curve.
-    # This is the "running exponent" — it reveals where the power law
+    # This is the "running exponent" - it reveals where the power law
     # holds (constant slope) and where it breaks down.
     valid = (distances > 0) & (ps > 0) & np.isfinite(ps)
     d_v = distances[valid]
@@ -866,7 +866,7 @@ def compare_contact_maps(
     exp = exp_map[:N, :N].copy()
 
     if max_diag is not None:
-        # Vectorised masking — replaces O(N²) Python loop
+        # Vectorised masking - replaces O(N²) Python loop
         row_idx, col_idx = np.ogrid[:N, :N]
         off_diag_mask = np.abs(row_idx - col_idx) > max_diag
         sim[off_diag_mask] = 0
@@ -877,7 +877,7 @@ def compare_contact_maps(
     exp_norm = exp / (exp.max() + 1e-10)
 
     # 1. Pearson correlation (per-diagonal)
-    # np.diagonal(offset=d) returns a zero-copy view of diagonal d — no list comp needed.
+    # np.diagonal(offset=d) returns a zero-copy view of diagonal d - no list comp needed.
     diag_corrs = []
     for d in range(1, min(N, max_diag or N)):
         sim_diag = np.diagonal(sim_norm, offset=d)

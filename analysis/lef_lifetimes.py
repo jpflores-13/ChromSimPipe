@@ -63,7 +63,7 @@ def collect_lifetimes_from_trajectory(
 
     A "binding event" begins the first step a given (left, right) pair
     appears and ends when that anchor pair vanishes. The pair is tracked
-    *exactly* by its two endpoints — i.e. an extrusion step that moves
+    *exactly* by its two endpoints - i.e. an extrusion step that moves
     either arm produces a different pair and is counted as a new (short)
     event. This matches Hansen-lab post-processing and is appropriate for
     identifying stalled/stable loops.
@@ -233,7 +233,7 @@ def plot_lifetime_vs_size(
     resolution_bp: int = 1000,
     resolution_seconds: Optional[float] = None,
 ) -> None:
-    """2D hex-bin of lifetime vs. max loop size — reveals CTCF-stalled population."""
+    """2D hex-bin of lifetime vs. max loop size - reveals CTCF-stalled population."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt

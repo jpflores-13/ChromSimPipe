@@ -2,7 +2,7 @@
 
 ## Primary literature
 
-**Flores et al. 2026** — STRS paper (ChromSimPipe use case).
+**Flores et al. 2026**: STRS paper (ChromSimPipe use case).
 Data: GEO [GSE310051](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE310051)
 (Hi-C), [GSE310047](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE310047) (CUT&Tag).
 
@@ -34,20 +34,20 @@ enables rapid genome exploration by CTCF and cohesin.
 
 ## Software
 
-**polychrom** — GPU polymer simulation engine (OpenMM wrapper).
+**polychrom**: GPU polymer simulation engine (OpenMM wrapper).
 <https://github.com/open2c/polychrom>
 
-**OpenMM** — molecular dynamics GPU engine.
+**OpenMM**: molecular dynamics GPU engine.
 <https://openmm.org>
 
-**Cooler** — sparse storage format for Hi-C contact matrices.
+**Cooler**: sparse storage format for Hi-C contact matrices.
 <https://github.com/open2c/cooler>
 
-**hic2cool** — `.hic` → `.cool` format conversion.
+**hic2cool**: `.hic` → `.cool` format conversion.
 <https://github.com/4dn-dcic/hic2cool>
 
-**FIMO (MEME Suite)** — motif scanning used for CTCF site extraction.
+**FIMO (MEME Suite)**: motif scanning used for CTCF site extraction.
 <https://meme-suite.org/meme/tools/fimo>
 
-**Snakemake** — workflow management.
+**Snakemake**: workflow management.
 <https://snakemake.readthedocs.io>

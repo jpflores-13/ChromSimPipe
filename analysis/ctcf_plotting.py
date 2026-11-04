@@ -17,7 +17,7 @@ This module does two things:
 
 The arrows are drawn using matplotlib's ``FancyArrowPatch``: forward
 (``+1``) sites point right / down; reverse (``-1``) sites point left / up.
-Convergent pairs (→...←) — the canonical loop anchors — are thereby
+Convergent pairs (→...←) - the canonical loop anchors - are thereby
 readable directly from the figure.
 """
 
@@ -127,7 +127,7 @@ def write_relative_bed(
 #
 # ``extra_elements`` is an optional dict ``{name: spec}`` where spec is
 # ``{"positions": [bin, ...], "marker": str, "color": str, "ms": int, "label": str}``
-# — positions are in matrix-bin units (monomer indices). The spec keys
+# - positions are in matrix-bin units (monomer indices). The spec keys
 # default to the sticky-element style above.
 
 _DEFAULT_ELEMENT_SPEC = dict(marker="s", color="#33bbee", ms=4)
@@ -241,7 +241,7 @@ def _draw_vertical_arrows(ax, positions, orientations, n_bins,
 # The simulation's "contact map + CTCF" figure used to show just CTCF arrows
 # stacked on the heatmap. The companion Hi-C quicklook script also overlays
 # gene models fetched from UCSC's public REST API. We port the same pieces
-# here so the simulation figure matches the experimental one — same coordinate
+# here so the simulation figure matches the experimental one - same coordinate
 # frame, same strand colours, same row-packing for overlapping genes.
 
 # Prefixes that mean "predicted / placeholder / tiny ncRNA" in MGI / NCBI
@@ -299,7 +299,7 @@ def fetch_ucsc_genes(
     ``txStart``, ``txEnd``, ``exonStarts``, ``exonEnds``). Collapses
     multiple transcripts for the same gene symbol to the longest one.
 
-    On network / API error, returns ``None`` and logs a warning — the
+    On network / API error, returns ``None`` and logs a warning - the
     caller can still produce a figure without the gene strip.
     """
     genome = genome or default_genome_assembly()
@@ -309,7 +309,7 @@ def fetch_ucsc_genes(
     try:
         with urllib.request.urlopen(url, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-    except Exception as exc:  # noqa: BLE001 — any failure is soft
+    except Exception as exc:  # noqa: BLE001 - any failure is soft
         logger.warning(f"  UCSC gene fetch failed ({exc!r}); "
                        "skipping gene track.")
         return None
@@ -362,7 +362,7 @@ def _draw_gene_track(ax, genes, n_bins: int,
     module globals.
 
     Forward-strand genes are steel blue, reverse-strand genes are dark
-    orange — chosen to be distinguishable from the CTCF arrow colours.
+    orange - chosen to be distinguishable from the CTCF arrow colours.
     """
     from matplotlib.patches import Rectangle
 
@@ -482,10 +482,10 @@ def plot_contact_map_with_ctcf(
     resolution_bp, region_start_bp, chrom :
         Used to annotate axis ticks with genomic coordinates.
     arrow_len_bins : int, optional
-        Kept for backward compatibility — ignored in the marker-based style.
+        Kept for backward compatibility - ignored in the marker-based style.
     extra_elements : dict, optional
         ``{label: {"positions": [bin, ...], "marker": "s", "color": "#33bbee",
-        "ms": 4}, ...}`` — e.g. enhancers/promoters. Drawn on both the top
+        "ms": 4}, ...}`` - e.g. enhancers/promoters. Drawn on both the top
         and left tracks.
     genes : list, optional
         List of gene dicts (as returned by :func:`fetch_ucsc_genes`) to draw
@@ -551,11 +551,11 @@ def plot_contact_map_with_ctcf(
         ax_genes = None
     ax_left = divider.append_axes("left", size="4.5%", pad=0.05,
                                   sharey=ax_main)
-    # Colorbar gets its own locator axis — won't steal width from the map.
+    # Colorbar gets its own locator axis - won't steal width from the map.
     ax_cbar = divider.append_axes("right", size="3%", pad=0.12)
 
     # Genomic axis ticks if region info is given. Only label the BOTTOM
-    # x-axis and the LEFT y-axis of the main heatmap — the strips inherit
+    # x-axis and the LEFT y-axis of the main heatmap - the strips inherit
     # tick positions via sharex/sharey but we hide their tick labels below.
     if region_start_bp is not None:
         def _fmt(bin_idx):
@@ -606,7 +606,7 @@ def plot_contact_map_with_ctcf(
         extra_elements=extra_elements,
     )
 
-    # Hide tick labels on the strips — sharex/sharey propagates the tick
+    # Hide tick labels on the strips - sharex/sharey propagates the tick
     # positions from ax_main, so without this the outer top / left strips
     # would render a duplicate set of Mb labels on their far edges.
     for _ax in (ax_top, ax_left) + ((ax_genes,) if ax_genes else ()):
@@ -667,7 +667,7 @@ def load_elements_bed(
     """
     Load a BED3/4 file of generic elements (enhancers, promoters, TAD
     boundaries, …) and return a list of monomer positions inside the
-    simulated region. Strand is ignored — use ``read_oriented_bed`` if
+    simulated region. Strand is ignored - use ``read_oriented_bed`` if
     you need directionality.
     """
     out: List[int] = []
@@ -716,7 +716,7 @@ def emit_ctcf_bed_and_figure(
     """
     Read CTCF BED, write relative-coordinate BED into the analysis folder,
     and emit the contact-map + CTCF two-panel figure. Optionally overlay a
-    second BED of sticky elements (enhancers/promoters), and — by default —
+    second BED of sticky elements (enhancers/promoters), and - by default -
     a gene-model strip pulled from the UCSC REST API.
 
     Returns ``(n_sites, positions, orientations)``.

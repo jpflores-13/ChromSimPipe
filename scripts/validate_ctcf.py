@@ -59,16 +59,16 @@ def info(msg):
 
 def header(title):
     print()
-    print(f"{'─' * 70}")
+    print(f"{'-' * 70}")
     print(f"  {title}")
-    print(f"{'─' * 70}")
+    print(f"{'-' * 70}")
 
 
 # ---------------------------------------------------------------------------
 # 1. Validate a single BED file (raw parsing)
 # ---------------------------------------------------------------------------
 def validate_bed_file(bed_path, label):
-    header(f"BED FILE: {label} — {os.path.basename(bed_path)}")
+    header(f"BED FILE: {label} - {os.path.basename(bed_path)}")
 
     if not check(os.path.isfile(bed_path), f"File exists: {bed_path}"):
         return None
@@ -189,7 +189,7 @@ def validate_conversion(sites_data, label):
         dups = len(positions) - len(unique_pos)
         check(False, f"No duplicate monomer positions: {dups} duplicates found",
               warn_only=True)
-        info("(Multiple peaks mapping to the same monomer — only last one used)")
+        info("(Multiple peaks mapping to the same monomer - only last one used)")
 
     check(all(o in (+1, -1) for o in orientations),
           f"All orientations are +1 or -1")
@@ -353,7 +353,7 @@ def compare_conditions(cond_a, cond_b):
 # ---------------------------------------------------------------------------
 def main():
     print("=" * 70)
-    print("  CTCF VALIDATION — Pre-simulation checks")
+    print("  CTCF VALIDATION - Pre-simulation checks")
     print("=" * 70)
     print(f"  Region:     {CHROM}:{REGION_START:,}-{REGION_END:,}")
     print(f"  Resolution: {RESOLUTION} bp/monomer")
@@ -373,7 +373,7 @@ def main():
             validate_arrays(condition, loaded)
             loaded_per_condition[condition] = loaded
         else:
-            header(f"{condition.upper()} — BED FILE NOT FOUND")
+            header(f"{condition.upper()} - BED FILE NOT FOUND")
             check(False, f"Oriented CTCF BED exists: {bed_path}")
 
     # Compare every pair of loaded CTCF types
@@ -389,12 +389,12 @@ def main():
     print()
 
     if n_fail > 0:
-        print("  \033[91m✗ CTCF validation FAILED — fix errors before running simulations\033[0m")
+        print("  \033[91mFAILED: CTCF validation - fix errors before running simulations\033[0m")
         sys.exit(1)
     elif n_warn > 0:
-        print("  \033[93m⚠ CTCF validation passed with warnings — review before production\033[0m")
+        print("  \033[93mCTCF validation passed with warnings - review before production\033[0m")
     else:
-        print("  \033[92m✓ All checks passed — CTCF sites are ready for simulation\033[0m")
+        print("  \033[92mAll checks passed - CTCF sites are ready for simulation\033[0m")
     print()
 
 
