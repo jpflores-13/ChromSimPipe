@@ -199,6 +199,11 @@ analysis:
   n_jobs: 4                    # worker processes inside each analysis job
   msd:    False                # two-point MSD + polymer dynamics (slow)
 
+  ## Hi-C normalization used when comparing with experiment: a weights column
+  ## in the .cool bins table. hic2cool copies Juicer's as KR, VC, VC_SQRT;
+  ## 'weight' is cooler's ICE; False compares raw counts.
+  hic_balance: KR
+
   ## APA / absolute loop quantification over convergent CTCF pairs
   apa:
     min_size_bins: 20

@@ -129,6 +129,7 @@ from configs.parameters import (  # noqa: E402
     SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_BEDS, MCOOL_FILES, ANALYSIS, PATHS,
 )
 _APA = ANALYSIS["apa"]
+_HIC_BALANCE = ANALYSIS["hic_balance"]
 
 _CONDITION_BY_KEY = {
     f"{c['params']['name']}_ctcf-{c['ctcf_type']}": c for c in SIMULATION_CONDITIONS
@@ -808,7 +809,7 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                         f"Pearson={metrics['overall_pearson']:.4f}")
         elif mcool_path:
             exp_map = exp_mod.load_region_matrix(
-                mcool_path, CHROM, REGION_START, REGION_END, RESOLUTION,
+                mcool_path, CHROM, REGION_START, REGION_END, RESOLUTION, balance=_HIC_BALANCE,
             )
             if exp_map is not None:
                 m = exp_mod.compute_sim_exp_metrics(sim_map, exp_map)
@@ -855,7 +856,7 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                         try:
                             e_d, e_p = ps_mod.compute_ps_from_cooler(
                                 mcool_path, region=f"{CHROM}:{REGION_START}-{REGION_END}",
-                                resolution=RESOLUTION,
+                                resolution=RESOLUTION, balance=_HIC_BALANCE,
                             )
                             expt_ps_curve = (e_d, e_p)
                         except Exception as e:
@@ -1139,7 +1140,7 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                             f"Pearson={metrics['overall_pearson']:.4f}")
             elif mcool_path:
                 exp_map = exp_mod.load_region_matrix(
-                    mcool_path, CHROM, REGION_START, REGION_END, RESOLUTION,
+                    mcool_path, CHROM, REGION_START, REGION_END, RESOLUTION, balance=_HIC_BALANCE,
                 )
                 if exp_map is not None:
                     m = exp_mod.compute_sim_exp_metrics(sim_map, exp_map)
@@ -1175,7 +1176,7 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                             e_d, e_p = ps_mod.compute_ps_from_cooler(
                                 mcool_path,
                                 region=f"{CHROM}:{REGION_START}-{REGION_END}",
-                                resolution=RESOLUTION,
+                                resolution=RESOLUTION, balance=_HIC_BALANCE,
                             )
                             expt_ps_curve = (e_d, e_p)
                         except Exception as e:
@@ -1237,7 +1238,7 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                         e_d, e_p = ps_mod.compute_ps_from_cooler(
                             mc_path,
                             region=f"{CHROM}:{REGION_START}-{REGION_END}",
-                            resolution=RESOLUTION,
+                            resolution=RESOLUTION, balance=_HIC_BALANCE,
                         )
                         exp_label = f"{ct_key}_experimental (exp)"
                         exp_curves[exp_label] = (e_d, e_p)

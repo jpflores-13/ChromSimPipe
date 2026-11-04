@@ -181,7 +181,7 @@ def extract_ps_metrics(
 def compute_ps_from_cooler(
     cool_path: str,
     region: Optional[str] = None,
-    balance: bool = True,
+    balance=True,
     min_diag: int = 2,
     resolution: Optional[int] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -199,8 +199,9 @@ def compute_ps_from_cooler(
         Path to an .mcool::/resolutions/<bp> URI or a single-resolution .cool.
     region : str, optional
         UCSC-style region, e.g. "chr3:34,000,000-36,000,000".
-    balance : bool
-        Use ICE-balanced values if available.
+    balance : bool or str
+        False for raw counts, True for cooler's ``weight`` column, or the
+        name of a normalization column (e.g. "KR" from hic2cool).
     min_diag : int
         Ignore the first ``min_diag`` diagonals (near-diagonal noise).
     resolution : int, optional
@@ -229,6 +230,11 @@ def compute_ps_from_cooler(
 
     clr = cooler.Cooler(uri)
     bp_per_bin = clr.binsize
+    try:
+        from experimental_compare import resolve_balance
+    except ImportError:
+        from analysis.experimental_compare import resolve_balance
+    balance = resolve_balance(clr, balance)
 
     if region is not None:
         mat = clr.matrix(balance=balance).fetch(region)

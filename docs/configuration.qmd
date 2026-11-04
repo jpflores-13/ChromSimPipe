@@ -58,8 +58,13 @@ tiling:     {tile_size, chrom_size, padding}
 sim_run:    {engine, seed_base, smc_steps_per_block, md_steps_per_block,
              total_blocks, warmup_blocks, save_every, restart_milker_every,
              contact_radius, hdf5_frames_per_file}
-analysis:   {n_jobs, msd, apa, msd_probe, msd_fit, calibration}
+analysis:   {n_jobs, msd, hic_balance, apa, msd_probe, msd_fit, calibration}
 ```
+
+`analysis.hic_balance` names the normalization read from each `.cool` when
+comparing with experiment. `hic2cool` copies Juicer's normalizations as
+columns named `KR`, `VC` and `VC_SQRT` (default `KR`); `weight` is cooler's
+own ICE balancing; `False` compares raw counts.
 
 ::: {.callout-note}
 `sim_run.engine` must be importable in the simulation environment; the

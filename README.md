@@ -337,6 +337,11 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `peaks had no FIMO hit` | `ctcf_motif.unoriented: 'error'` and some peaks lack a motif | Inspect them in `output/logs/orientCTCF_*.err`, or switch to `'drop'` |
 | No emails arrive | `mail` missing or blocked on the cluster | Test `echo test \| mail -s test $CHROMSIM_EMAIL`; change `notify: command:` |
 | Launcher job `OUT_OF_MEMORY` on the first run | Conda environments are built inside the launcher job | Build them once on a compute node: `srun ... --mem=16g --pty bash`, then `bash ChromSimPipe.sh --conda-create-envs-only` |
+| `nvrtc: error: invalid value for --gpu-architecture` | OpenMM built against CUDA 13, which dropped Pascal (GTX 10xx) and Volta (V100) GPUs | `envs/cohesin_sim.yml` pins `cuda-version=12`; rebuild the env (`--conda-create-envs-only` on a compute node) |
+| `No module named 'h5py'` (or another package) in a rule | An environment built before the env file listed it, or a different `python` came first on `PATH` | Rules now call `"$CONDA_PREFIX/bin/python"`; rebuild the env if the package is genuinely missing |
+| `no 'KR' normalization in ...cool` | The `.cool` has a different normalization column | Set `analysis.hic_balance` to one it lists (`weight`, `VC`, ...) or `False` for raw counts |
+| `convertHic` ends in `TIMEOUT` | Large `.hic`: a 3.7 GB map takes ~1.6 h | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` (default 480 min) |
+| `UCSC gene fetch failed ... timed out` | Compute nodes have no internet | Harmless: figures are drawn without the gene track |
 | A job failed | — | Its stdout / stderr are in `output/logs/{rule}_{wildcards}.out|.err` |
 
 For the full codebase walkthrough, see [`CODE_GUIDE.md`](CODE_GUIDE.md).

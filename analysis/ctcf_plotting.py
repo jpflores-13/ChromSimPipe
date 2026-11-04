@@ -267,6 +267,17 @@ def _is_placeholder_label(label: str) -> bool:
     return any(label.startswith(p) for p in _PLACEHOLDER_PREFIXES)
 
 
+
+def _resolve_cmap(name):
+    """Return ``name`` if matplotlib knows it (after registering cooltools'
+    maps such as "fall"); otherwise the closest built-in, "YlOrRd"."""
+    import matplotlib
+    try:
+        import cooltools.lib.plotting  # noqa: F401  registers "fall" etc.
+    except ImportError:
+        pass
+    return name if name in matplotlib.colormaps else "YlOrRd"
+
 def default_genome_assembly() -> str:
     """UCSC assembly name from the config (genome_assembly)."""
     from configs.parameters import GENOME_ASSEMBLY
@@ -465,7 +476,7 @@ def plot_contact_map_with_ctcf(
     out_path : str
     cmap : str
         Matplotlib colormap; "fall" is Hansen-lab default (via cooltools).
-        Falls back to "Reds" if "fall" is not registered.
+        Falls back to "YlOrRd" if the name is not registered.
     log_scale : bool
         Apply log10(x+eps) before plotting.
     resolution_bp, region_start_bp, chrom :
@@ -489,11 +500,7 @@ def plot_contact_map_with_ctcf(
     import matplotlib.pyplot as plt
     from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-    try:
-        import cooltools  # noqa: F401  (registers colormaps like "fall")
-    except ImportError:
-        if cmap == "fall":
-            cmap = "Reds"
+    cmap = _resolve_cmap(cmap)
 
     N = contact_map.shape[0]
 
