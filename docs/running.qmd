@@ -134,7 +134,8 @@ squeue -u $USER
 | Symptom | Fix |
 |---------|-----|
 | Snakemake lock error | `bash unlock.sh` then resubmit |
-| `nvrtc: error: invalid value for --gpu-architecture` | The env has CUDA 13, which dropped Pascal/Volta GPUs; the env file pins CUDA 12, so rebuild the env on a compute node |
+| `nvrtc: error: invalid value for --gpu-architecture` | The env has CUDA 13, which dropped Pascal/Volta GPUs; the env file pins CUDA 12.4, so rebuild the env on a compute node |
+| `CUDA_ERROR_UNSUPPORTED_PTX_VERSION` | The env's CUDA is newer than the node's driver supports (`nvidia-smi` shows the limit); lower `cuda-version` and rebuild |
 | `convertHic` ends in `TIMEOUT` | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` |
 | `no 'KR' normalization in ...cool` | Set `analysis.hic_balance` to a column it lists, or `False` |
 | No emails arrive | Test `echo test \| mail -s test $CHROMSIM_EMAIL`; change `notify: command:` |

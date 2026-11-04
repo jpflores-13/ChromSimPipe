@@ -71,7 +71,7 @@ bash ChromSimPipe.sh --conda-create-envs-only
 exit
 ```
 
-`envs/cohesin_sim.yml` pins `cuda-version=12` (CUDA 13 does not support
+`envs/cohesin_sim.yml` pins `cuda-version=12.4` (CUDA 13 does not support
 Pascal or Volta GPUs) and `numpy<2`, and uses only conda-forge and bioconda.
 Editing an env file gives it a new hash, so Snakemake builds a fresh
 environment; delete the old one under `.snakemake/conda/` to free space.

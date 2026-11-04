@@ -15,12 +15,16 @@ dependencies:
   - pyyaml           # configs/parameters.py reads the config
 
   # --- OpenMM + CUDA
-  # CUDA 12: CUDA 13 dropped Pascal (GTX 10xx) and Volta (V100) GPUs, so a
-  # CUDA 13 OpenMM fails on those nodes with "nvrtc: invalid value for
-  # --gpu-architecture". CUDA 12 runs on Pascal through Ada/Hopper (needs an
-  # NVIDIA driver >= 525). Do NOT pin the old `cudatoolkit` package.
+  # cuda-version=12.4:
+  #  - not 13: CUDA 13 dropped Pascal (P100, GTX 10xx) and Volta (V100), so
+  #    OpenMM fails with "nvrtc: invalid value for --gpu-architecture".
+  #  - not the newest 12.x: OpenMM compiles GPU code at run time, and the
+  #    NVIDIA driver must support that CUDA version, else
+  #    "CUDA_ERROR_UNSUPPORTED_PTX_VERSION". 12.4 needs a driver >= 550
+  #    (Pioneer's 570 supports up to 12.8). `nvidia-smi` shows a node's limit.
+  # Do NOT pin the old `cudatoolkit` package.
   - openmm
-  - cuda-version=12
+  - cuda-version=12.4
 
   # --- Hi-C data processing ---
   - cooler           # reads .cool files (experimental_compare.py, ps_curve.py)

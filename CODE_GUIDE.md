@@ -678,8 +678,13 @@ Longleaf.
 **CUDA architecture error.** `openmm.OpenMMException: nvrtc: error: invalid
 value for --gpu-architecture (-arch)` means the environment's CUDA cannot
 compile for the allocated GPU. CUDA 13 dropped Pascal (GTX 10xx) and Volta
-(V100); `envs/cohesin_sim.yml` pins `cuda-version=12` for this reason. Check
+(V100); `envs/cohesin_sim.yml` pins `cuda-version=12.4` for this reason. Check
 with `conda list -p <env> | grep cuda-version` and rebuild if it says 13.
+
+**`CUDA_ERROR_UNSUPPORTED_PTX_VERSION`.** The environment's CUDA is newer than
+the GPU node's NVIDIA driver supports. `nvidia-smi` on a GPU node prints
+"CUDA Version", the most the driver supports; `cuda-version` in
+`envs/cohesin_sim.yml` must not exceed it (12.4 needs a driver of 550 or newer).
 
 **No Hi-C comparison in the analysis output.** The analysis catches errors in
 each step, logs a warning and continues, so check
