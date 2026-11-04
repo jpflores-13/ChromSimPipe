@@ -6,7 +6,7 @@ A faithful numerical re-implementation of ``analysis/polymer_dynamics.py``
 that collapses the seven sequential stream passes the orchestrator
 currently performs (R_g + looped_fraction × n_pairs + dwell_times ×
 n_pairs + pair_distance_dist × n_pairs) into **one** pass parallelised
-across polychrom ``blocks_*.h5`` files — the same Hansen-lab worker
+across polychrom ``blocks_*.h5`` files - the same Hansen-lab worker
 pattern already used by ``analysis.contact_maps._block_file_tile_contact_worker``.
 
 Motivation
@@ -39,7 +39,7 @@ Per worker:   ~1–3 MB scratch per frame + per-block output arrays that
               block). No full trajectory ever held.
 Parent:       n_tiles × T × 8 B for R_g-per-tile and
               n_pairs × n_tiles × T × 8 B for pair distances.
-              For T=300 k, n_tiles=28, n_pairs=2 this totals ~200 MB —
+              For T=300 k, n_tiles=28, n_pairs=2 this totals ~200 MB -
               three orders of magnitude below the current pooled
               contact-map footprint.
 
@@ -98,7 +98,7 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# WORKER — one h5 block file at a time
+# WORKER - one h5 block file at a time
 # =============================================================================
 
 def _per_block_dynamics_worker(args):
@@ -153,7 +153,7 @@ def _per_block_dynamics_worker(args):
         for t_idx, key in enumerate(frame_keys):
             frame = _np.asarray(hf[key]["pos"], dtype=_np.float64)
 
-            # ── R_g per tile (two-pass identity) ──────────────────────────
+            # R_g per tile (two-pass identity)
             # Stack n_tiles sub-slices of shape (N_sub, 3).
             subs = _np.stack(
                 [frame[off + start_loc : off + end_loc, :] for off in tile_offsets],
@@ -165,7 +165,7 @@ def _per_block_dynamics_worker(args):
             cm_sq = _np.einsum("kj,kj->k", sum_x, sum_x) / (N_sub * N_sub)
             rg[:, t_idx] = _np.sqrt(_np.maximum(mean_sq - cm_sq, 0.0))
 
-            # ── Per-pair, per-tile separation ─────────────────────────────
+            # Per-pair, per-tile separation
             for p_idx in range(n_pairs):
                 idx_a, idx_b = pair_indices[p_idx]
                 # Stack the two beads across tiles: (n_tiles, 3) each.
@@ -178,7 +178,7 @@ def _per_block_dynamics_worker(args):
 
 
 # =============================================================================
-# PUBLIC API — batched, file-parallel entry point
+# PUBLIC API - batched, file-parallel entry point
 # =============================================================================
 
 def compute_dynamics_batch(
@@ -299,7 +299,7 @@ def compute_dynamics_batch(
     )
 
     # Use the "spawn" context so workers do not inherit the parent's
-    # already-warm numpy / h5py state — keeps per-worker RSS bounded
+    # already-warm numpy / h5py state - keeps per-worker RSS bounded
     # over long Phase-2 sweeps. The file-parallel pattern makes the
     # spawn cost negligible (1 × per worker, not per task).
     ctx = mp.get_context("spawn")
@@ -349,7 +349,7 @@ def compute_dynamics_batch(
 
 
 # =============================================================================
-# POST-PROCESSING HELPERS — vectorised, no stream access
+# POST-PROCESSING HELPERS - vectorised, no stream access
 # =============================================================================
 
 def _looped_fraction_from_distances(
@@ -412,7 +412,7 @@ def _pair_distance_dist_from_distances(
 
 
 # =============================================================================
-# SEQUENTIAL FALLBACK — reuses the existing, well-tested functions
+# SEQUENTIAL FALLBACK - reuses the existing, well-tested functions
 # =============================================================================
 
 def _compute_dynamics_batch_sequential(
@@ -466,7 +466,7 @@ def _compute_dynamics_batch_sequential(
 
 
 # =============================================================================
-# THIN CONVENIENCE WRAPPER — matches _run_msd_and_dynamics's plotting block
+# THIN CONVENIENCE WRAPPER - matches _run_msd_and_dynamics's plotting block
 # =============================================================================
 
 def run_polymer_dynamics_parallel(

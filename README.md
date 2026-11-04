@@ -1,10 +1,10 @@
-# ChromSimPipe — Cohesin Loop-Extrusion Simulation Pipeline
+# ChromSimPipe: Cohesin Loop-Extrusion Simulation Pipeline
 
 ## What this pipeline does
 
 Inside every cell, long DNA molecules are organised into 3D structures by
 **cohesin**, a ring-shaped protein that pulls DNA through itself, extruding
-a growing loop. **CTCF** proteins act as roadblocks — cohesin stops when it
+a growing loop. **CTCF** proteins act as roadblocks: cohesin stops when it
 runs into a CTCF site from the correct direction. The pattern of where
 cohesin stops determines which genomic regions contact each other,
 measurable by **Hi-C**.
@@ -21,8 +21,8 @@ stress (sorbitol treatment), comparing control vs. sorbitol CTCF CUT&Tag
 peaks against matched Hi-C maps. Swap in your own data and the pipeline
 runs the same way.
 
-**If you want a line-by-line walkthrough of every script, read
-[`CODE_GUIDE.md`](CODE_GUIDE.md).**
+A script-by-script description of the code is in
+[`CODE_GUIDE.md`](CODE_GUIDE.md).
 
 ### How the pieces fit together
 
@@ -234,10 +234,10 @@ not change when you move.
 
 Each folder has two files:
 
-- `env.sh` — sourced by `ChromSimPipe.sh` and `unlock.sh`; makes `python3`
+- `env.sh`: sourced by `ChromSimPipe.sh` and `unlock.sh`; makes `python3`
   (≥ 3.11) and `conda` available (`module load ...`, or
   `source ~/miniforge3/etc/profile.d/conda.sh`).
-- `config.yaml` — the Snakemake profile: scheduler, account, partitions, and
+- `config.yaml`: the Snakemake profile: scheduler, account, partitions, and
   each rule's CPUs / memory / GPU.
 
 To set up a new SLURM cluster:
@@ -287,7 +287,7 @@ output/
 
 | File | Purpose |
 |------|---------|
-| `ChromSimPipe.sh` | sbatch entry point — run this to launch the workflow |
+| `ChromSimPipe.sh` | sbatch entry point; run this to launch the workflow |
 | `unlock.sh` | Release the Snakemake lock after a failed run |
 | `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
 | `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, notifications, compute site |
@@ -343,16 +343,16 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `no 'KR' normalization in ...cool` | The `.cool` has a different normalization column | Set `analysis.hic_balance` to one it lists (`weight`, `VC`, ...) or `False` for raw counts |
 | `convertHic` ends in `TIMEOUT` | Large `.hic`: a 3.7 GB map takes ~1.6 h | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` (default 480 min) |
 | `UCSC gene fetch failed ... timed out` | Compute nodes have no internet | Harmless: figures are drawn without the gene track |
-| A job failed | — | Its stdout / stderr are in `output/logs/{rule}_{wildcards}.out|.err` |
+| A job failed | - | Its stdout / stderr are in `output/logs/{rule}_{wildcards}.out|.err` |
 
-For the full codebase walkthrough, see [`CODE_GUIDE.md`](CODE_GUIDE.md).
+For a description of every script, see [`CODE_GUIDE.md`](CODE_GUIDE.md).
 
 ---
 
 ## References
 
 ### Example dataset (STRS project)
-- Flores et al. 2026 — STRS paper. GEO: GSE310051 (Hi-C), GSE310047 (CUT&Tag).
+- Flores et al. 2026, STRS paper. GEO: GSE310051 (Hi-C), GSE310047 (CUT&Tag).
 
 ### Loop extrusion model & parameters
 - Fudenberg et al., *Cell Reports* **15**:2038–2049 (2016). Canonical loop-extrusion model.

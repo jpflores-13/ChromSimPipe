@@ -71,7 +71,7 @@ def _stream_selected_beads(
     For a ConformationStream over a tiled 70k-monomer simulation, replacing
     ``np.asarray(conformations)`` (which would allocate 168 GB for T=100k)
     with this helper keeps the full (T, N_chrom, 3) array off the parent
-    heap — only the picked ``n_beads`` positions per frame are retained.
+    heap - only the picked ``n_beads`` positions per frame are retained.
 
     Parameters
     ----------
@@ -81,7 +81,7 @@ def _stream_selected_beads(
     Returns
     -------
     ndarray of shape (T, n_beads, 3), dtype float64.
-    Memory = T * n_beads * 24 B — e.g. 13 MB for T=100k, n_beads=56.
+    Memory = T * n_beads * 24 B - e.g. 13 MB for T=100k, n_beads=56.
     """
     bead_indices = np.asarray(bead_indices, dtype=int)
     T = len(conformations)
@@ -231,7 +231,7 @@ def _pair_distance_trajectories_tiled(
     Single streaming pass over the conformation iterable; output shape
     (n_tiles, T). Callers that previously looped ``n_tiles`` times calling
     ``_pair_distance_trajectory`` (which re-reads the HDF5 stream each
-    call) should use this instead — one disk pass, ~27× faster.
+    call) should use this instead - one disk pass, ~27× faster.
     """
     tile_offsets = np.arange(n_tiles, dtype=int) * tile_size + pad
     bead_indices = np.empty(2 * n_tiles, dtype=int)
@@ -272,7 +272,7 @@ def compute_looped_fraction(
         return {"looped_fraction": frac, "looped_fraction_sem": 0.0,
                 "n_tiles_used": 1, "contact_radius": float(contact_radius)}
 
-    # (n_tiles, T) in one stream pass — no per-tile disk re-read.
+    # (n_tiles, T) in one stream pass - no per-tile disk re-read.
     d_all = _pair_distance_trajectories_tiled(
         conformations, idx_a, idx_b, tile_size, pad, n_tiles,
     )

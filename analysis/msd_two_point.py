@@ -701,7 +701,7 @@ def calibrate_from_msd(
     G_expt, _ = _short_time_diffusivity(expt_lags_sec, expt_msd_um2,
                                         fit_lag_min_sec, fit_lag_max_sec)
     # For sim, scale the experimental window to frames assuming
-    # sec_per_frame=1 initially — then we iterate on the conversion.
+    # sec_per_frame=1 initially - then we iterate on the conversion.
     G_sim, _ = _short_time_diffusivity(sim_lags_frames, sim_msd_monomer2,
                                         fit_lag_min_sec, fit_lag_max_sec)
 

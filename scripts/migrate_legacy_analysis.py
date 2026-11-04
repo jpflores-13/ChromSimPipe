@@ -25,7 +25,7 @@ Safe to re-run: skips files whose destination already exists.
 
 Usage examples
 --------------
-Dry-run (recommended first pass — logs what would happen, touches nothing)::
+Dry-run (recommended first pass - logs what would happen, touches nothing)::
 
     python scripts/migrate_legacy_analysis.py \\
         --results-dir results/polychrom_3d --dry-run

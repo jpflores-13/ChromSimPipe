@@ -1,5 +1,5 @@
 """
-Simulation parameters loader — reads config/ChromSimConfig.yaml and the
+Simulation parameters loader - reads config/ChromSimConfig.yaml and the
 samplesheet it names. Nothing here is hard-coded: every value comes from the
 config (set CHROMSIM_CONFIG=/path/to/config.yaml to use another file).
 
@@ -24,7 +24,7 @@ import csv as _csv
 import numpy as np
 import os as _os
 
-# ── Locate and load config ────────────────────────────────────────────────────
+# Locate and load config
 REPO_ROOT   = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), ".."))
 CONFIG_PATH = _os.path.abspath(_os.path.expanduser(_os.environ.get(
     "CHROMSIM_CONFIG", _os.path.join(REPO_ROOT, "config", "ChromSimConfig.yaml"))))
@@ -281,7 +281,7 @@ def list_conditions():
     print(f"{'Condition':<45} {'CTCF':>10} {'Hi-C':>8}   Description")
     print("-" * 110)
     for c in SIMULATION_CONDITIONS:
-        hic = c["compare_hic"] or "—"
+        hic = c["compare_hic"] or "-"
         print(
             f"{c['name']:<45} "
             f"{c['ctcf_type']:>10} "

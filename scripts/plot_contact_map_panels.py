@@ -5,16 +5,16 @@ Reads the prefixed ``.npy`` contact maps written by run_analysis_all.py and
 emits three families of figures into ``results/figures/`` (or wherever you
 point ``--output-dir``):
 
-  1. **Per-condition per-rep grid** — one subplot per replicate of one
+  1. **Per-condition per-rep grid** - one subplot per replicate of one
      condition, drawn as log-scale heatmaps on a shared colour scale.
      File: ``{condition}_contact_maps_per_rep.png``
 
-  2. **Per-condition pooled (merged-reps)** — single contact-map heatmap
+  2. **Per-condition pooled (merged-reps)** - single contact-map heatmap
      drawn from the pooled-across-replicates ``*_pooled_contact_map.npy``
      when one is present.
      File: ``{condition}_contact_map_merged_reps.png``
 
-  3. **All-conditions overview** — one subplot per condition (using the
+  3. **All-conditions overview** - one subplot per condition (using the
      pooled map when available, else replicate 0), showing every condition
      side-by-side on a shared scale.
      File: ``all_conditions_contact_maps.png``

@@ -44,8 +44,8 @@ parameters need adjustment.
 
 ### APA (Aggregate Peak Analysis)
 
-APA averages the contact matrix around all convergent CTCF pairs — the loop
-anchors. A strong APA peak (bright center relative to corners) indicates
+APA averages the contact matrix around all convergent CTCF pairs (the loop
+anchors). A strong APA peak (bright center relative to corners) indicates
 successful loop extrusion between convergent CTCF sites.
 
 ### Experimental comparison

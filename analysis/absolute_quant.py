@@ -32,7 +32,7 @@ Differences from upstream that are by design (not bugs)
 - ``cv2.GaussianBlur`` replaced by ``scipy.ndimage.gaussian_filter``
   (truncate=1.5 mimics cv2's ``ceil(3σ)`` kernel size). Numerical
   agreement verified at sigma=10 px on the synthetic test image in
-  ``tests/test_able_quantifier.py`` — scores agree within < 1 % on
+  ``tests/test_able_quantifier.py`` - scores agree within < 1 % on
   the regression image.
 - Cooler-specific code (``clr.matrix().fetch``, bin-snapping, chrom
   names) is replaced by numpy slicing with NaN padding off-edge.
@@ -46,7 +46,7 @@ Giorgetti L, Mirny LA, Hansen AS (2025)
    bioRxiv 2025.01.13.632736 (preprint, posted 2025-01-15;
    PMC11812599; DOI 10.1101/2025.01.13.632736).
    This preprint is the methods paper introducing AbLE; it will be
-   superseded by the journal-accepted version — update the citation
+   superseded by the journal-accepted version - update the citation
    when published. Repo (renamed 2025–2026):
    https://github.com/ahansenlab/AbsQuant_analysis_code
    (was ``ahansenlab/AbsLoopQuant_analysis_code``).
@@ -471,7 +471,7 @@ class LoopQuantifier:
         return strong
 
     # ------------------------------------------------------------------
-    # Main scoring routine — faithful port of LoopQuantifier.quantify_loop
+    # Main scoring routine - faithful port of LoopQuantifier.quantify_loop
     # ------------------------------------------------------------------
 
     def quantify_loop(
@@ -600,7 +600,7 @@ class LoopQuantifier:
 
 
 # =============================================================================
-# CONVENIENCE WRAPPERS — faithful AbLE on a numpy contact map
+# CONVENIENCE WRAPPERS - faithful AbLE on a numpy contact map
 # =============================================================================
 
 def _default_ps_values(contact_map: np.ndarray) -> np.ndarray:
@@ -665,7 +665,7 @@ def absolute_loop_quant(
 
     Back-compat: callers using the pre-2026-04-29 kwargs
     ``local_region_size``, ``quant_region_bins``, ``ps_window`` still
-    work — they are remapped or ignored with a one-shot warning.
+    work - they are remapped or ignored with a one-shot warning.
     """
     if local_region_size is not None:
         # Old units: bp at default resolution. Map by treating it as bins.

@@ -40,7 +40,7 @@ def merge_polychrom_hdf5(shard_dirs, output_dir):
 
     Each shard has its own blocks_0-99.h5, blocks_100-199.h5, etc.
     Instead of loading all frames into memory, we stream shard-by-shard
-    and write immediately — keeping memory usage constant regardless of
+    and write immediately - keeping memory usage constant regardless of
     total frame count.
     """
     try:
@@ -50,10 +50,10 @@ def merge_polychrom_hdf5(shard_dirs, output_dir):
         HAS_POLYCHROM = False
 
     if not HAS_POLYCHROM:
-        logger.warning("polychrom not installed — falling back to raw h5 merge")
+        logger.warning("polychrom not installed - falling back to raw h5 merge")
         return _merge_raw_h5(shard_dirs, output_dir)
 
-    # First pass: count total frames (cheap — only reads metadata)
+    # First pass: count total frames (cheap - only reads metadata)
     total_frames = 0
     shard_uri_counts = []
     for shard_dir in shard_dirs:
@@ -235,7 +235,7 @@ def merge_one(results_dir, base_name, shard_dirs, cleanup=False):
                 return
             else:
                 logger.info(f"  {base_name}: {len(existing)} shard dirs found but only "
-                            f"{n_previously_merged} previously merged — re-merging all...")
+                            f"{n_previously_merged} previously merged - re-merging all...")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -262,7 +262,7 @@ def merge_one(results_dir, base_name, shard_dirs, cleanup=False):
 
 
 def _merge_one_wrapper(args):
-    """Wrapper for multiprocessing Pool — unpacks args tuple."""
+    """Wrapper for multiprocessing Pool - unpacks args tuple."""
     results_dir, base_name, shard_dirs, cleanup = args
     try:
         merge_one(results_dir, base_name, shard_dirs, cleanup=cleanup)
@@ -356,7 +356,7 @@ def main():
                         help="Disable parallel merging (merge groups sequentially)")
     parser.add_argument("--cleanup", action="store_true",
                         help="Delete shard directories after a successful merge. "
-                             "Saves disk space but is irreversible — use with caution.")
+                             "Saves disk space but is irreversible - use with caution.")
 
     args = parser.parse_args()
 

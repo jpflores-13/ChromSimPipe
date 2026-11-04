@@ -15,7 +15,7 @@ config's path to its script in `$CHROMSIM_CONFIG`, so
 `--configfile other.yaml` reaches every job. No path, name, or parameter is
 written into the Snakefile or scripts.
 
-## `config/ChromSimConfig.yaml` — reference
+## `config/ChromSimConfig.yaml`: reference
 
 The shipped file is commented line by line; this is the outline.
 
@@ -76,11 +76,11 @@ BEDs must exist before simulation; there are no placeholder sites.
 
 `config/ChromSimConfig.test.yaml` is a complete copy of the main config with
 one condition, `n_replicates: 1`, `n_shards: 1`, `total_blocks: 1000`,
-`warmup_blocks: 400`, and `outputDir: 'output_test'` — a 9-job smoke test.
+`warmup_blocks: 400`, and `outputDir: 'output_test'`: a 9-job smoke test.
 Any config passed with `--configfile` must be complete like this one: it
 replaces the default, it is not merged into it.
 
-## `configs/parameters.py` — exported API
+## `configs/parameters.py`: exported API
 
 ```python
 from configs.parameters import (
@@ -152,7 +152,7 @@ with `Hi-C`. Snakemake picks new conditions up automatically.
 
 Each compute site has a folder under `profiles/` (see [Cluster Reference](cluster.qmd)).
 `profiles/longleaf/config.yaml` holds Longleaf's defaults and, under
-`set-resources:`, every rule's request (the dietJuicer pattern — rules carry
+`set-resources:`, every rule's request (the dietJuicer pattern: rules carry
 no resources of their own):
 
 ```yaml

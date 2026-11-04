@@ -11,7 +11,7 @@ behaviour we ported from ``ahansenlab/AbsQuant_analysis_code``:
   - The score scales linearly with the integrated excess at the loop
     centre.
 
-If any of these break, an algorithmic regression has occurred — fix
+If any of these break, an algorithmic regression has occurred - fix
 ``LoopQuantifier`` rather than relaxing the test.
 """
 

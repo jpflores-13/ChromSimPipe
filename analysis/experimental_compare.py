@@ -7,7 +7,7 @@ uses, extracts the simulated locus, and provides convenience routines to compare
 it with simulated data using the P(s) and APA modules.
 
 If cooler is not installed or the mcool path doesn't exist, every function
-here is a graceful no-op — callers should treat a None/empty return as
+here is a graceful no-op - callers should treat a None/empty return as
 "no experimental comparison available".
 """
 
@@ -90,12 +90,12 @@ def load_region_matrix(
     exist. NaNs (from balancing) are replaced with 0. ``balance`` is passed
     to :func:`resolve_balance` (True, False, or a column name such as "KR").
 
-    ``N`` equals ``(end_bp - start_bp) // resolution`` — the caller can
+    ``N`` equals ``(end_bp - start_bp) // resolution`` - the caller can
     assume the simulated contact map and the experimental matrix share the
     same shape so long as ``resolution`` matches the simulation bin size.
     """
     if not _cooler_available():
-        logger.warning("  cooler not installed — skipping experimental load")
+        logger.warning("  cooler not installed - skipping experimental load")
         return None
     if not os.path.exists(mcool_path):
         logger.warning(f"  mcool not found: {mcool_path}")
@@ -124,7 +124,7 @@ def load_region_matrix(
     N_actual = mat.shape[0]
     if N_actual != N_expected:
         logger.info(f"  mcool region returned {N_actual} bins, expected "
-                    f"{N_expected} — trimming/padding")
+                    f"{N_expected} - trimming/padding")
         N = min(N_actual, N_expected)
         out = np.zeros((N_expected, N_expected), dtype=float)
         out[:N, :N] = mat[:N, :N]

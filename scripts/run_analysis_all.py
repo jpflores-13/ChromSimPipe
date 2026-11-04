@@ -93,7 +93,7 @@ def _allocated_cpu_count() -> int:
          value the scheduler *intends* us to use. On clusters whose
          TaskPlugin is not ``task/cgroup``, ``sched_getaffinity`` can
          include SMT siblings (32 logical for 16 physical), which silently
-         doubles the Phase 1 ThreadPoolExecutor width — observed on
+         doubles the Phase 1 ThreadPoolExecutor width - observed on
          2026-04-23 job 9388487 under --cpus-per-task=16 +
          --hint=nomultithread, where the orchestrator spawned 2
          concurrent dirs and re-introduced the parent-heap-fragmentation
@@ -249,7 +249,7 @@ def parse_condition_rep(base_name: str) -> tuple[str, int]:
 
     A leading 'merged_' (the prefix written by scripts/merge_shards.py for
     merged simulation directories) is stripped before parsing so condition
-    names — and therefore every analysis output filename — stay clean.
+    names - and therefore every analysis output filename - stay clean.
     """
     if base_name.startswith(MERGED_PREFIX):
         base_name = base_name[len(MERGED_PREFIX):]
@@ -439,7 +439,7 @@ def _run_msd_and_dynamics(
     logger.info(f"    [MSD] {cell_type}: {len(pairs)} pair(s) "
                 f"{list(zip(labels, pairs))}")
 
-    # ── Two-point MSD per pair ──────────────────────────────────────────
+    # Two-point MSD per pair
     if do_msd:
         for (idx_a, idx_b), label in zip(pairs, labels):
             try:
@@ -470,7 +470,7 @@ def _run_msd_and_dynamics(
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"    [MSD] overlay failed: {e}")
 
-    # ── Polymer-dynamics diagnostics per pair ────────────────────────────
+    # Polymer-dynamics diagnostics per pair
     if do_polymer_dynamics:
         try:
             rg = pd_mod.compute_rg_timecourse(
@@ -541,7 +541,7 @@ def _run_msd_and_dynamics(
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"    [pair-dist] plot failed: {e}")
 
-    # ── Physical-units calibration ──────────────────────────────────────
+    # Physical-units calibration
     calib = None
     try:
         hic_cfg = CALIBRATION["hic"]
@@ -837,7 +837,7 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                         f"polymer-dynamics outputs")
         elif (do_msd or do_polymer_dynamics):
             # If we took the cached-contact-map shortcut above, conformations
-            # were never loaded. Load them now — MSD / dynamics need them.
+            # were never loaded. Load them now - MSD / dynamics need them.
             if conformations is None:
                 try:
                     conformations = load_conformations_h5(sim_dir)
@@ -1049,7 +1049,7 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
 
             # At this point sim_map and prefix are guaranteed set (either from
             # the cache fast-path or the compute path above). P(s) and
-            # insulation are cheap — always recompute so they stay in sync
+            # insulation are cheap - always recompute so they stay in sync
             # with the contact map that will be used by the downstream steps.
             distances, ps = ps_mod.compute_ps_curve(sim_map, RESOLUTION)
             np.savez(os.path.join(common_dir, f"{prefix}_ps_curve.npz"),
@@ -1511,7 +1511,7 @@ def main():
             cleanup_legacy_cache=args.cleanup_legacy_cache,
         ))
 
-    # ── Phase 1: per-replicate analysis ──────────────────────────────────
+    # Phase 1: per-replicate analysis
     logger.info("")
     logger.info("=" * 60)
     logger.info("PHASE 1: Per-replicate analysis")
@@ -1552,7 +1552,7 @@ def main():
     n_fail = len(results) - n_ok
     logger.info(f"Phase 1 complete: {n_ok} succeeded, {n_fail} failed.")
 
-    # ── Phase 2: pool replicates per condition ───────────────────────────
+    # Phase 2: pool replicates per condition
     if not args.no_pool:
         logger.info("")
         logger.info("=" * 60)
@@ -1578,7 +1578,7 @@ def main():
     else:
         logger.info("Skipping Phase 2 (--no-pool)")
 
-    # ── Phase 3: between-condition MSD statistics ───────────────────────
+    # Phase 3: between-condition MSD statistics
     # Aggregates per-replicate alpha and K_alpha values across conditions
     # and runs pairwise comparisons (Welch's t, Mann-Whitney, permutation,
     # bootstrap CI, Cohen's d). Honest caveats on n_rep = 3 power are
@@ -1602,7 +1602,7 @@ def main():
     elif args.no_msd_stats:
         logger.info("Skipping Phase 3 (--no-msd-stats)")
 
-    # ── Phase 4: metric-by-condition summary table ───────────────────────
+    # Phase 4: metric-by-condition summary table
     # Reads every scalar already written to ``common_dir`` and pivots it
     # into a single matrix (rows = metrics grouped by family, columns =
     # conditions). This is the one place to look if you want to compare
@@ -1627,7 +1627,7 @@ def main():
     else:
         logger.info("Skipping Phase 4 (--no-summary-table)")
 
-    # ── Summary ─────────────────────────────────────────────────────────────────
+    # Summary
     logger.info("")
     logger.info("=" * 60)
     logger.info("ALL DONE")
