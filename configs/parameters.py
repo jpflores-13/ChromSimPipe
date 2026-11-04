@@ -388,6 +388,7 @@ _apa = _ana.get("apa", {}) or {}
 ANALYSIS = dict(
     n_jobs = int(_ana.get("n_jobs", 4)),
     msd    = bool(_ana.get("msd", False)),
+    hic_balance = _ana.get("hic_balance", "KR"),
     apa    = dict(
         min_size_bins = int(_apa.get("min_size_bins", 20)),
         max_size_bins = int(_apa.get("max_size_bins", 1000)),

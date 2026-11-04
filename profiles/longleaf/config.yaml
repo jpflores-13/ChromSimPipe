@@ -15,7 +15,7 @@ default-resources:
 ## Per-rule resources (dietJuicer pattern: rules carry no resources of their own)
 set-resources:
   convertHic:
-    runtime: 120
+    runtime: 480                  # 1.6 h for a 3.7 GB .hic on Longleaf
     cpus_per_task: 4
     mem_mb: 32000
   getMotif:

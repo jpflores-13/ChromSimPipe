@@ -45,18 +45,50 @@ def resolve_mcool_uri(path: str, resolution: int) -> str:
     return path
 
 
+
+def _resolve_cmap(name):
+    """Return ``name`` if matplotlib knows it (after registering cooltools'
+    maps such as "fall"); otherwise the closest built-in, "YlOrRd"."""
+    import matplotlib
+    try:
+        import cooltools.lib.plotting  # noqa: F401  registers "fall" etc.
+    except ImportError:
+        pass
+    return name if name in matplotlib.colormaps else "YlOrRd"
+
+
+def resolve_balance(clr, balance):
+    """
+    cooler ``balance`` argument for ``clr``: False for raw counts, or the
+    bins column holding normalization weights. ``True`` means cooler's
+    default ``weight`` (ICE); a string names a column such as ``KR``, which
+    hic2cool writes for Juicer normalizations. Raises if it is missing.
+    """
+    if balance is False or balance is None:
+        return False
+    column = "weight" if balance is True else str(balance)
+    available = [c for c in clr.bins().columns if c not in ("chrom", "start", "end")]
+    if column not in available:
+        raise ValueError(
+            f"no '{column}' normalization in {clr.uri}; available: {available}. "
+            "Set analysis.hic_balance in the config."
+        )
+    return column
+
+
 def load_region_matrix(
     mcool_path: str,
     chrom: str,
     start_bp: int,
     end_bp: int,
     resolution: int,
-    balance: bool = True,
+    balance=True,
 ) -> Optional[np.ndarray]:
     """
     Fetch a dense (N, N) matrix for ``chrom:start-end`` at the given
     resolution. Returns ``None`` if cooler is missing or the file doesn't
-    exist. NaNs (from balancing) are replaced with 0.
+    exist. NaNs (from balancing) are replaced with 0. ``balance`` is passed
+    to :func:`resolve_balance` (True, False, or a column name such as "KR").
 
     ``N`` equals ``(end_bp - start_bp) // resolution`` — the caller can
     assume the simulated contact map and the experimental matrix share the
@@ -79,7 +111,8 @@ def load_region_matrix(
 
     region = f"{chrom}:{start_bp}-{end_bp}"
     try:
-        mat = np.asarray(clr.matrix(balance=balance).fetch(region), dtype=float)
+        mat = np.asarray(clr.matrix(balance=resolve_balance(clr, balance)).fetch(region),
+                         dtype=float)
     except Exception as e:
         logger.warning(f"  failed to fetch {region} from {mcool_path}: {e}")
         return None
@@ -120,11 +153,7 @@ def plot_sim_vs_exp_map(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    try:
-        import cooltools  # noqa: F401
-    except ImportError:
-        if cmap == "fall":
-            cmap = "Reds"
+    cmap = _resolve_cmap(cmap)
 
     N = min(sim_map.shape[0], exp_map.shape[0])
     sim = np.asarray(sim_map[:N, :N], dtype=float)
