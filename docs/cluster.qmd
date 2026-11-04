@@ -74,7 +74,7 @@ Scratch is purged automatically, so copy `<outputDir>/analysis/` and
 |---------|-------|-------|
 | Account | `pjt5_1` (its QOS `gpuext2` applies by default) | `default-resources: slurm_account` |
 | CPU partition | `batch` | `default-resources: slurm_partition` |
-| GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gres: "gpu:1"` | `set-resources: simulateShard` |
+| GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gpu: 1` (`--gpus=1`) | `set-resources: simulateShard` |
 | Software | your own Miniforge (Pioneer's `Miniconda3` modules ship conda 23.x) | `env.sh` |
 
 ## SLURM account and partition (Longleaf)
