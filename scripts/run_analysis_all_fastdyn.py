@@ -29,7 +29,7 @@ Usage
 Drop-in replacement for ``run_analysis_all.py``::
 
     python scripts/run_analysis_all_fastdyn.py \
-        --results-dir results/polychrom_3d \
+        --results-dir output/sims \
         --n-jobs 16 \
         --reuse-heavy --skip-existing \
         ... (every flag accepted by run_analysis_all.py is accepted here)

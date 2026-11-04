@@ -1,0 +1,3 @@
+Project	Cell_Type	Condition	CTCF_Peaks	Hi-C
+STRS	HEK293T	condition1	/home/jxf700/ChromSimPipe_data/STRS_HEK293_eGFP-YAP_CTCF_cont_0h_peaks.narrowPeak	/home/jxf700/ChromSimPipe_data/YAPP_HEK293_eGFP-YAP_Cai_control_megaMap_inter_30.hic
+STRS	HEK293T	condition2	/home/jxf700/ChromSimPipe_data/STRS_HEK293_eGFP-YAP_CTCF_sorbitol_1h_peaks.narrowPeak	/home/jxf700/ChromSimPipe_data/YAPP_HEK293_eGFP-YAP_Cai_sorbitol_megaMap_inter_30.hic

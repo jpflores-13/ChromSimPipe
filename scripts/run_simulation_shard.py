@@ -61,7 +61,7 @@ def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
     # global_shard_index accounts for any offset from previous runs,
     # ensuring unique directory names and independent random seeds
     global_shard_index = shard_index + shard_index_offset
-    shard_seed = 42 + replicate * 10000 + global_shard_index * 1000
+    shard_seed = SIM_RUN["seed_base"] + replicate * 10000 + global_shard_index * 1000
 
     shard_dir = os.path.join(output_dir,
                              f"{name}_ctcf-{ctcf_type}_rep{replicate}_shard{global_shard_index}")
@@ -93,22 +93,18 @@ def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
     for _ in range(warmup):
         lef_sim.step()
 
-    # --- Try polychrom, then OpenMM, then LEF-only ---
-    engine_used = "lef_only"
-
+    # --- Engine from config (sim_run.engine); stop if it cannot be imported ---
+    engine_used = SIM_RUN["engine"]
     try:
-        import polychrom
-        from polychrom.simulation import Simulation
-        from polychrom.forces import (
-            harmonic_bonds, angle_force, polynomial_repulsive, spherical_confinement,
+        if engine_used == "polychrom":
+            import polychrom  # noqa: F401
+        elif engine_used == "openmm":
+            import openmm  # noqa: F401
+    except ImportError as e:
+        raise SystemExit(
+            f"sim_run.engine is '{engine_used}' but it cannot be imported ({e}). "
+            "Check the condaEnvs.sim environment."
         )
-        engine_used = "polychrom"
-    except ImportError:
-        try:
-            import openmm
-            engine_used = "openmm"
-        except ImportError:
-            engine_used = "lef_only"
 
     logger.info(f"Shard {shard_index}: engine={engine_used}, blocks={blocks_per_shard}, GPU={gpu}")
 
@@ -166,22 +162,23 @@ def _run_shard_polychrom(lef_sim, params, N, n_lefs, n_blocks, warmup,
     # --- Initialize polymer and simulation ---
     coords = initialize_polymer(N, POLYMER["density"])
 
-    reporter = HDF5Reporter(folder=shard_dir, max_data_length=100,
+    reporter = HDF5Reporter(folder=shard_dir,
+                            max_data_length=SIM_RUN["hdf5_frames_per_file"],
                             overwrite=True, blocks_only=True)
 
     sim = Simulation(
         platform=POLYMER["platform"], GPU=str(gpu), N=N,
         error_tol=POLYMER["error_tol"], collision_rate=POLYMER["collision_rate"],
-        integrator="variableLangevin",
+        integrator=POLYMER["integrator"],
         reporters=[reporter],
         PBCbox=False,
-        precision="mixed",
+        precision=POLYMER["precision"],
     )
     sim.set_data(coords)
 
     # --- Add forces ---
     sim.add_force(spherical_confinement(
-        sim, density=POLYMER["density"], k=1.0,
+        sim, density=POLYMER["density"], k=POLYMER["confinement_k"],
     ))
 
     sim.add_force(
@@ -201,7 +198,7 @@ def _run_shard_polychrom(lef_sim, params, N, n_lefs, n_blocks, warmup,
             },
             nonbonded_force_func=polynomial_repulsive,
             nonbonded_force_kwargs={
-                "trunc": 3.0,
+                "trunc": POLYMER["repulsion_trunc"],
             },
             except_bonds=True,
             override_checks=True,

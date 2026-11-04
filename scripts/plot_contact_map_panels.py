@@ -47,6 +47,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from configs.parameters import PATHS  # noqa: E402
+
 
 # Filename patterns produced by run_analysis_all.py (Tasks 5+6 of the
 # 2026-04-27 flat-output refactor):
@@ -235,10 +238,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--analysis-dir", default="results/analysis",
+    parser.add_argument("--analysis-dir", default=PATHS["analysis"],
                         help="Folder holding *_contact_map.npy files. "
                              "Default: results/analysis.")
-    parser.add_argument("--output-dir", default="results/figures",
+    parser.add_argument("--output-dir", default=PATHS["figures"],
                         help="Destination for the figure panels. "
                              "Default: results/figures.")
     parser.add_argument("--no-log-scale", action="store_true",

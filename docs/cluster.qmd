@@ -2,57 +2,138 @@
 
 ## How jobs are submitted
 
-`ChromSimPipe.sh` submits itself as a SLURM job. Inside that job, Snakemake
-uses `snakemake-executor-plugin-slurm` to submit each rule as its own SLURM job.
-You only ever run `sbatch ChromSimPipe.sh` — everything else is automatic.
+`sbatch ChromSimPipe.sh` starts the launcher job. Inside it, Snakemake uses
+`snakemake-executor-plugin-slurm` to submit each rule as its own SLURM job.
 
-## SLURM account and partition
+## Compute sites
 
-| Setting | Value | Where set |
-|---------|-------|-----------|
-| Account | `rc_dphansti_pi` | `profiles/slurm/config.yaml` |
-| Default partition | `general` | `profiles/slurm/config.yaml` |
-| GPU partition | `gpu` | `simulate_shard` rule in Snakefile |
-| GPU QOS | `gpu_access` | `simulate_shard` rule in Snakefile |
+Everything specific to a compute site lives in one folder under `profiles/`;
+the config names it with `hpcProfile`. The science config and samplesheet do
+not change when you move.
+
+| Folder | For |
+|--------|-----|
+| `profiles/longleaf/` | UNC Longleaf (SLURM) |
+| `profiles/pioneer/` | Case Western Pioneer (SLURM); use with `config/ChromSimConfig.pioneer.yaml` |
+| `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
+| `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
+
+Each folder has two files:
+
+- `env.sh` — sourced by `ChromSimPipe.sh` and `unlock.sh`; makes `python3`
+  (≥ 3.11) and `conda` available (`module load ...`, or
+  `source ~/miniforge3/etc/profile.d/conda.sh`).
+- `config.yaml` — the Snakemake profile: scheduler, account, partitions, and
+  each rule's CPUs / memory / GPU.
+
+To set up a new SLURM cluster:
+
+```bash
+cp -r profiles/slurm-template profiles/<cluster>
+nano profiles/<cluster>/config.yaml   # account, CPU partition, GPU partition (+ QOS if required)
+nano profiles/<cluster>/env.sh        # module loads for python3 and conda
+# then in config/ChromSimConfig.yaml:  hpcProfile: 'profiles/<cluster>'
+sbatch ChromSimPipe.sh
+```
+
+`sinfo -s` lists partitions, `sacctmgr show assoc user=$USER` lists your
+accounts, and `module avail` shows the available software. Without editing the
+config, `--profile profiles/<cluster>` picks a site for a single run. For
+`profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
+
+::: {.callout-warning}
+**Profile status.** None of the shipped profiles has completed a full run yet.
+Run the 9-job test config on a new cluster first.
+:::
+
+### One config per cluster
+
+The data and genome live at different paths on each cluster, so each
+cluster gets its own samplesheet and config, identical in science to the
+main ones. For Pioneer: `ChromSimSamplesheet.pioneer.txt`,
+`config/ChromSimConfig.pioneer.yaml` (full run) and
+`config/ChromSimConfig.pioneer.test.yaml` (9-job test).
+
+On Pioneer, inputs and code live in home and compute output goes to scratch:
+
+| What | Where |
+|------|-------|
+| Peaks, `.hic` maps, genome FASTA | `/home/jxf700/ChromSimPipe_data/` |
+| The clone (and the conda environments Snakemake builds inside it) | home |
+| Miniforge | `$HOME/miniforge3` |
+| `outputDir` (simulations, analysis, logs) | scratch — replace `<your scratch dir>` in both Pioneer configs |
+
+Scratch is purged automatically, so copy `<outputDir>/analysis/` and
+`<outputDir>/*_benchmarking.tsv` back to home when a run finishes.
+
+## Pioneer (Case Western)
+
+| Setting | Value | Where |
+|---------|-------|-------|
+| Account | `pjt5_1` (its QOS `gpuext2` applies by default) | `default-resources: slurm_account` |
+| CPU partition | `batch` | `default-resources: slurm_partition` |
+| GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gres: "gpu:1"` | `set-resources: simulateShard` |
+| Software | your own Miniforge (Pioneer's `Miniconda3` modules ship conda 23.x) | `env.sh` |
+
+## SLURM account and partition (Longleaf)
+
+All of these are in `profiles/longleaf/config.yaml`:
+
+| Setting | Value | Where |
+|---------|-------|-------|
+| Account | `rc_dphansti_pi` | `default-resources: slurm_account` |
+| Default partition | `general` | `default-resources: slurm_partition` |
+| GPU partitions | `l40-gpu,volta-gpu,gpu` (first with a free node) | `set-resources: simulateShard` |
+| GPU QOS | `gpu_access` | `set-resources: simulateShard` |
+
+`env.sh` activates your own Miniforge (see [Conda](#conda-version) below):
+Longleaf's `anaconda` modules ship conda 24.1, older than Snakemake needs.
 
 ## Per-rule resource requests
 
 | Rule | Partition | CPUs | RAM | Wall time | GPU |
 |------|-----------|------|-----|-----------|-----|
-| `convert_hic` | general | 4 | 32 GB | 2 h | — |
-| `extract_ctcf` | general | 2 | 16 GB | 1 h | — |
-| `validate_ctcf` | general | 1 | 4 GB | 15 min | — |
-| `simulate_shard` | **gpu** | 4 | 60 GB | 12 h | **1** |
-| `merge_shards` | general | 4 | 64 GB | 2 h | — |
-| `analyze_all` | general | 4 | 64 GB | 6 h | — |
+| `convertHic` | general | 4 | 32 GB | 2 h | — |
+| `getMotif` | general | 1 | 1 GB | 15 min | — |
+| `orientCTCF` | general | 2 | 16 GB | 1 h | — |
+| `validateCTCF` | general | 1 | 4 GB | 15 min | — |
+| `simulateShard` | **l40-gpu, volta-gpu, gpu** | 4 | 60 GB | 12 h | **1** |
+| `mergeShards` | general | 4 | 64 GB | 2 h | — |
+| `analyzeCondition` | general | 4 | 64 GB | 6 h | — |
+| `benchmarkSummary` | general | 1 | 2 GB | 15 min | — |
 
 ## Log file locations
 
 | Log | Path |
 |-----|------|
-| Top-level Snakemake log | `logs/snakemake_{jobid}.err` |
-| Per-rule job logs | `.snakemake/slurm_logs/rule_{rule}/{wildcards}/{jobid}.log` |
-| Setup script log | `logs/setup_data*.log` |
+| Launcher (main Snakemake process) | `ChromSimPipe-{jobid}.out` |
+| Each job's stdout / stderr | `output/logs/{rule}_{wildcards}.out` / `.err` |
+| SLURM job logs | `output/logs_slurm/` (`--slurm-logdir` in `ChromSimPipe.sh`) |
+| Per-job run time / memory | `output/benchmarks/`, summarised in `output/{runName}_benchmarking.tsv` |
 
-::: {.callout-warning}
-Do not move or rename the `.snakemake/slurm_logs/` directory. Snakemake reads
-those paths to report per-job errors. Move them after the run if you want to
-archive them.
-:::
+## Conda version {#conda-version}
+
+Snakemake 8.27 requires conda 24.7.1 or newer and stops with
+`Conda must be version 24.7.1 or later` otherwise. Neither Longleaf's
+`anaconda` modules (24.1) nor Pioneer's `Miniconda3` modules (23.x) are new
+enough, so both profiles use a Miniforge you install once per cluster:
+
+```bash
+wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh
+bash Miniforge3-Linux-x86_64.sh -b -p $HOME/miniforge3
+rm -rf env        # the launcher's venv, if it was built with another Python
+```
+
+`env.sh` activates it (set `CHROMSIM_CONDA_ROOT` to use another location).
+The rule environments themselves are built inside the repo
+(`.snakemake/conda/`), so keep the clone on storage that is not purged.
 
 ## Conda environments in SLURM jobs
 
-GPU nodes on Longleaf require initializing conda via `source` rather than
-`module load`. The Snakefile does this:
-
-```bash
-source /nas/longleaf/rhel9/apps/anaconda/2024.02/etc/profile.d/conda.sh
-conda run -p ~/.local/share/mamba/envs/cohesin_sim \
-    python scripts/run_simulation_shard.py ...
-```
-
-Using `conda run -p <full-path>` (not `-n <name>`) is essential for reliable
-environment activation in non-interactive SLURM jobs.
+Each rule declares `conda:` with an entry from `condaEnvs` in the config, and
+the profile sets `software-deployment-method: conda`. Snakemake activates the
+environment inside each job. The site's `env.sh` puts `conda` on the `PATH`
+that SLURM jobs inherit.
 
 ## Checking queue status
 
@@ -68,7 +149,7 @@ sacct -j <jobid> --format=JobID,State,Elapsed,ExitCode
 ```bash
 scancel <jobid>                   # one job
 scancel -u $USER                  # ALL your jobs (careful!)
-scancel -u $USER --name simulate_shard   # by job name
+scancel -u $USER --name <jobname>        # by job name
 ```
 
 After cancelling, run `bash unlock.sh` before resubmitting.

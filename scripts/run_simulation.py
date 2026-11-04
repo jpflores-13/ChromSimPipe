@@ -30,7 +30,7 @@ from configs.parameters import (
     POLYMER, SMC_BOND, SIM_RUN, N_MONOMERS, TILING,
     ALL_PARAM_SETS, SIMULATION_CONDITIONS,
     CTCF_TYPES, get_ctcf_arrays, get_tiled_ctcf_arrays, get_condition,
-    CHROM, REGION_START, REGION_END, RESOLUTION,
+    CHROM, REGION_START, REGION_END, RESOLUTION, PATHS,
 )
 from scripts.lef_dynamics import LEFSimulator
 
@@ -144,19 +144,19 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
             )
             from polychrom.hdf5_format import HDF5Reporter
             HAS_POLYCHROM = True
-        except ImportError:
-            HAS_POLYCHROM = False
-            logger.warning("polychrom not available — running LEF-only simulation")
+        except ImportError as e:
+            raise SystemExit(f"polychrom engine requested but it cannot be imported ({e}). "
+                             "Use --engine lef_only for a 1D-only run.")
 
     # --- Tiling: simulate a large chromosome with N_TILES copies of the locus ---
     # Numeric values below are the current defaults from configs/parameters.py
     # (TILING dict); they are kept as comments only to make the intent clear.
     # The truth is always TILING at runtime.
-    N_locus = POLYMER["N"]                      # 2000 (original locus)
-    N = TILING["chrom_size"]                     # 70000 (tiled chromosome)
-    n_tiles = TILING["n_tiles"]                  # 28
-    tile_size = TILING["tile_size"]              # 2500
-    pad = TILING["padding"]                      # 250
+    N_locus = POLYMER["N"]                      # locus monomers
+    N = TILING["chrom_size"]                     # tiled chromosome
+    n_tiles = TILING["n_tiles"]
+    tile_size = TILING["tile_size"]
+    pad = TILING["padding"]
 
     name = params["name"]
     # Include CTCF type in the directory name so runs with different CTCF
@@ -190,7 +190,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
     # seed numpy (used by polychrom.starting_conformations.grow_cubic and any
     # other np.random.* call) and the OpenMM integrator (Langevin noise) below
     # right after Simulation() construction.
-    rep_seed = 42 + replicate * 1000
+    rep_seed = SIM_RUN["seed_base"] + replicate * 1000
     np.random.seed(rep_seed)
 
     # --- Initialize LEF simulator on the FULL tiled chromosome ---
@@ -263,7 +263,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
         # block lands at last_block_idx+1.
         if should_resume:
             reporter = HDF5Reporter(
-                folder=run_dir, max_data_length=100,
+                folder=run_dir, max_data_length=SIM_RUN["hdf5_frames_per_file"],
                 overwrite=False, check_exists=False, blocks_only=True,
             )
             last_block_idx, last_data = reporter.continue_trajectory()
@@ -274,7 +274,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
                         f"loaded conformation shape {coords.shape})")
         else:
             reporter = HDF5Reporter(
-                folder=run_dir, max_data_length=100,
+                folder=run_dir, max_data_length=SIM_RUN["hdf5_frames_per_file"],
                 overwrite=True, blocks_only=True,
             )
             start_block = 0
@@ -286,10 +286,10 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
             N=N,
             error_tol=POLYMER["error_tol"],
             collision_rate=POLYMER["collision_rate"],
-            integrator="variableLangevin",
+            integrator=POLYMER["integrator"],
             reporters=[reporter],
             PBCbox=False,
-            precision="mixed",
+            precision=POLYMER["precision"],
         )
 
         # Seed the OpenMM integrator's Langevin noise deterministically per
@@ -304,7 +304,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
 
         # --- Add forces ---
         sim.add_force(spherical_confinement(
-            sim, density=POLYMER["density"], k=1.0,
+            sim, density=POLYMER["density"], k=POLYMER["confinement_k"],
         ))
 
         from polychrom import forcekits
@@ -325,7 +325,7 @@ def run_simulation_polychrom(params: dict, replicate: int, output_dir: str,
                 },
                 nonbonded_force_func=polynomial_repulsive,
                 nonbonded_force_kwargs={
-                    "trunc": 3.0,
+                    "trunc": POLYMER["repulsion_trunc"],
                 },
                 except_bonds=True,
                 override_checks=True,
@@ -541,7 +541,7 @@ def run_simulation_openmm_standalone(params: dict, replicate: int, output_dir: s
                     "replicate": replicate}, f, indent=2, default=str)
 
     # Per-rep deterministic seeding (mirrors run_simulation_polychrom).
-    rep_seed = 42 + replicate * 1000
+    rep_seed = SIM_RUN["seed_base"] + replicate * 1000
     np.random.seed(rep_seed)
 
     # Initialize LEFs
@@ -735,9 +735,9 @@ def main():
                              "to fit comfortably in the 48h walltime "
                              "(default 700 blocks ≈ 22h on V100, "
                              "yielding 70 000 saved conformations).")
-    parser.add_argument("--engine", type=str, default="auto",
-                        choices=["auto", "polychrom", "openmm", "lef_only"],
-                        help="Simulation engine to use")
+    parser.add_argument("--engine", type=str, default=SIM_RUN["engine"],
+                        choices=["polychrom", "openmm", "lef_only"],
+                        help="Simulation engine (default: sim_run.engine in the config)")
 
     args = parser.parse_args()
 
@@ -751,7 +751,7 @@ def main():
     )
 
     if args.output is None:
-        args.output = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results")
+        args.output = PATHS["sims"]
     os.makedirs(args.output, exist_ok=True)
 
     logger.info(f"Running simulation: {params['name']} + CTCF={ctcf_type} (rep {args.replicate})")
@@ -770,19 +770,6 @@ def main():
         run_simulation_polychrom(**run_kwargs)
     elif args.engine == "openmm":
         run_simulation_openmm_standalone(**run_kwargs)
-    else:
-        # Auto-detect best engine
-        try:
-            import polychrom
-            run_simulation_polychrom(**run_kwargs)
-        except ImportError:
-            try:
-                import openmm
-                run_simulation_openmm_standalone(**run_kwargs)
-            except ImportError:
-                logger.warning("Neither polychrom nor openmm available. Running LEF-only.")
-                run_simulation_polychrom(**run_kwargs, force_lef_only=True)
-
 
 if __name__ == "__main__":
     main()

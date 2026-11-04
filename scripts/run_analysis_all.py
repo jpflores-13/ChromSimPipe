@@ -44,14 +44,14 @@ Overlay plot across all conditions:
 
 Usage
 -----
-# Analyse everything found under results/polychrom_3d/:
-    python scripts/run_analysis_all.py --results-dir results/polychrom_3d
+# Analyse everything found under output/sims/:
+    python scripts/run_analysis_all.py --results-dir output/sims
 
 # Each condition is compared with its compare_hic map from the config,
-# looked up as <hic-dir>/<hic_type>.cool (or .npy), else data/mcool/:
+# looked up as <hic-dir>/<hic_type>.cool (or .npy), else <outputDir>/mcool/:
     python scripts/run_analysis_all.py \\
-        --results-dir results/polychrom_3d \\
-        --hic-dir data/mcool
+        --results-dir output/sims \\
+        --hic-dir output/mcool
 
 Options
 -------
@@ -126,8 +126,9 @@ logger = logging.getLogger(__name__)
 # which CTCF set was simulated and which Hi-C map (compare_hic) to compare to.
 
 from configs.parameters import (  # noqa: E402
-    SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_BEDS, MCOOL_FILES,
+    SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_BEDS, MCOOL_FILES, ANALYSIS, PATHS,
 )
+_APA = ANALYSIS["apa"]
 
 _CONDITION_BY_KEY = {
     f"{c['params']['name']}_ctcf-{c['ctcf_type']}": c for c in SIMULATION_CONDITIONS
@@ -199,7 +200,7 @@ def resolve_ctcf_bed(
 
 def find_mcool(hic_type: str, hic_dir: str | None,
                overrides: dict[str, str]) -> str | None:
-    """Return the first existing mcool for a Hi-C type: override, hic_dir, data/mcool."""
+    """Return the first existing mcool for a Hi-C type: override, hic_dir, <outputDir>/mcool."""
     candidates = [overrides.get(hic_type)]
     if hic_dir:
         candidates.append(os.path.join(hic_dir, f"{hic_type}.cool"))
@@ -288,7 +289,7 @@ def _build_prefix(sim_dir: str) -> str:
 
     Returns ``{condition}_{n_blocks}blk_rep{rep}`` when the directory
     name contains a ``_repN`` suffix, otherwise ``{base}_{n_blocks}blk``.
-    Used by every analysis output so files in ``results/analysis/``
+    Used by every analysis output so files in ``<outputDir>/analysis/``
     sort by condition.
     """
     base = os.path.basename(sim_dir.rstrip("/\\"))
@@ -386,7 +387,7 @@ def _run_msd_and_dynamics(
     cell_type : str
         Used to pick MSD pairs and the matching experimental reference.
     common_dir : str
-        Flat output folder (results/analysis/) where every artefact lands.
+        Flat output folder (<outputDir>/analysis/) where every artefact lands.
     file_prefix : str
         Stem prepended to every filename (e.g. ``cond1_baseline_2400blk_rep0`` or
         ``cond1_baseline_7200blk_pooled``).
@@ -777,11 +778,12 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
             try:
                 loops = abs_mod.enumerate_convergent_ctcf_loops(
                     positions, orientations,
-                    min_size_bins=20, max_size_bins=min(sim_map.shape[0], 1000),
+                    min_size_bins=_APA["min_size_bins"],
+                    max_size_bins=min(sim_map.shape[0], _APA["max_size_bins"]),
                 )
                 if loops:
                     pileup, n_used = abs_mod.apa_pileup(
-                        sim_map, loops, pad=10, normalise="obs_over_exp_diag",
+                        sim_map, loops, pad=_APA["pad"], normalise="obs_over_exp_diag",
                     )
                     abs_mod.plot_apa(
                         pileup,
@@ -1100,12 +1102,12 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                 try:
                     loops = abs_mod.enumerate_convergent_ctcf_loops(
                         positions, orientations,
-                        min_size_bins=20,
-                        max_size_bins=min(sim_map.shape[0], 1000),
+                        min_size_bins=_APA["min_size_bins"],
+                        max_size_bins=min(sim_map.shape[0], _APA["max_size_bins"]),
                     )
                     if loops:
                         pileup, n_used = abs_mod.apa_pileup(
-                            sim_map, loops, pad=10,
+                            sim_map, loops, pad=_APA["pad"],
                             normalise="obs_over_exp_diag",
                         )
                         abs_mod.plot_apa(
@@ -1315,17 +1317,17 @@ def main():
                         help="Root directory containing merged simulation dirs")
     parser.add_argument("--output-dir", type=str, default=None,
                         help="Common output folder for all analysis results. "
-                             "Default: results/analysis/ (sibling of --results-dir)")
+                             "Default: analysis/ (sibling of --results-dir)")
     parser.add_argument("--condition", type=str, default=None,
                         help="Analyse only this specific merged dir name "
                              "(a condition name from the config). Default: all.")
     parser.add_argument("--hic-dir", type=str, default=None,
                         help="Directory with experimental Hi-C named after the "
                              "config's compare_hic types (<type>.cool or <type>.npy). "
-                             "Falls back to data/mcool/<type>.cool.")
-    parser.add_argument("--n-jobs", type=int, default=4,
+                             "Falls back to <outputDir>/mcool/<type>.cool.")
+    parser.add_argument("--n-jobs", type=int, default=ANALYSIS["n_jobs"],
                         help="Parallel workers for contact detection within each dir "
-                             "(default 4). Each directory analysis uses this many cores.")
+                             "(default: analysis.n_jobs in the config).")
     parser.add_argument("--no-parallel", action="store_true",
                         help="Analyse directories sequentially instead of in parallel. "
                              "Useful for debugging or when RAM is tight.")

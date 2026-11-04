@@ -13,7 +13,7 @@ For LEF contact maps: sums the matrices (more samples = better statistics).
 Usage:
     python merge_shards.py \
         --condition cond1_baseline --replicate 3 --n-shards 4 \
-        --results-dir results/polychrom_3d
+        --results-dir output/sims
 """
 
 import os
@@ -340,10 +340,10 @@ def main():
         description="Merge shard outputs",
         epilog="Examples:\n"
                "  # Merge ALL conditions/replicates found in results dir:\n"
-               "  python merge_shards.py --all --results-dir results/polychrom_3d\n\n"
+               "  python merge_shards.py --all --results-dir output/sims\n\n"
                "  # Merge a specific condition/replicate:\n"
                "  python merge_shards.py --condition cond1_baseline --replicate 3 "
-               "--n-shards 2 --results-dir results/polychrom_3d\n",
+               "--n-shards 2 --results-dir output/sims\n",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--all", action="store_true",

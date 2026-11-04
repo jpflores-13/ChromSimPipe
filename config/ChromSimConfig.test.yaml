@@ -1,0 +1,215 @@
+## =============================================================================
+## ChromSimPipe TEST configuration
+## Same data, locus and physics as ChromSimConfig.yaml, but one condition,
+## one replicate, one shard, and a short simulation: a cheap end-to-end check
+## (1 GPU job) before a full run. Results are NOT production quality.
+##   sbatch ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml
+## Every path, name, and parameter the workflow uses is set here (or in the
+## samplesheet). configs/parameters.py reads this file; nothing is hard-coded
+## in the Snakefile or scripts.
+## =============================================================================
+
+## ── Sample sheet ─────────────────────────────────────────────────────────────
+## Tab-separated; one row per experimental sample. Required columns:
+##   CTCF_Peaks — CTCF peak file (narrowPeak/BED); 'NA' if this sample has none
+##   Hi-C       — .hic map to compare simulations against; 'NA' if none
+## Every other column is free-form metadata (Project, Cell_Type, Condition, ...).
+samplesheet: 'ChromSimSamplesheet.txt'
+
+## Columns joined with '_' to build each sample's name. Conditions below refer
+## to samples by this name (ctcf_type / compare_hic).
+fileNamesFrom: ['Condition']
+
+## ── Output ───────────────────────────────────────────────────────────────────
+## Every file the workflow writes goes under this directory.
+outputDir: 'output_test'
+
+## ── Genome ───────────────────────────────────────────────────────────────────
+## Genome FASTA used by FIMO to orient CTCF motifs (indexed with samtools faidx
+## if no .fai is present). Must use the same chromosome names as the peaks.
+genome: '/proj/phanstiel_lab/Reference/human/hg38/fasta/GRCh38.primary_assembly.genome.fa'
+genome_assembly: 'hg38'
+
+## ── CTCF motif orientation ───────────────────────────────────────────────────
+ctcf_motif:
+  jaspar_id:   'MA0139.1'
+  ## Local MEME file; leave '' to download jaspar_id from jaspar_url.
+  meme:        ''
+  jaspar_url:  'https://jaspar.elixir.no/api/v1/matrix/{jaspar_id}/?format=meme'
+  fimo_thresh: 1.0e-3
+  flank_bp:    100        # ± bp around each peak summit scanned by FIMO
+  ## Peaks with no FIMO hit have no measured orientation:
+  ##   'drop'  — leave them out of the simulation (logged)
+  ##   'error' — stop the workflow
+  unoriented:  'drop'
+
+## ── Resolution ───────────────────────────────────────────────────────────────
+resolution: 1000   # bp per monomer (also the .cool resolution)
+
+## ── Job counts ───────────────────────────────────────────────────────────────
+n_replicates: 1    # independent simulations per condition
+n_shards: 1        # GPU jobs per replicate (total_blocks is split across them)
+
+## ── Compute site ─────────────────────────────────────────────────────────────
+## Folder holding this cluster's Snakemake profile (config.yaml: scheduler,
+## account, partitions, per-rule resources) and env.sh (module loads).
+## Shipped: profiles/longleaf (UNC), profiles/local (no scheduler), and
+## profiles/slurm-template (copy and fill in for any other SLURM cluster).
+hpcProfile: 'profiles/longleaf'
+
+## ── Notifications ────────────────────────────────────────────────────────────
+## Email when the workflow starts, finishes, or fails (one message per event,
+## not per job). Leave email '' for no email. The CHROMSIM_EMAIL environment
+## variable overrides it, which keeps your address out of a shared repo:
+##   export CHROMSIM_EMAIL=you@university.edu   (e.g. in ~/.bashrc)
+notify:
+  email:   ''
+  events:  ['start', 'success', 'error']
+  ## Shell command that sends one message; {subject} and {email} are filled
+  ## in and the message body arrives on stdin. Most clusters have `mail`;
+  ## otherwise e.g. 'sendmail {email}' (put a Subject: line in the body).
+  command: 'mail -s {subject} {email}'
+
+## ── Software ─────────────────────────────────────────────────────────────────
+## Conda environment for each rule group. Each value may be:
+##   - an environment file (.yml/.yaml, relative to the repo root):
+##     Snakemake builds it on the first run
+##   - the name of an existing environment, e.g. 'cohesin_sim'
+##   - the path to an existing environment, e.g. '~/.local/share/mamba/envs/cohesin_sim'
+condaEnvs:
+  sim:  'envs/cohesin_sim.yml'        # polychrom, OpenMM, cooler, hic2cool, analysis
+  ctcf: 'envs/ctcf_extraction.yml'    # bedtools, samtools, MEME/FIMO
+
+
+## =============================================================================
+## Locus
+## region_start / region_end define the simulated window.
+## anchor_bp picks the CTCF pairs used as MSD probes.
+## =============================================================================
+locus:
+  name:         chr1_fig1
+  chrom:        chr1
+  region_start: 64210000
+  region_end:   66170000
+  label:        "chr1 Fig1 gained+lost (JAK1/AK4/LEPR locus)"
+  anchor_bp:    65190000   # midpoint of figure window 64.71–65.67 Mb
+
+
+## =============================================================================
+## Simulation conditions
+## Each entry is one cohesin × CTCF combination.
+##
+## Fields:
+##   name         — unique identifier; used in output directory names
+##   params_name  — prefix for the simulation directory (unique within a ctcf_type)
+##   lifetime     — mean cohesin lifetime in SMC steps (~kb processivity = lifetime × resolution)
+##   separation   — inter-cohesin spacing in monomers
+##   ctcf_capture — stalling probability per CTCF encounter (0–1)
+##   ctcf_release — escape probability per step while stalled (0–1)
+##   ctcf_type    — sample (name built from fileNamesFrom) whose CTCF peaks to load
+##   compare_hic  — sample whose Hi-C map to compare against (omit for none)
+## =============================================================================
+conditions:
+
+  ## 1. Baseline: does the model reproduce condition 1 Hi-C?
+  - name:         cond1_baseline
+    description:  "Baseline cohesin + condition 1 CTCF sites"
+    params_name:  baseline
+    lifetime:     75
+    separation:   240
+    ctcf_capture: 0.125
+    ctcf_release: 0.0033
+    ctcf_type:    condition1
+    compare_hic:  condition1
+
+
+## =============================================================================
+## Polymer physics  (advanced — Gabriele et al. 2022 defaults)
+## =============================================================================
+polymer:
+  density:            0.2
+  bond_length:        1.0
+  bond_wiggle_dist:   0.05
+  angle_force:        1.5
+  collision_rate:     0.03
+  error_tol:          0.003
+  repulsion_trunc:    3.0      # polynomial_repulsive truncation energy
+  confinement_k:      1.0      # spherical confinement stiffness
+  integrator:         variableLangevin
+  precision:          mixed
+  platform:           CUDA     # "CPU" for testing without a GPU
+
+smc_bond:
+  wiggle_dist: 0.2
+  bond_dist:   0.5
+
+## Tiling: back-to-back copies of the locus on one long chromosome, giving
+## n_tiles = chrom_size / tile_size times more contact statistics per run
+## (Yang et al. 2023 Nat Commun).
+## tile_size must equal (region_end - region_start) / resolution + 2 * padding.
+tiling:
+  tile_size:  2500
+  chrom_size: 70000
+  padding:    270
+
+sim_run:
+  ## Simulation engine: 'polychrom' (3D polymer, default), 'openmm'
+  ## (standalone OpenMM), or 'lef_only' (1D cohesin bridging only).
+  ## The workflow stops if the requested engine cannot be imported.
+  engine:               polychrom
+  seed_base:            42     # shard seed = seed_base + rep*10000 + shard*1000
+  smc_steps_per_block:  1
+  md_steps_per_block:   250
+  total_blocks:         1000     # full run: 50000
+  warmup_blocks:        400      # full run: 4000
+  save_every:           10
+  restart_milker_every: 100
+  contact_radius:       3.0
+  hdf5_frames_per_file: 100    # polychrom HDF5Reporter max_data_length
+
+
+## =============================================================================
+## Analysis
+## =============================================================================
+analysis:
+  n_jobs: 4                    # worker processes inside each analysis job
+  msd:    False                # two-point MSD + polymer dynamics (slow)
+
+  ## APA / absolute loop quantification over convergent CTCF pairs
+  apa:
+    min_size_bins: 20
+    max_size_bins: 1000
+    pad:           10
+
+  ## Two-point MSD probes. pairs: {ctcf_type: [[monomer_a, monomer_b], ...]};
+  ## leave empty to auto-select convergent CTCF pairs around anchor_bp.
+  msd_probe:
+    pairs:  {}
+    labels: {}
+    auto:
+      min_sep_monomers:       200
+      max_sep_monomers:       1500
+      require_convergent:     True
+      n_pairs:                2
+      require_conserved:      True
+      conserved_tol_monomers: 0
+      prefer_flanking:        True
+      disjoint_anchors:       True
+      relax_if_missing:       True
+
+  msd_fit:
+    lag_min_frames:     1
+    lag_max_frac:       0.3333333333333333
+    fit_lag_min:        5
+    fit_lag_max_frac:   0.25
+    min_n_lags_for_fit: 6
+
+  calibration:
+    default_anchor: hic
+    hic:
+      s_ref_bp:       100000
+      persistence_nm: 50.0
+      nm_per_bp:      0.34
+    msd:
+      expt_msd:      {}        # {ctcf_type: CSV path}
+      loc_error_um2: 0.0

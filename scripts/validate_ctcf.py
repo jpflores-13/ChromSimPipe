@@ -3,7 +3,8 @@
 Validate CTCF BED files: parsing, coordinate conversion, and polychrom format.
 
 BED paths and conditions are read from configs/parameters.py (which reads
-ChromSimConfig.yaml). No arguments needed for a standard run.
+the config named by $CHROMSIM_CONFIG, default config/ChromSimConfig.yaml).
+No arguments needed for a standard run.
 
 Usage:
     python scripts/validate_ctcf.py
@@ -199,7 +200,8 @@ def validate_conversion(sites_data, label):
     info(f"Orientations:      {['+' if o == 1 else '-' for o in orientations]}")
 
     density = len(monomers) / (N_MONOMERS / 100)
-    info(f"CTCF density: {density:.1f} sites per 100 monomers (100 kb)")
+    info(f"CTCF density: {density:.1f} sites per 100 monomers "
+         f"({100 * RESOLUTION / 1000:g} kb)")
 
     convergent = 0
     for i in range(len(monomers) - 1):
@@ -289,7 +291,8 @@ def validate_arrays(condition, expected_sites):
     info(f"Total occupied monomers: {(left_stall | right_stall).sum()} / {N_MONOMERS}")
 
     # Check CTCF near the locus anchor point
-    anchor_range = range(ANCHOR_MONOMER - 50, ANCHOR_MONOMER + 50)
+    half = 50_000 // RESOLUTION   # ±50 kb in monomers
+    anchor_range = range(ANCHOR_MONOMER - half, ANCHOR_MONOMER + half)
     near_anchor = [(p, o) for p, o in zip(positions, orientations) if p in anchor_range]
     if near_anchor:
         anchor_bp = ANCHOR_MONOMER * RESOLUTION + REGION_START
@@ -299,9 +302,9 @@ def validate_arrays(condition, expected_sites):
             strand = "+" if o == +1 else "-"
             genomic = p * RESOLUTION + REGION_START
             info(f"  monomer {p} ({genomic:,} bp), orientation {strand}, "
-                 f"{'upstream' if dist < 0 else 'downstream'} {abs(dist)} kb")
+                 f"{'upstream' if dist < 0 else 'downstream'} {abs(dist) * RESOLUTION / 1000:g} kb")
     else:
-        check(False, f"No CTCF sites near anchor ±50 kb (monomer {ANCHOR_MONOMER})", warn_only=True)
+        check(False, f"No CTCF sites within ±50 kb of anchor (monomer {ANCHOR_MONOMER})", warn_only=True)
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +319,7 @@ def compare_conditions(cond_a, cond_b):
     info(f"{cond_a}: {len(pos_a)} sites")
     info(f"{cond_b}: {len(pos_b)} sites")
 
-    tolerance = 2  # monomers = 2 kb
+    tolerance = 2  # monomers
     shared = 0
     a_only = 0
     b_only = 0
@@ -331,14 +334,15 @@ def compare_conditions(cond_a, cond_b):
         if not any(abs(p - q) <= tolerance for q in pos_a):
             b_only += 1
 
-    info(f"Shared (within {tolerance} kb): {shared}")
+    info(f"Shared (within {tolerance * RESOLUTION / 1000:g} kb): {shared}")
     info(f"{cond_a}-specific: {a_only}")
     info(f"{cond_b}-specific: {b_only}")
 
     check(not np.array_equal(pos_a, pos_b),
           f"{cond_a} and {cond_b} have DIFFERENT CTCF landscapes")
 
-    anchor_window = range(ANCHOR_MONOMER - 100, ANCHOR_MONOMER + 100)
+    half = 100_000 // RESOLUTION   # ±100 kb in monomers
+    anchor_window = range(ANCHOR_MONOMER - half, ANCHOR_MONOMER + half)
     a_near = sum(1 for p in pos_a if p in anchor_window)
     b_near = sum(1 for p in pos_b if p in anchor_window)
     info(f"Sites within ±100 kb of anchor: {cond_a}={a_near}, {cond_b}={b_near}")
@@ -357,7 +361,7 @@ def main():
     print(f"  Anchor:     monomer {ANCHOR_MONOMER} ({ANCHOR_MONOMER * RESOLUTION + REGION_START:,} bp)")
     print(f"  CTCF types: {list(CTCF_BEDS)}")
     missing = [t for t in CTCF_BEDS if t not in CTCF_SITES_BY_TYPE]
-    print(f"  Placeholder CTCF: {missing or 'none'}")
+    print(f"  Missing CTCF BEDs: {missing or 'none'}")
 
     loaded_per_condition = {}
 
@@ -370,9 +374,7 @@ def main():
             loaded_per_condition[condition] = loaded
         else:
             header(f"{condition.upper()} — BED FILE NOT FOUND")
-            info(f"Expected: {bed_path}")
-            info("Using placeholder sites from parameters.py")
-            validate_arrays(condition, None)
+            check(False, f"Oriented CTCF BED exists: {bed_path}")
 
     # Compare every pair of loaded CTCF types
     loaded_types = list(loaded_per_condition)
