@@ -40,7 +40,7 @@ set-resources:
     cpus_per_task: 4
     mem_mb: 64000
   analyzeCondition:
-    runtime: 360
+    runtime: 1440                 # 24 h; a full run (150,000 frames) took 4.5 h to > 6 h
     cpus_per_task: 4      # keep >= analysis.n_jobs in config/ChromSimConfig.yaml
     mem_mb: 64000
   benchmarkSummary:

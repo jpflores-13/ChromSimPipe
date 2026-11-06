@@ -120,7 +120,7 @@ Longleaf's `anaconda` modules ship conda 24.1, older than Snakemake needs.
 | `validateCTCF` | general | 1 | 4 GB | 15 min | - |
 | `simulateShard` | **l40-gpu, volta-gpu, gpu** | 4 | 60 GB | 12 h | **1** |
 | `mergeShards` | general | 4 | 64 GB | 2 h | - |
-| `analyzeCondition` | general | 4 | 64 GB | 6 h | - |
+| `analyzeCondition` | general | 4 | 64 GB | 24 h | - |
 | `benchmarkSummary` | general | 1 | 2 GB | 15 min | - |
 
 ## Log file locations
@@ -178,6 +178,11 @@ not catch this; the error appears when the job is submitted.
 | `analyzeCondition` | 6 min 31 s | 2.0 GB |
 
 A full-run shard is 12,500 blocks, so roughly 35 min on the same GPU type.
+
+In the full Longleaf run (3 replicates × 50,000 blocks per condition), shards
+took about 1 h each on `l40-gpu` and `volta-gpu`. `analyzeCondition` took about
+4.5 h for two conditions; the third ran past 6 h after SLURM placed it on the
+`spill` partition, hence the 24 h limit.
 
 ## Checking queue status
 

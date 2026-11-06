@@ -385,6 +385,7 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `CUDA_ERROR_UNSUPPORTED_PTX_VERSION` | The env's CUDA is newer than the GPU node's driver supports | Check `nvidia-smi` on a GPU node ("CUDA Version"); `cuda-version` in `envs/cohesin_sim.yml` must not exceed it; rebuild the env |
 | `No module named 'h5py'` (or another package) in a rule | An environment built before the env file listed it, or a different `python` came first on `PATH` | Rules now call `"$CONDA_PREFIX/bin/python"`; rebuild the env if the package is genuinely missing |
 | `no 'KR' normalization in ...cool` | The `.cool` has a different normalization column | Set `analysis.hic_balance` to one it lists (`weight`, `VC`, ...) or `False` for raw counts |
+| `analyzeCondition` ends in `TIMEOUT` | Full runs pool 150,000 frames per condition; on a slow node this can exceed the limit | Raise `analyzeCondition: runtime:` in the profile (default 1440 min), `bash unlock.sh`, resubmit; finished pieces are reused (`--skip-existing`) |
 | `convertHic` ends in `TIMEOUT` | Large `.hic`: a 3.7 GB map takes ~1.6 h | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` (default 480 min) |
 | `UCSC gene fetch failed ... timed out` | Compute nodes have no internet | Harmless: figures are drawn without the gene track |
 | A job failed | - | Its stdout / stderr are in `<outputDir>/logs/{rule}_{wildcards}.out|.err` |
