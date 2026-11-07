@@ -28,6 +28,9 @@ set-resources:
   validateCTCF:
     runtime: 15
     mem_mb: 4000
+  preparePolysim:                 # builds polysim's Cython LEF model once (engine: polysim)
+    runtime: 30
+    mem_mb: 4000
   simulateShard:
     runtime: 720
     slurm_partition: "l40-gpu,volta-gpu,gpu"   # first one with a free node; `sinfo -s` lists GPU partitions

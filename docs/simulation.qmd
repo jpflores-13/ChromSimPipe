@@ -10,7 +10,33 @@ Each `simulateShard` SLURM job runs `scripts/run_simulation_shard.py`, which:
 4. Runs `polychrom` (OpenMM wrapper) to simulate 3D chromatin folding on a GPU
 5. Writes trajectory blocks to `output/sims/{params_name}_ctcf-{sample}_rep{N}_shard{M}/`
 
-## The cohesin (LEF) dynamics engine
+With the default `sim_run.engine: polysim`, steps 3–4 are done by the Hansen
+lab's polysim package; `polychrom` runs ChromSimPipe's original model (see
+[Simulation engines](#simulation-engines)).
+
+## Simulation engines
+
+| Setting | `polychrom` (original; reproduces earlier runs) | `polysim` (default) |
+|---|---|---|
+| Model code | ChromSimPipe's own: Python LEF model (`scripts/lef_dynamics.py`) driving polychrom | The Hansen lab's [polysim](https://github.com/ahansenlab/polysim_bootcamp) (Cython LEF model + bond updater on polychrom), pinned in `envs/cohesin_sim.yml` |
+| `lifetime` units | steps; each leg moves every step, so ~`lifetime` kb per leg | LEF timesteps (blocks); each leg moves with probability `vlef` per timestep, so ~`lifetime × vlef` kb per leg |
+| Stalled cohesin | released with `ctcf_release` per step | lives `life_boost_stalled` × longer when both legs are stalled (`ctcf_release` unused) |
+| Extrusion vs polymer motion | 1 LEF step per `md_steps_per_block` (250) MD steps | 1 LEF step per `poly_steps_per_block / vlef` MD steps (13,200 with the defaults) |
+| Polymer | `polymer:` block (density 0.2, stiff chain) | `polysim:` block (density 0.3, flexible chain) |
+| Saved frames | every block; no 3D warm-up | every `saveevery` blocks; optional unsaved equilibration (`initskip`) of at least one LEF lifetime |
+| `total_blocks` means | blocks simulated per replicate | conformations saved per replicate |
+
+For polysim, the shard runner maps each oriented CTCF site to polysim's stall
+arrays (+ sites stop leftward-moving legs: `ctcf_left`; − sites stop
+rightward-moving legs: `ctcf_right`), each with the condition's `ctcf_capture`,
+seeds numpy and C `drand48` from the shard seed, and calls
+`polysim.sim3d.run()` with the shard folder as output. polysim writes the same
+`blocks_*.h5` files (plus the LEF bonds of each saved frame under `SMCs`), so
+merging and analysis are unchanged. A `preparePolysim` job imports polysim once
+before the shards start, so its Cython module is compiled once rather than by
+every GPU job at the same time.
+
+## The cohesin (LEF) dynamics engine (polychrom engine)
 
 Loop extrusion factors (LEFs = cohesin rings) are simulated as pairs of one-
 dimensional walkers on the polymer lattice.
@@ -42,7 +68,7 @@ produced by the `orientCTCF` rule (`scripts/extract_ctcf_sites.py`) encode orien
 
 Convergent CTCF pairs therefore trap cohesin between them, forming stable loops.
 
-## The 3D simulation (polychrom / OpenMM)
+## The 3D simulation with the polychrom engine (OpenMM)
 
 Each monomer is a bead. Forces between beads:
 

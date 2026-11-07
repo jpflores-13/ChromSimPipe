@@ -37,6 +37,12 @@ enables rapid genome exploration by CTCF and cohesin.
 **polychrom**: GPU polymer simulation engine (OpenMM wrapper).
 <https://github.com/open2c/polychrom>
 
+**polysim (Hansen lab polymer simulation bootcamp)**: loop-extrusion and
+polymer simulation package used by `sim_run.engine: polysim`, adapted from the
+polychrom loop-extrusion example and the simulation code of Goel et al. 2025
+(*Nat Struct Mol Biol*, <https://www.nature.com/articles/s41594-025-01687-2>).
+MIT license. <https://github.com/ahansenlab/polysim_bootcamp>
+
 **OpenMM**: molecular dynamics GPU engine.
 <https://openmm.org>
 

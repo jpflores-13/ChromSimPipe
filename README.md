@@ -61,9 +61,9 @@ your own, edit the `conditions:` list there.
 
 | # | Name | Cohesin params | CTCF sites | Compare vs | Question |
 |---|------|---------------|------------|------------|----------|
-| 1 | `cond1_baseline`             | Gabriele 2022 | Condition 1 | Condition 1 Hi-C | Baseline: can we reproduce condition 1 Hi-C? |
-| 2 | `cond2_ctcf-only`            | Gabriele 2022 | Condition 2 | Condition 2 Hi-C | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
-| 3 | `cond2_weak-ctcf`            | Gabriele 2022 (0.5× CTCF capture) | Condition 2 | Condition 2 Hi-C | Weaker CTCF stalling at retained sites? |
+| 1 | `cond1_baseline`             | polysim bootcamp | Condition 1 | Condition 1 Hi-C | Baseline: can we reproduce condition 1 Hi-C? |
+| 2 | `cond2_ctcf-only`            | polysim bootcamp | Condition 2 | Condition 2 Hi-C | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
+| 3 | `cond2_weak-ctcf`            | polysim bootcamp (0.5× CTCF capture) | Condition 2 | Condition 2 Hi-C | Weaker CTCF stalling at retained sites? |
 
 ### Example locus (STRS use case, hg38, HEK293T)
 
@@ -184,8 +184,8 @@ without running anything).
 
 `config/ChromSimConfig.test.yaml` is the full config cut down to a cheap
 end-to-end check: same samplesheet, locus and physics, but one condition, one
-replicate, one shard, and 1,000 blocks instead of 50,000. It is 9 jobs, one of
-them on a GPU, written to `output_test/` (under `$CHROMSIM_OUTPUT_ROOT` if
+replicate, one shard, and 2,000 saved frames instead of 10,000 per replicate.
+It is 10 jobs, one of them on a GPU (about 1-2 h), written to `output_test/` (under `$CHROMSIM_OUTPUT_ROOT` if
 set). Its results are a smoke test, not
 data.
 
@@ -240,7 +240,8 @@ sbatch ChromSimPipe.sh       # --rerun-incomplete is on by default
 | `getMotif` | 1 | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped if `ctcf_motif.meme` is set) |
 | `orientCTCF` | 1 per CTCF sample used (2) | FIMO motif strand → oriented CTCF BED for the locus |
 | `validateCTCF` | 1 | Checks every BED parses and maps onto the polymer |
-| `simulateShard` | conditions × reps × shards (36, GPU) | polychrom 3D loop-extrusion simulation |
+| `preparePolysim` | 1 | Builds polysim's Cython cohesin model once (engine: polysim) |
+| `simulateShard` | conditions × reps × shards (18, GPU) | 3D loop-extrusion simulation (polysim by default) |
 | `mergeShards` | conditions × reps (9) | Concatenates shard trajectories |
 | `analyzeCondition` | 1 per condition (3) | Contact maps, P(s), insulation, APA, Hi-C comparison |
 | `benchmarkSummary` | 1 | Collects per-job run time / memory into one table |
@@ -332,7 +333,7 @@ output/
 | `unlock.sh` | Release the Snakemake lock after a failed run |
 | `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
 | `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, notifications, compute site |
-| `config/ChromSimConfig.test.yaml` | Small 9-job version of the config for testing a new setup |
+| `config/ChromSimConfig.test.yaml` | Small 10-job version of the config for testing a new setup |
 | `data/` | Input files for a run, linked in per cluster (git-ignored except `data/README.md`) |
 | `config/requirements.txt` | Snakemake version for the launcher venv |
 | `profiles/<site>/config.yaml` | Scheduler settings and per-rule resources for one compute site |
@@ -345,16 +346,45 @@ output/
 
 ## Cohesin parameters
 
-The default parameter set is derived from **Gabriele et al. 2022** (*Science*)
-single-molecule imaging in mESCs. Adjust the `conditions:` list in
-`config/ChromSimConfig.yaml` for your biological context.
+The defaults are the Hansen lab polysim bootcamp tutorial values (polysim
+engine), themselves based on Gabriele et al. 2022 (*Science*) and Goel et al.
+2025. Adjust the `conditions:` list in `config/ChromSimConfig.yaml` for your
+biological context, and the shared settings in its `polysim:` block.
 
 | Parameter | Default value | Meaning |
 |-----------|--------------|---------|
-| `lifetime` | 75 steps | ~150 kb processivity at 1 kb/monomer |
+| `lifetime` | 75,000 LEF timesteps | With `vlef` 0.0025, ~190 kb extruded per leg (~375 kb loops) |
 | `separation` | 240 monomers | ~8 cohesin rings per 2 Mb locus |
-| `ctcf_capture` | 0.125 | 12.5% stalling probability per CTCF encounter |
-| `ctcf_release` | 0.0033 | Stalled cohesin lives ~4× longer than free cohesin |
+| `ctcf_capture` | 0.5 | 50% stalling probability per CTCF encounter |
+| `polysim: life_boost_stalled` | 4 | Cohesin stalled at CTCF on both legs lives 4× longer |
+| `polysim: vlef` | 0.0025 | Probability a leg steps per timestep: sets extrusion speed relative to polymer motion |
+
+The earlier runs used the `polychrom` engine with `lifetime` 75 steps,
+`ctcf_capture` 0.125 and `ctcf_release` 0.0033; set `sim_run.engine:
+polychrom` (as `config/ChromSimConfig.chr7_157.yaml` does) to reproduce them.
+
+### Simulation engines
+
+`sim_run.engine` picks the 3D model; the default is `polysim`. Everything
+around it (samplesheet, CTCF orientation, tiling, workflow, analysis) is
+shared.
+
+| Setting | `polychrom` (original; reproduces earlier runs) | `polysim` (default) |
+|---|---|---|
+| Model code | ChromSimPipe's own: Python LEF model (`scripts/lef_dynamics.py`) driving polychrom | The Hansen lab's [polysim](https://github.com/ahansenlab/polysim_bootcamp) (Cython LEF model + bond updater on polychrom), pinned in `envs/cohesin_sim.yml` |
+| `lifetime` units | steps; each leg moves every step, so ~`lifetime` kb per leg | LEF timesteps (blocks); each leg moves with probability `vlef` per timestep, so ~`lifetime × vlef` kb per leg |
+| Stalled cohesin | released with `ctcf_release` per step | lives `life_boost_stalled` × longer when both legs are stalled (`ctcf_release` unused) |
+| Extrusion vs polymer motion | 1 LEF step per `md_steps_per_block` (250) MD steps | 1 LEF step per `poly_steps_per_block / vlef` MD steps (13,200 with the defaults) |
+| Polymer | `polymer:` block (density 0.2, stiff chain) | `polysim:` block (density 0.3, flexible chain) |
+| Saved frames | every block; no 3D warm-up | every `saveevery` blocks; optional unsaved equilibration (`initskip`) of at least one LEF lifetime |
+| `total_blocks` means | blocks simulated per replicate | conformations saved per replicate |
+
+The chr7 control locus configs show both: `config/ChromSimConfig.chr7_157.yaml`
+(polychrom) and `config/ChromSimConfig.chr7_polysim.yaml` (polysim, bootcamp
+tutorial parameters: lifetime 75000, vlef 0.0025, separation 240, capture 0.5,
+lifetime boost 4), plus a small `config/ChromSimConfig.chr7_polysim_test.yaml`.
+ChromSimPipe seeds polysim's C random number generator (`drand48`) per shard;
+polysim itself does not, so unseeded runs would share one random sequence.
 
 ### Tiling trick
 
@@ -372,6 +402,8 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `Error running conda info` | conda not on `PATH` | Fix the conda line in `profiles/<site>/env.sh` |
 | `CUDA not available` | GPU job on wrong partition | Check `simulateShard` under `set-resources:` in `profiles/<site>/config.yaml` |
 | `sim_run.engine is 'polychrom' but it cannot be imported` | Sim env missing polychrom | Rebuild the `condaEnvs.sim` environment |
+| `sim_run.engine is 'polysim' but it cannot be imported`, or `preparePolysim` fails | Sim env built before polysim was added, or no C compiler | Rebuild the `condaEnvs.sim` environment (it now includes polysim and `c-compiler`); read `<outputDir>/logs/preparePolysim.err` |
+| `polysim needs frames per shard ... multiple of ...` | `total_blocks / n_shards` × `saveevery` is not a multiple of `blocks_per_updater` | Use the frame count the message suggests |
 | Snakemake lock error | Previous run crashed | `bash unlock.sh`, then resubmit |
 | `MissingInputException` naming a `data/...` file | That file is not linked into `data/` on this cluster, or the link is broken | `ls -lL data/`; add or fix the link ([Input data](#input-data)) |
 | Output appears in the repo folder instead of scratch | `CHROMSIM_OUTPUT_ROOT` not set in the shell that ran `sbatch` | `echo $CHROMSIM_OUTPUT_ROOT`; add the export to `~/.bashrc`, `source ~/.bashrc`, resubmit |

@@ -58,6 +58,10 @@ tiling:     {tile_size, chrom_size, padding}
 sim_run:    {engine, seed_base, smc_steps_per_block, md_steps_per_block,
              total_blocks, warmup_blocks, save_every, restart_milker_every,
              contact_radius, hdf5_frames_per_file}
+polysim:    {density, angle_k, bond_wiggle, repel, confinement_k,
+             smc_bond_wiggle, smc_bond_dist, vlef, life_boost_stalled,
+             integrator, dt, colrate, poly_steps_per_block, saveevery,
+             initsteps, initskip, blocks_per_updater}   # engine: polysim only
 analysis:   {n_jobs, msd, hic_balance, apa, msd_probe, msd_fit, calibration}
 ```
 
@@ -71,6 +75,29 @@ own ICE balancing; `False` compares raw counts.
 workflow stops instead of silently switching to another engine. Oriented CTCF
 BEDs must exist before simulation; there are no placeholder sites.
 :::
+
+## The `polysim:` block
+
+Used with `sim_run.engine: polysim`, the default engine. Defaults are the polysim bootcamp
+tutorial values. Conditions keep `lifetime`, `separation` and `ctcf_capture`
+(and may override `vlef` and `life_boost_stalled` each); `lifetime` is then in
+LEF timesteps, so the extruded length per leg is about `lifetime × vlef`
+monomers.
+
+| Field | Default | Meaning |
+|-------|---------|---------|
+| `density`, `angle_k`, `bond_wiggle`, `repel`, `confinement_k` | 0.3, 0.05, 0.1, 3.0, 1.0 | Polymer (replaces the `polymer:` block) |
+| `smc_bond_wiggle`, `smc_bond_dist` | 0.2, 0.5 | Cohesin bond |
+| `vlef` | 0.0025 | Probability a LEF leg steps per timestep (block) |
+| `life_boost_stalled` | 4.0 | Lifetime multiplier while both legs are stalled at CTCF |
+| `integrator`, `dt`, `colrate`, `poly_steps_per_block` | langevin, 40 fs, 0.01, 33 | Integration; 1 block ≈ 20 ms with these values |
+| `saveevery` | 50 | Blocks between saved conformations |
+| `initsteps` | 540000 | LEF-only steps before the polymer starts |
+| `initskip` | 0 | Unsaved polymer equilibration; polysim extends it to at least one LEF lifetime |
+| `blocks_per_updater` | 1000 | Frames per shard × `saveevery` must be a multiple of this |
+
+`sim_run.total_blocks` is the number of saved conformations per replicate with
+this engine (split across `n_shards`).
 
 ## Paths and environment variables
 
@@ -94,8 +121,8 @@ typically exported in `~/.bashrc`, so they stay out of the shared repo:
 ## Other configs
 
 `config/ChromSimConfig.test.yaml` is a complete copy of the main config with
-one condition, `n_replicates: 1`, `n_shards: 1`, `total_blocks: 1000`,
-`warmup_blocks: 400`, and `outputDir: 'output_test'`: a 9-job smoke test.
+one condition, `n_replicates: 1`, `n_shards: 1`, `total_blocks: 2000`
+(saved frames), and `outputDir: 'output_test'`: a 10-job smoke test.
 Any config passed with `--configfile` must be complete like this one: it
 replaces the default, it is not merged into it.
 

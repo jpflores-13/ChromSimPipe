@@ -31,6 +31,9 @@ set-resources:
   validateCTCF:
     runtime: 15
     mem_mb: 4000
+  preparePolysim:                 # builds polysim's Cython LEF model once (engine: polysim)
+    runtime: 30
+    mem_mb: 4000
   simulateShard:
     runtime: 720
     slurm_partition: gpu          # 39 nodes, 114 GPUs

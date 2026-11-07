@@ -335,7 +335,7 @@ user-defined hypotheses.</p>
 <pre><code>ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C)
     ↓  orientCTCF rule → scripts/extract_ctcf_sites.py  (strand via FIMO)
 Oriented CTCF BED files (output/ctcf/)
-    ↓  simulateShard rule → scripts/run_simulation_shard.py + polychrom
+    ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim (default) or polychrom
 Simulated conformations (output/sims/)
     ↓  analyzeCondition rule → scripts/run_analysis_all.py
 Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertHic rule)</code></pre>
@@ -374,10 +374,10 @@ relative <code>outputDir</code> goes under (e.g. scratch).</li>
 <div class="sourceCode" id="cb2"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh        <span class="co"># whole workflow</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> ChromSimPipe.sh <span class="at">-n</span>       <span class="co"># dry run</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh <span class="at">--configfile</span> config/ChromSimConfig.test.yaml   <span class="co"># 9-job smoke test</span></span></code></pre></div>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh <span class="at">--configfile</span> config/ChromSimConfig.test.yaml   <span class="co"># 10-job smoke test</span></span></code></pre></div>
 <p><strong>Test config.</strong>
 <code>config/ChromSimConfig.test.yaml</code> is the same config with one
-condition, one replicate, one shard and 1,000 blocks, written to
+condition, one replicate, one shard and 2,000 saved frames, written to
 <code>output_test/</code>. Run it first on any new cluster: it touches
 every rule, including one GPU simulation, for a fraction of the cost of
 a full run.</p>
@@ -457,7 +457,10 @@ random position. Stalled cohesins unbind at the same rate.</li>
 </ul>
 <h3 id="the-3d-simulation-scriptsrun_simulation_shard.py">The 3D
 simulation: <code>scripts/run_simulation_shard.py</code></h3>
-<p>This is where polychrom (OpenMM on GPU) runs. For each block:</p>
+<p>This is where the 3D model runs on the GPU. With the default
+<code>polysim</code> engine, the Hansen lab’s polysim package does the
+work (see section 5a). With <code>engine: polychrom</code>,
+ChromSimPipe’s original model runs. For each block:</p>
 <ol type="1">
 <li><code>LEFSimulator.step()</code> advances all cohesins one tick on
 the 1D lattice.</li>
@@ -562,7 +565,7 @@ at <code>resolution</code></td>
 <tr class="odd">
 <td><code>simulateShard</code></td>
 <td>condition × replicate × shard (GPU)</td>
-<td><code>run_simulation_shard.py</code>: 36 jobs with the example
+<td><code>run_simulation_shard.py</code>: 18 jobs with the example
 config</td>
 </tr>
 <tr class="even">
@@ -882,8 +885,8 @@ times, return the list of per-step bond lists.</li>
 <h3 id="a.-scriptsrun_simulation_shard.py-the-snakemake-entry-point">5a.
 <code>scripts/run_simulation_shard.py</code>: the Snakemake entry
 point</h3>
-<p>This is what every <code>simulateShard</code> SLURM job calls (36
-jobs with the example config: 3 conditions × 3 replicates × 4
+<p>This is what every <code>simulateShard</code> SLURM job calls (18
+jobs with the example config: 3 conditions × 3 replicates × 2
 shards).</p>
 <p><strong>Arguments:</strong></p>
 <table>
@@ -957,6 +960,34 @@ configuration.</li>
 and the 3D side of <code>warmup_blocks</code> are not applied in this
 runner.</li>
 </ol>
+<p><strong>polysim engine</strong>
+(<code>sim_run.engine: polysim</code>). <code>run_shard()</code> hands
+the shard to <code>_run_shard_polysim()</code> before any of the steps
+above:</p>
+<ol type="1">
+<li><code>seed_all(seed)</code> seeds numpy and C
+<code>drand48()</code>. polysim’s Cython LEF model draws every stall,
+unbinding and stepping decision from <code>drand48()</code> and never
+seeds it, so without this every shard would replay one random
+sequence.</li>
+<li><code>polysim_kwargs()</code> builds polysim’s
+<code>SimParams</code>: the tiled chain length, the
+<code>polysim:</code> config block, the condition’s
+<code>lifetime</code> / <code>separation</code> (and optional
+<code>vlef</code>, <code>life_boost_stalled</code>), and the oriented
+CTCF sites as per-site stall probabilities (<code>ctcf_capture</code>):
++ sites go to <code>ctcf_left</code> (they stop leftward-moving legs), −
+sites to <code>ctcf_right</code>. It checks that frames per shard ×
+<code>saveevery</code> is a multiple of <code>blocks_per_updater</code>
+before any GPU time is spent.</li>
+<li><code>polysim.sim3d.run()</code> writes <code>blocks_*.h5</code>
+into the shard folder (each saved frame also carries the LEF bonds as
+<code>SMCs</code>), which <code>merge_shards.py</code> and the analysis
+read like polychrom output.</li>
+</ol>
+<p>The <code>preparePolysim</code> rule imports polysim once before the
+shards, so its Cython module (<code>LEF_Dynamics.pyx</code>, built by
+pyximport) is compiled once.</p>
 <h3 id="b.-scriptsmerge_shards.py">5b.
 <code>scripts/merge_shards.py</code></h3>
 <p>Concatenates per-shard HDF5 streams into

@@ -28,7 +28,8 @@ getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF
 | `getMotif` | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | FIMO motif strand → oriented CTCF BED for the locus |
 | `validateCTCF` | Checks every BED parses and maps onto the polymer |
-| `simulateShard` | polychrom 3D loop-extrusion simulation (GPU) |
+| `preparePolysim` | Builds polysim's Cython cohesin model once (engine: polysim) |
+| `simulateShard` | 3D loop-extrusion simulation on a GPU (polysim by default) |
 | `mergeShards` | Concatenates shard trajectories per replicate |
 | `analyzeCondition` | Contact maps, P(s), insulation, APA, comparison with Hi-C |
 | `benchmarkSummary` | Run time / memory of every job in one table |
@@ -40,8 +41,8 @@ Resources for each rule are in `profiles/<site>/config.yaml` under
 
 `config/ChromSimConfig.test.yaml` is the full config cut down to a cheap
 end-to-end check: same samplesheet, locus and physics, but one condition, one
-replicate, one shard, and 1,000 blocks instead of 50,000. It is 9 jobs, one of
-them on a GPU, written to `output_test/`. Its results are a smoke test, not
+replicate, one shard, and 2,000 saved frames instead of 10,000 per replicate.
+It is 10 jobs, one of them on a GPU (about 1-2 h), written to `output_test/`. Its results are a smoke test, not
 data.
 
 ```bash

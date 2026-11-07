@@ -36,9 +36,12 @@ dependencies:
   - matplotlib
   - openpyxl         # Excel output in summarize_analysis.py
 
-  # --- Build tools for polychrom (installed from source by pip) ---
+  # --- Build tools for polychrom and polysim (installed from source by pip) ---
   - cython
   - setuptools
+  - c-compiler       # polysim builds its Cython LEF model with pyximport at first import
   - pip
   - pip:
     - git+https://github.com/open2c/polychrom.git
+    ## Hansen lab polysim (sim_run.engine: polysim), pinned for reproducibility
+    - git+https://github.com/ahansenlab/polysim_bootcamp.git@7f273ab648e7c606c7212702bb5caa1604810006

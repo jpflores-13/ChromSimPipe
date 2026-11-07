@@ -39,6 +39,7 @@ from configs.parameters import (
     SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, CTCF_BEDS,
     HIC_FILES, MCOOL_FILES, PATHS, SAMPLES, RUN_NAME,
     REGION, N_REPLICATES, N_SHARDS, ANALYSIS, LOCUS_TAG, GENOME_ASSEMBLY, GENOME,
+    SIM_RUN,
 )
 
 
@@ -248,9 +249,26 @@ rule validateCTCF:
         """
 
 
+## polysim builds its Cython LEF model (LEF_Dynamics.pyx) with pyximport on
+## first import. Do that once here, so parallel shards load the built module
+## instead of compiling it at the same time.
+rule preparePolysim:
+    output:
+        done = f"{DONE_DIR}/preparePolysim.done"
+    log:
+        err = f"{LOG_DIR}/preparePolysim.err"
+    conda: ENV_SIM
+    shell:
+        """
+        "$CONDA_PREFIX/bin/python" -c "import polysim.extrusion, polysim.sim3d" 2> {log.err}
+        touch {output.done}
+        """
+
+
 rule simulateShard:
     input:
         validated = rules.validateCTCF.output.done,
+        engine    = [rules.preparePolysim.output.done] if SIM_RUN["engine"] == "polysim" else [],
         bed       = lambda wildcards: rel(CTCF_BEDS[COND_LOOKUP[wildcards.condition]["ctcf_type"]])
     output:
         done = f"{DONE_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.done"

@@ -238,8 +238,10 @@ tiling:
   padding:    270
 
 sim_run:
-  ## Simulation engine: 'polychrom' (3D polymer, default), 'openmm'
-  ## (standalone OpenMM), or 'lef_only' (1D cohesin bridging only).
+  ## Simulation engine: 'polysim' (Hansen lab polysim, default; see the
+  ## polysim: block), 'polychrom' (ChromSimPipe's original polychrom model,
+  ## kept to reproduce earlier runs), 'openmm' (standalone OpenMM), or
+  ## 'lef_only' (1D cohesin bridging only).
   ## The workflow stops if the requested engine cannot be imported.
   engine:               polychrom
   seed_base:            42     # shard seed = seed_base + rep*10000 + shard*1000

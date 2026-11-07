@@ -13,7 +13,7 @@ Public API used by the Snakefile and scripts:
 
     CONFIG_PATH, REPO_ROOT, OUTPUT_ROOT, OUTPUT_DIR, PATHS, GENOME
     ACTIVE_LOCUS, LOCI, CHROM, REGION_START, REGION_END, RESOLUTION, N_MONOMERS
-    POLYMER, SMC_BOND, TILING, SIM_RUN, N_REPLICATES, N_SHARDS
+    POLYMER, SMC_BOND, TILING, SIM_RUN, POLYSIM, N_REPLICATES, N_SHARDS
     SAMPLES, SIMULATION_CONDITIONS, ALL_PARAM_SETS
     GENOME_ASSEMBLY, CTCF_TYPES, CTCF_PEAKS, CTCF_BEDS, CTCF_SITES_BY_TYPE
     HIC_TYPES, HIC_FILES, MCOOL_FILES
@@ -145,7 +145,7 @@ assert TILING["tile_size"] == N_MONOMERS + 2 * TILING["padding"], (
 # =============================================================================
 _run = _cfg.get("sim_run", {})
 SIM_RUN = dict(
-    engine               = str(_run.get("engine",               "polychrom")),
+    engine               = str(_run.get("engine",               "polysim")),
     seed_base            = int(_run.get("seed_base",            42)),
     hdf5_frames_per_file = int(_run.get("hdf5_frames_per_file", 100)),
     smc_steps_per_block  = int(_run.get("smc_steps_per_block",  1)),
@@ -158,9 +158,39 @@ SIM_RUN = dict(
     n_replicates         = int(_run.get("n_replicates", _cfg.get("n_replicates", 3))),
 )
 N_REPLICATES = SIM_RUN["n_replicates"]
+
+
+# =============================================================================
+# POLYSIM ENGINE (sim_run.engine: polysim)
+# Hansen lab polysim package (github.com/ahansenlab/polysim_bootcamp). Defaults
+# are the bootcamp tutorial values (tutorial/sim3D_complete.py). In this engine a
+# condition's `lifetime` is in LEF timesteps (= blocks), and each LEF leg steps
+# with probability vlef per timestep, so the mean extruded length per leg is
+# lifetime * vlef monomers.
+# =============================================================================
+_ps = _cfg.get("polysim", {}) or {}
+POLYSIM = dict(
+    density              = float(_ps.get("density",              0.3)),
+    confinement_k        = float(_ps.get("confinement_k",        1.0)),
+    repel                = float(_ps.get("repel",                3.0)),
+    bond_wiggle          = float(_ps.get("bond_wiggle",          0.1)),
+    angle_k              = float(_ps.get("angle_k",              0.05)),
+    smc_bond_wiggle      = float(_ps.get("smc_bond_wiggle",      0.2)),
+    smc_bond_dist        = float(_ps.get("smc_bond_dist",        0.5)),
+    vlef                 = float(_ps.get("vlef",                 0.0025)),
+    life_boost_stalled   = float(_ps.get("life_boost_stalled",   4.0)),
+    integrator           = str(_ps.get("integrator",             "langevin")),
+    dt                   = int(_ps.get("dt",                     40)),
+    colrate              = float(_ps.get("colrate",              0.01)),
+    poly_steps_per_block = int(_ps.get("poly_steps_per_block",   33)),
+    saveevery            = int(_ps.get("saveevery",              50)),
+    initsteps            = int(_ps.get("initsteps",              540000)),
+    initskip             = int(_ps.get("initskip",               0)),
+    blocks_per_updater   = int(_ps.get("blocks_per_updater",     1000)),
+)
 N_SHARDS     = int(_cfg.get("n_shards", 4))
 
-_ENGINES = ("polychrom", "openmm", "lef_only")
+_ENGINES = ("polychrom", "polysim", "openmm", "lef_only")
 if SIM_RUN["engine"] not in _ENGINES:
     raise ValueError(f"sim_run.engine must be one of {_ENGINES}, got {SIM_RUN['engine']!r}")
 
@@ -274,8 +304,12 @@ for _c in _cfg.get("conditions", []):
         lifetime     = int(_c["lifetime"]),
         separation   = int(_c["separation"]),
         ctcf_capture = float(_c["ctcf_capture"]),
-        ctcf_release = float(_c["ctcf_release"]),
+        ctcf_release = float(_c.get("ctcf_release", 0.0)),
     )
+    # polysim-only, optional per condition (defaults in the polysim: block)
+    for _k in ("vlef", "life_boost_stalled"):
+        if _k in _c:
+            _params[_k] = float(_c[_k])
     _cond = dict(
         name        = _c["name"],
         description = _c.get("description", _c["name"]),

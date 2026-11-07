@@ -42,7 +42,7 @@ accounts, and `module avail` shows the available software.
 `profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
 
 ::: {.callout-warning}
-**Profile status.** The 9-job test config has run end to end on Longleaf
+**Profile status.** The test config (then 9 jobs, polychrom engine) has run end to end on Longleaf
 (GPU simulation included). On Pioneer the test has completed the CTCF steps
 (identical to Longleaf's), the GPU simulation (V100) and the merge. Run the
 test config on any new cluster first.
@@ -118,6 +118,7 @@ Longleaf's `anaconda` modules ship conda 24.1, older than Snakemake needs.
 | `getMotif` | general | 1 | 1 GB | 15 min | - |
 | `orientCTCF` | general | 2 | 16 GB | 1 h | - |
 | `validateCTCF` | general | 1 | 4 GB | 15 min | - |
+| `preparePolysim` (engine: polysim only) | general | 1 | 4 GB | 30 min | - |
 | `simulateShard` | **l40-gpu, volta-gpu, gpu** | 4 | 60 GB | 12 h | **1** |
 | `mergeShards` | general | 4 | 64 GB | 2 h | - |
 | `analyzeCondition` | general | 4 | 64 GB | 24 h | - |

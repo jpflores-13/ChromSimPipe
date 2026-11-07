@@ -18,6 +18,8 @@ This is called by the simulate_shard rule in workflows/ChromSimPipe.snakefile.
 
 import os
 import sys
+import ctypes
+import ctypes.util
 import argparse
 import logging
 import json
@@ -26,7 +28,7 @@ import h5py
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from configs.parameters import (
-    POLYMER, SMC_BOND, SIM_RUN, N_MONOMERS, TILING, CTCF_TYPES,
+    POLYMER, SMC_BOND, SIM_RUN, POLYSIM, N_MONOMERS, TILING, CTCF_TYPES,
     get_tiled_ctcf_arrays,
 )
 from scripts.lef_dynamics import LEFSimulator
@@ -34,6 +36,69 @@ from scripts.run_simulation import get_param_set, resolve_condition, initialize_
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def seed_all(seed):
+    """Seed numpy and libc's drand48.
+
+    polysim's LEF translocator (LEF_Dynamics.pyx) draws its stall / unbinding /
+    stepping decisions from C drand48(), which it never seeds, so without this
+    every shard and replicate would replay the same random sequence.
+    """
+    np.random.seed(seed)
+    libc = ctypes.CDLL(ctypes.util.find_library("c"))
+    libc.srand48(ctypes.c_long(seed))
+
+
+def polysim_kwargs(params, ctcf_pos, ctcf_ori, n_frames, gpu, shard_dir):
+    """polysim SimParams keyword arguments for one shard.
+
+    CTCF orientation follows ChromSimPipe's convention (+1 stops leftward-moving
+    LEF legs, -1 stops rightward-moving ones), which is polysim's ctcf_left /
+    ctcf_right. Each site stalls with the condition's ctcf_capture per encounter.
+    `n_frames` is the number of conformations this shard saves.
+    """
+    ps = POLYSIM
+    blocks = n_frames * ps["saveevery"]
+    if blocks % ps["blocks_per_updater"]:
+        step = ps["blocks_per_updater"] // np.gcd(ps["saveevery"], ps["blocks_per_updater"])
+        raise ValueError(
+            f"polysim needs frames per shard (total_blocks / n_shards = {n_frames}) times "
+            f"saveevery ({ps['saveevery']}) to be a multiple of blocks_per_updater "
+            f"({ps['blocks_per_updater']}); use a multiple of {step} frames per shard")
+    cap = float(params["ctcf_capture"])
+    left = {int(p): cap for p, o in zip(ctcf_pos, ctcf_ori) if o == +1}
+    right = {int(p): cap for p, o in zip(ctcf_pos, ctcf_ori) if o == -1}
+    return dict(
+        npoly=int(TILING["chrom_size"]), nchr=1,
+        density=ps["density"], confinement_k=ps["confinement_k"], repel=ps["repel"],
+        bond_wiggle=ps["bond_wiggle"], angle_k=ps["angle_k"],
+        life=float(params["lifetime"]), sep=float(params["separation"]),
+        vlef=float(params.get("vlef", ps["vlef"])),
+        lifebooststalled=float(params.get("life_boost_stalled", ps["life_boost_stalled"])),
+        stall=None, ctcf_left=left, ctcf_right=right,
+        smc_bond_wiggle=ps["smc_bond_wiggle"], smc_bond_dist=ps["smc_bond_dist"],
+        platform=POLYMER["platform"], gpu=str(gpu), integrator=ps["integrator"],
+        dt=ps["dt"], colrate=ps["colrate"], poly_steps_per_block=ps["poly_steps_per_block"],
+        numsave=int(n_frames), saveevery=ps["saveevery"], initskip=ps["initskip"],
+        initsteps=ps["initsteps"], blocks_per_updater=ps["blocks_per_updater"],
+        max_data_length=SIM_RUN["hdf5_frames_per_file"], outpath=shard_dir,
+        save_smc_bonds=True,
+    )
+
+
+def _run_shard_polysim(params, ctcf_type, n_frames, shard_dir, gpu, seed):
+    """Run one shard with polysim (Hansen lab) and write blocks_*.h5 into shard_dir."""
+    try:
+        from polysim.sim3d import SimParams, run
+    except ImportError as e:
+        raise SystemExit(f"sim_run.engine is 'polysim' but it cannot be imported ({e}). "
+                         "Rebuild the condaEnvs.sim environment.")
+    seed_all(seed)
+    ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(ctcf_type)
+    sp = SimParams(**polysim_kwargs(params, ctcf_pos, ctcf_ori, n_frames, gpu, shard_dir))
+    logger.info("polysim configuration:\n" + sp.summary())
+    run(sp, folder=shard_dir, verbose=True)
 
 
 def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
@@ -66,14 +131,22 @@ def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
     shard_dir = os.path.join(output_dir,
                              f"{name}_ctcf-{ctcf_type}_rep{replicate}_shard{global_shard_index}")
     os.makedirs(shard_dir, exist_ok=True)
+    engine_used = SIM_RUN["engine"]
 
     with open(os.path.join(shard_dir, "params.json"), "w") as f:
         json.dump({
             **params, "ctcf_type": ctcf_type, "replicate": replicate,
             "shard_index": global_shard_index, "n_shards": n_shards,
             "blocks_per_shard": blocks_per_shard, "seed": shard_seed,
-            "tiling": TILING,
+            "tiling": TILING, "engine": engine_used,
+            **({"polysim": POLYSIM} if engine_used == "polysim" else {}),
         }, f, indent=2, default=str)
+
+    if engine_used == "polysim":
+        logger.info(f"Shard {shard_index}: engine=polysim, frames={blocks_per_shard}, GPU={gpu}")
+        _run_shard_polysim(params, ctcf_type, blocks_per_shard, shard_dir, gpu, shard_seed)
+        logger.info(f"Shard {shard_index}: complete")
+        return shard_dir
 
     # --- Initialize LEF simulator on the FULL tiled chromosome ---
     ctcf_pos, ctcf_ori = get_tiled_ctcf_arrays(ctcf_type)
@@ -94,7 +167,6 @@ def run_shard(params, replicate, shard_index, n_shards, gpu, output_dir,
         lef_sim.step()
 
     # --- Engine from config (sim_run.engine); stop if it cannot be imported ---
-    engine_used = SIM_RUN["engine"]
     try:
         if engine_used == "polychrom":
             import polychrom  # noqa: F401

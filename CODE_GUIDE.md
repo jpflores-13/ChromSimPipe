@@ -50,7 +50,7 @@ and cohesin dynamics parameters, the simulation tests user-defined hypotheses.
 ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C)
     ↓  orientCTCF rule → scripts/extract_ctcf_sites.py  (strand via FIMO)
 Oriented CTCF BED files (output/ctcf/)
-    ↓  simulateShard rule → scripts/run_simulation_shard.py + polychrom
+    ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim (default) or polychrom
 Simulated conformations (output/sims/)
     ↓  analyzeCondition rule → scripts/run_analysis_all.py
 Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertHic rule)
@@ -86,11 +86,11 @@ building conda environments are all workflow steps.
 ```bash
 sbatch ChromSimPipe.sh        # whole workflow
 bash ChromSimPipe.sh -n       # dry run
-sbatch ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml   # 9-job smoke test
+sbatch ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml   # 10-job smoke test
 ```
 
 **Test config.** `config/ChromSimConfig.test.yaml` is the same config with
-one condition, one replicate, one shard and 1,000 blocks, written to
+one condition, one replicate, one shard and 2,000 saved frames, written to
 `output_test/`. Run it first on any new cluster: it touches every rule,
 including one GPU simulation, for a fraction of the cost of a full run.
 
@@ -164,7 +164,9 @@ stochastic process. `LEFSimulator` runs this:
 
 ### The 3D simulation: `scripts/run_simulation_shard.py`
 
-This is where polychrom (OpenMM on GPU) runs. For each block:
+This is where the 3D model runs on the GPU. With the default `polysim`
+engine, the Hansen lab's polysim package does the work (see section 5a).
+With `engine: polychrom`, ChromSimPipe's original model runs. For each block:
 
 1. `LEFSimulator.step()` advances all cohesins one tick on the 1D lattice.
 2. Cohesin arm positions feed into polychrom as harmonic spring bonds
@@ -229,7 +231,7 @@ dies without cleanup, the lock persists and the next run refuses to start.
 | `getMotif` | once | `wget` the JASPAR motif (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | per CTCF sample used by a condition | `extract_ctcf_sites.py` |
 | `validateCTCF` | once | `validate_ctcf.py`: sanity-checks all BED files |
-| `simulateShard` | condition × replicate × shard (GPU) | `run_simulation_shard.py`: 36 jobs with the example config |
+| `simulateShard` | condition × replicate × shard (GPU) | `run_simulation_shard.py`: 18 jobs with the example config |
 | `mergeShards` | condition × replicate | `merge_shards.py`: concatenates shard HDF5 streams |
 | `analyzeCondition` | per condition | `run_analysis_all.py`: contact maps, P(s), APA, figures |
 | `benchmarkSummary` | once | `workflows/utils/benchmarking.py` |
@@ -499,8 +501,8 @@ reflect the current state: `left_pos[i]`, `right_pos[i]`, `ages[i]`,
 
 ### 5a. `scripts/run_simulation_shard.py`: the Snakemake entry point
 
-This is what every `simulateShard` SLURM job calls (36 jobs with the
-example config: 3 conditions × 3 replicates × 4 shards).
+This is what every `simulateShard` SLURM job calls (18 jobs with the
+example config: 3 conditions × 3 replicates × 2 shards).
 
 **Arguments:**
 
@@ -534,6 +536,26 @@ Shard output goes to `<output>/<params_name>_ctcf-<ctcf_type>_rep<r>_shard<i>/`.
    conformation of every block (`hdf5_frames_per_file` per file).
    `save_every` and the 3D side of `warmup_blocks` are not applied in this
    runner.
+
+**polysim engine** (`sim_run.engine: polysim`). `run_shard()` hands the shard
+to `_run_shard_polysim()` before any of the steps above:
+
+1. `seed_all(seed)` seeds numpy and C `drand48()`. polysim's Cython LEF model
+   draws every stall, unbinding and stepping decision from `drand48()` and never
+   seeds it, so without this every shard would replay one random sequence.
+2. `polysim_kwargs()` builds polysim's `SimParams`: the tiled chain length, the
+   `polysim:` config block, the condition's `lifetime` / `separation` (and
+   optional `vlef`, `life_boost_stalled`), and the oriented CTCF sites as
+   per-site stall probabilities (`ctcf_capture`): + sites go to `ctcf_left`
+   (they stop leftward-moving legs), − sites to `ctcf_right`. It checks that
+   frames per shard × `saveevery` is a multiple of `blocks_per_updater`
+   before any GPU time is spent.
+3. `polysim.sim3d.run()` writes `blocks_*.h5` into the shard folder (each
+   saved frame also carries the LEF bonds as `SMCs`), which `merge_shards.py`
+   and the analysis read like polychrom output.
+
+The `preparePolysim` rule imports polysim once before the shards, so its
+Cython module (`LEF_Dynamics.pyx`, built by pyximport) is compiled once.
 
 ### 5b. `scripts/merge_shards.py`
 

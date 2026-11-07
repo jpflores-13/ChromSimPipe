@@ -128,7 +128,7 @@ You then get one email when a run starts, finishes, or fails. See
 
 ## 6. Test the setup
 
-Before the first full run on a new cluster, run the 9-job test config:
+Before the first full run on a new cluster, run the 10-job test config:
 
 ```bash
 bash ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml -n
