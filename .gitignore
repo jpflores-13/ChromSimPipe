@@ -3,7 +3,7 @@
 
 # Generated data and results (large files, not for version control)
 output/
-output_test/
+output_*/
 data/*
 !data/README.md
 results/
