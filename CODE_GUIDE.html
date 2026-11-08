@@ -256,8 +256,9 @@ id="toc-configuration-configsparameters.py">1. Configuration:
 Hi-C data preparation</a></li>
 <li><a href="#ctcf-annotation" id="toc-ctcf-annotation">3. CTCF
 annotation</a></li>
-<li><a href="#the-lef-dynamics-engine"
-id="toc-the-lef-dynamics-engine">4. The LEF dynamics engine</a></li>
+<li><a href="#the-simulation-model-polysim"
+id="toc-the-simulation-model-polysim">4. The simulation model:
+polysim</a></li>
 <li><a href="#running-simulations" id="toc-running-simulations">5.
 Running simulations</a></li>
 <li><a href="#post-simulation-analysis"
@@ -334,9 +335,9 @@ user-defined hypotheses.</p>
 <h3 id="data-flow">Data flow</h3>
 <pre><code>ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C)
     ↓  orientCTCF rule → scripts/extract_ctcf_sites.py  (strand via FIMO)
-Oriented CTCF BED files (output/ctcf/)
-    ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim (default) or polychrom
-Simulated conformations (output/sims/)
+Oriented CTCF BED files (output/loci/&lt;locus&gt;/ctcf/)
+    ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim
+Simulated conformations (output/loci/&lt;locus&gt;/sims/)
     ↓  analyzeCondition rule → scripts/run_analysis_all.py
 Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertHic rule)</code></pre>
 <h3 id="setup-and-launch">Setup and launch</h3>
@@ -389,33 +390,35 @@ in the config).</p>
 config: <code>config/ChromSimConfig.yaml</code></h3>
 <p>This YAML file and the samplesheet are the source of truth for
 everything. <code>configs/parameters.py</code> reads both at import
-time. From the <code>locus:</code> block it derives <code>CHROM</code>,
-<code>REGION_START</code>, <code>REGION_END</code>, and
-<code>N_MONOMERS</code> (1,960 for the default window at 1 kb per
-monomer).</p>
+time. <code>loci:</code> lists one or more windows; every job is told
+its locus through <code>$CHROMSIM_LOCUS</code>, and from that entry the
+module derives <code>CHROM</code>, <code>REGION_START</code>,
+<code>REGION_END</code>, and <code>N_MONOMERS</code> (1,960 for the
+default chr1 window at 1 kb per monomer).</p>
 <p><strong>CTCF auto-loading.</strong> When any script imports
 <code>configs.parameters</code>, it opens the oriented CTCF BED for each
 CTCF sample and locus if it already exists
-(e.g. <code>output/ctcf/ctcf_oriented_hg38_condition1_&lt;locus&gt;.bed</code>).
+(e.g. <code>output/loci/&lt;locus&gt;/ctcf/ctcf_oriented_hg38_condition1.bed</code>).
 It parses each line into <code>(monomer_position, orientation)</code>
 where <code>+1</code> means a forward-strand motif and <code>−1</code>
 means reverse. If a BED does not exist yet, nothing is loaded, and
 <code>get_ctcf_arrays()</code> raises an error when a script asks for
 those sites. There are no placeholder sites.</p>
 <p><strong>Cohesin parameters.</strong> Each condition has a parameter
-set, a dict with <code>lifetime</code> (mean steps before cohesin falls
-off), <code>separation</code> (spacing between cohesins),
-<code>ctcf_capture</code> (probability of stalling per CTCF encounter),
-and <code>ctcf_release</code> (escape probability per step while
-stalled). Values come from Gabriele et al. 2022 (mESC measurements used
-as the human baseline).</p>
-<p><strong>Tiling.</strong> Rather than simulating 1,960 monomers, the
-simulation runs 70,000 monomers arranged as 28 back-to-back copies of
-the locus (each tile = 1,960 monomers + 270 padding on each side). All
-28 tiles are independent, so each GPU run produces ~28× the contact
-statistics at no extra physics cost. Contact maps are averaged back down
-to 1,960×1,960 for comparison. All three numbers are in the
-<code>tiling:</code> block.</p>
+set, a dict with <code>lifetime</code> (mean LEF timesteps before
+cohesin falls off), <code>separation</code> (spacing between cohesins)
+and <code>ctcf_capture</code> (probability of stalling per CTCF
+encounter), optionally overriding <code>vlef</code> and
+<code>life_boost_stalled</code> from the <code>polysim:</code> block.
+Defaults are the polysim bootcamp tutorial values.</p>
+<p><strong>Tiling.</strong> Rather than simulating one copy of the
+locus, the simulation runs a ~70,000-monomer chain of back-to-back
+copies (for chr1: 28 copies of 1,960 monomers + 270 padding on each
+side). The copies are independent, so each GPU run produces ~28× the
+contact statistics at no extra physics cost. Contact maps are averaged
+back down to one locus-sized map for comparison. The copy size and count
+are computed per locus from <code>tiling.padding</code> and
+<code>tiling.chain_size</code> (<code>locus_tiling()</code>).</p>
 <h3 id="the-ctcf-extraction-scriptsextract_ctcf_sites.py">The CTCF
 extraction: <code>scripts/extract_ctcf_sites.py</code></h3>
 <p>Your <code>.narrowPeak</code> file has peak coordinates but no strand
@@ -439,39 +442,32 @@ says: <code>drop</code> leaves them out and lists them in the log;
 <li>Writes a BED6 file where column 6 is <code>+</code> or
 <code>−</code>.</li>
 </ol>
-<h3 id="the-1d-engine-scriptslef_dynamics.py">The 1D engine:
-<code>scripts/lef_dynamics.py</code></h3>
-<p>Before any 3D physics, loop extrusion is modelled as a purely 1D
-stochastic process. <code>LEFSimulator</code> runs this:</p>
+<h3 id="the-simulation-scriptsrun_simulation_shard.py-polysim">The
+simulation: <code>scripts/run_simulation_shard.py</code> + polysim</h3>
+<p>The 3D model is the Hansen lab’s polysim package
+(github.com/ahansenlab/polysim_bootcamp), pinned in
+<code>envs/cohesin_sim.yml</code>:</p>
 <ul>
-<li>Each cohesin is a pair of arms that step away from each other along
-the chromatin fiber, one lattice site per simulation tick.</li>
-<li>An arm stalls when it hits a CTCF site with the blocking
-orientation, with probability <code>ctcf_capture</code>. It escapes with
-probability <code>ctcf_release</code> per step.</li>
-<li>Arms also stall when they collide with another cohesin (steric
-exclusion).</li>
-<li>Each cohesin lives for a geometrically distributed number of steps
-with mean <code>lifetime</code>, then unbinds and is replaced at a
-random position. Stalled cohesins unbind at the same rate.</li>
+<li><strong>Cohesin (1D, Cython).</strong> Each cohesin is a pair of
+legs that step apart along the chromatin fibre, each with probability
+<code>vlef</code> per LEF timestep. A leg stalls at a CTCF site with the
+blocking orientation with probability <code>ctcf_capture</code> per
+encounter; legs also block each other. Each cohesin unbinds with
+probability 1 / <code>lifetime</code> per timestep,
+<code>life_boost_stalled</code> times less often while both legs are
+stalled, and rebinds elsewhere.</li>
+<li><strong>Polymer (3D, polychrom / OpenMM on GPU).</strong> Each block
+is <code>poly_steps_per_block</code> Langevin steps; the cohesin bonds
+are springs between the two leg positions, switched on and off as
+cohesin moves. Every <code>saveevery</code>-th block is saved to
+<code>blocks_*.h5</code>. Contacts (pairs within
+<code>contact_radius</code> = 3.0) are counted later, in the
+analysis.</li>
 </ul>
-<h3 id="the-3d-simulation-scriptsrun_simulation_shard.py">The 3D
-simulation: <code>scripts/run_simulation_shard.py</code></h3>
-<p>This is where the 3D model runs on the GPU. With the default
-<code>polysim</code> engine, the Hansen lab’s polysim package does the
-work (see section 5a). With <code>engine: polychrom</code>,
-ChromSimPipe’s original model runs. For each block:</p>
-<ol type="1">
-<li><code>LEFSimulator.step()</code> advances all cohesins one tick on
-the 1D lattice.</li>
-<li>Cohesin arm positions feed into polychrom as harmonic spring bonds
-between the two bridged monomers.</li>
-<li>OpenMM integrates the polymer under those bonds for
-<code>md_steps_per_block</code> (250) MD steps.</li>
-<li>polychrom’s <code>HDF5Reporter</code> saves the coordinates of the
-block. Contacts (pairs within <code>contact_radius</code> = 3.0) are
-counted later, in the analysis.</li>
-</ol>
+<p>ChromSimPipe’s part (<code>run_simulation_shard.py</code>) maps the
+oriented CTCF sites onto polysim’s stall arrays, seeds numpy and C
+<code>drand48</code> per shard, and calls
+<code>polysim.sim3d.run()</code>; see section 5a.</p>
 <h3 id="the-analysis-analysis">The analysis: <code>analysis/</code></h3>
 <ul>
 <li><strong><code>contact_maps.py</code></strong>: accumulates saved
@@ -662,10 +658,10 @@ the single file that controls every simulation</li>
 turning experimental data into comparison matrices</li>
 <li><a href="#3-ctcf-annotation">CTCF annotation</a>: turning
 CUT&amp;Tag peaks into oriented barrier lists</li>
-<li><a href="#4-the-lef-dynamics-engine">The LEF dynamics engine</a>:
-the loop-extrusion simulator</li>
-<li><a href="#5-running-simulations">Running simulations</a>: the shard,
-merge, and single-run entry points</li>
+<li><a href="#4-the-simulation-model-polysim">The simulation model</a>:
+polysim, the loop-extrusion simulator</li>
+<li><a href="#5-running-simulations">Running simulations</a>: the shard
+and merge entry points</li>
 <li><a href="#6-post-simulation-analysis">Post-simulation analysis</a>:
 contact maps, P(s), APA, MSD, calibration</li>
 <li><a href="#legacy-cluster-scripts-legacycluster">Legacy cluster
@@ -701,33 +697,35 @@ import time, and re-exports a fixed set of variables so that all
 downstream scripts stay unchanged when config values change.</p>
 <p><strong>Key exported names:</strong></p>
 <ul>
-<li><p><strong>Locus</strong> (<code>CHROM</code>,
+<li><p><strong>Loci</strong> (<code>LOCI</code>,
+<code>LOCUS_NAMES</code>, <code>ACTIVE_LOCUS</code>, <code>CHROM</code>,
 <code>REGION_START</code>, <code>REGION_END</code>,
-<code>RESOLUTION</code>, <code>N_MONOMERS</code>,
-<code>ACTIVE_LOCUS</code>). Derived from the <code>locus:</code> block
-in <code>ChromSimConfig.yaml</code>. For the included STRS example:
-hg38, chr1:64,210,000–66,170,000 → 1,960 monomers at 1
-kb/monomer.</p></li>
+<code>RESOLUTION</code>, <code>N_MONOMERS</code>). <code>LOCI</code>
+holds every entry of the <code>loci:</code> list; the other names
+describe the active locus (<code>$CHROMSIM_LOCUS</code>, else the
+first). For the included STRS example: hg38, chr1:64,210,000–66,170,000
+→ 1,960 monomers at 1 kb/monomer.</p></li>
 <li><p><strong>Samples and outputs</strong> (<code>SAMPLES</code>,
 <code>RUN_NAME</code>, <code>OUTPUT_ROOT</code>,
 <code>OUTPUT_DIR</code>, <code>PATHS</code>, <code>GENOME</code>).
 Sample names, metadata and input files from the samplesheet; every
-output directory under <code>outputDir</code>. Input paths (samplesheet
-files, <code>genome</code>) resolve against the repo root; a relative
+output directory under <code>outputDir</code>.
+<code>locus_paths(name)</code> gives any locus’ folders
+(<code>&lt;outputDir&gt;/loci/&lt;name&gt;/...</code>;
+<code>.cool</code> files and motifs are shared), <code>PATHS</code>
+those of the active locus. Input paths (samplesheet files,
+<code>genome</code>) resolve against the repo root; a relative
 <code>outputDir</code> resolves against <code>OUTPUT_ROOT</code>, which
 is <code>$CHROMSIM_OUTPUT_ROOT</code> if set, else the repo
 root.</p></li>
-<li><p><strong>Polymer physics</strong> (<code>POLYMER</code> dict).
-Bond lengths, bending stiffness (<code>angle_force</code>), confinement
-density, integration tolerance, GPU platform. Rarely changed between
-projects.</p></li>
-<li><p><strong>LEF ↔︎ polymer bonds</strong> (<code>SMC_BOND</code>). How
-stiff the cohesin “ring” is in 3D, i.e. how strongly it pulls the two
-loop flanks together.</p></li>
+<li><p><strong>Simulation model</strong> (<code>POLYSIM</code>). The
+<code>polysim:</code> block: polymer (density, stiffness, repulsion),
+cohesin bond, extrusion speed (<code>vlef</code>), stalled-lifetime
+boost, integration and saving schedule.</p></li>
 <li><p><strong>CTCF tracks</strong> (<code>CTCF_TYPES</code>,
 <code>CTCF_PEAKS</code>, <code>CTCF_BEDS</code>). One oriented BED per
 <code>ctcf_type</code> used by a condition, under
-<code>output/ctcf/</code>. At import time,
+<code>output/loci/&lt;locus&gt;/ctcf/</code>. At import time,
 <code>load_ctcf_from_bed()</code> reads each file into
 <code>CTCF_SITES_BY_TYPE[type]</code>: monomer indices with
 <code>+1</code> / <code>−1</code> orientation labels. Type names are
@@ -736,21 +734,21 @@ supported.</p></li>
 <li><p><strong>Cohesin parameter sets</strong>
 (<code>ALL_PARAM_SETS</code>). One dict per condition hypothesis, each
 with <code>lifetime</code>, <code>separation</code>,
-<code>ctcf_capture</code>, and <code>ctcf_release</code>. Values from
-Gabriele et al. 2022.</p></li>
+<code>ctcf_capture</code>, and optional <code>vlef</code> /
+<code>life_boost_stalled</code> overrides.</p></li>
 <li><p><strong>Condition list</strong>
 (<code>SIMULATION_CONDITIONS</code>). The rows the Snakemake pipeline
 iterates over. Each entry pairs a cohesin parameter set with a CTCF
 track and has a <code>name</code>
 (e.g. <code>cond1_baseline</code>).</p></li>
-<li><p><strong>Tiling</strong> (<code>TILING</code>). The locus is
-copied 28× into one long polymer for 28× better contact statistics at no
-extra physics cost. <code>TILING["chrom_size"]</code> is the full
-polymer length (~70,000 monomers).</p></li>
+<li><p><strong>Tiling</strong> (<code>TILING</code>,
+<code>locus_tiling(name)</code>). The locus is copied into one long
+chain (28× for chr1) for better contact statistics at no extra physics
+cost. <code>TILING["chrom_size"]</code> is the full chain length
+(~70,000 monomers).</p></li>
 <li><p><strong>Run parameters</strong> (<code>SIM_RUN</code>).
-<code>engine</code>, <code>seed_base</code>, <code>total_blocks</code>,
-<code>md_steps_per_block</code>, <code>save_every</code>,
-<code>warmup_blocks</code>, <code>hdf5_frames_per_file</code>.</p></li>
+<code>seed_base</code>, <code>frames_per_replicate</code>,
+<code>contact_radius</code>, <code>hdf5_frames_per_file</code>.</p></li>
 <li><p><strong>Analysis</strong> (<code>ANALYSIS</code>,
 <code>MSD_PROBE</code>, <code>MSD_FIT</code>, <code>CALIBRATION</code>).
 Worker count, APA window, MSD probes and fits, and how to map simulation
@@ -799,8 +797,8 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--genome</span> /path/to/genome.fa <span class="dt">\</span></span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--motif</span> output/motifs/MA0139.1.meme <span class="dt">\</span></span>
 <span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--assembly</span> hg38 <span class="dt">\</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--fimo-thresh</span> 1e-3 <span class="at">--flank</span> 100 <span class="at">--unoriented</span> drop <span class="at">--resolution</span> 1000 <span class="dt">\</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output</span> output/ctcf/ctcf_oriented_hg38_condition1_chr1_64210000_66170000.bed</span></code></pre></div>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--fimo-thresh</span> 1e-4 <span class="at">--flank</span> 250 <span class="at">--unoriented</span> drop <span class="at">--resolution</span> 1000 <span class="dt">\</span></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output</span> output/loci/chr1_fig1/ctcf/ctcf_oriented_hg38_condition1.bed</span></code></pre></div>
 <p><strong>Output:</strong> BED6, one row per peak with a FIMO hit;
 column 6 (<code>+</code>/<code>−</code>) is the motif strand.</p>
 <h3
@@ -822,72 +820,74 @@ id="scriptsexport_conserved_ctcf_bed.py"><code>scripts/export_conserved_ctcf_bed
 sites shared in both (same position and orientation), and write a
 conserved-sites BED. Useful for testing “CTCF binding didn’t change,
 only cohesin did” scenarios.</p>
-<h2 id="the-lef-dynamics-engine">4. The LEF dynamics engine</h2>
-<h3
-id="scriptslef_dynamics.py"><code>scripts/lef_dynamics.py</code></h3>
-<p><strong>Purpose.</strong> A lightweight 1D Python simulator for
-loop-extruding factors (cohesins). No 3D physics, just where the
-cohesins are on the lattice, where they stall, and where they reload
-after unbinding.</p>
-<p><strong>Class: <code>LEFSimulator</code>.</strong> Constructor
-arguments:</p>
-<ul>
-<li><code>N</code>: lattice length in monomers.</li>
-<li><code>n_lefs</code>: how many cohesins to place.</li>
-<li><code>lifetime</code>: mean number of steps a cohesin stays bound
-before unbinding
-(<code>unbind probability per step = 1/lifetime</code>).</li>
-<li><code>ctcf_positions</code>, <code>ctcf_orientations</code>: from
-<code>get_ctcf_arrays</code>.</li>
-<li><code>ctcf_capture</code>: probability of stalling when a cohesin
-arm moves onto a CTCF site with the blocking orientation.</li>
-<li><code>ctcf_release</code>: probability per step that a stalled
-cohesin lets go.</li>
-<li><code>rng_seed</code>: for reproducibility.</li>
-</ul>
-<p><strong>What each <code>step()</code> call does.</strong></p>
-<ol type="1">
-<li>Rebuild the occupancy grid from every cohesin’s left / right arm
-positions (so collisions are up-to-date if arms moved last step).</li>
-<li>For each cohesin (in a random permutation, so no directional bias):
-<ul>
-<li>Age by one step.</li>
-<li>With probability <code>1/lifetime</code>, unbind → clear occupancy,
-call <code>_place_lef()</code> to re-seed at a random free pair of
-positions.</li>
-<li>Left arm (moves leftward): if the next position is free and not a
-blocking CTCF site (or we rolled <code>&gt; ctcf_capture</code>), move
-there. If it is blocking and we rolled <code>&lt; ctcf_capture</code>,
-flag as stalled.</li>
-<li>Right arm (moves rightward): mirror logic.</li>
-<li>If already stalled on CTCF, roll <code>&lt; ctcf_release</code> to
-escape.</li>
-</ul></li>
-</ol>
-<p><strong>Public methods.</strong></p>
-<ul>
-<li><code>get_bonds()</code>: list of <code>(left, right)</code> tuples
-of current cohesin-bridged monomer pairs. Fed to polychrom as harmonic
-SMC bonds.</li>
-<li><code>get_bond_arrays()</code>: same but as two parallel NumPy
-arrays.</li>
-<li><code>get_loop_sizes()</code>: current loop lengths (in
-monomers).</li>
-<li><code>run(n_steps)</code>: convenience: step <code>n_steps</code>
-times, return the list of per-step bond lists.</li>
-</ul>
-<p><strong>Output variables you should know.</strong> After a
-<code>step()</code>, these arrays reflect the current state:
-<code>left_pos[i]</code>, <code>right_pos[i]</code>,
-<code>ages[i]</code>, <code>left_stalled[i]</code>,
-<code>right_stalled[i]</code>, <code>occupied[pos]</code>.</p>
+<h2 id="the-simulation-model-polysim">4. The simulation model:
+polysim</h2>
+<p>ChromSimPipe simulates with the Hansen lab’s polysim package
+(github.com/ahansenlab/polysim_bootcamp, MIT license), pinned to one
+commit in <code>envs/cohesin_sim.yml</code>. It couples a 1D model of
+cohesin loop extrusion (<code>LEF_Dynamics.pyx</code>, Cython) to a 3D
+polymer on polychrom / OpenMM, as in the polychrom loop-extrusion
+example and Goel et al. 2025.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>polysim setting</th>
+<th>Comes from</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>life</code>, <code>sep</code></td>
+<td>condition <code>lifetime</code>, <code>separation</code></td>
+<td>75,000 timesteps, 240 monomers</td>
+</tr>
+<tr class="even">
+<td><code>vlef</code>, <code>lifebooststalled</code></td>
+<td><code>polysim:</code> block, or per-condition overrides</td>
+<td>0.0025, 4</td>
+</tr>
+<tr class="odd">
+<td><code>ctcf_left</code>, <code>ctcf_right</code></td>
+<td>oriented CTCF sites (+ / −), each at the condition’s
+<code>ctcf_capture</code></td>
+<td>0.5</td>
+</tr>
+<tr class="even">
+<td>polymer, integration, saving</td>
+<td><code>polysim:</code> block</td>
+<td>bootcamp values</td>
+</tr>
+<tr class="odd">
+<td><code>npoly</code></td>
+<td>the locus’ tiled chain (<code>TILING["chrom_size"]</code>)</td>
+<td>~70,000</td>
+</tr>
+<tr class="even">
+<td><code>numsave</code></td>
+<td><code>sim_run.frames_per_replicate / n_shards</code></td>
+<td>5,000</td>
+</tr>
+</tbody>
+</table>
+<p>ChromSimPipe’s earlier built-in model
+(<code>scripts/lef_dynamics.py</code>,
+<code>scripts/run_simulation.py</code>) was removed in November 2026: on
+a CTCF-driven control locus it gave the same contact pattern as polysim
+but about 7× too weak. It remains in the git history.</p>
 <h2 id="running-simulations">5. Running simulations</h2>
 <h3 id="a.-scriptsrun_simulation_shard.py-the-snakemake-entry-point">5a.
 <code>scripts/run_simulation_shard.py</code>: the Snakemake entry
 point</h3>
 <p>This is what every <code>simulateShard</code> SLURM job calls (18
-jobs with the example config: 3 conditions × 3 replicates × 2
-shards).</p>
+jobs per locus with the example config: 3 conditions × 3 replicates × 2
+shards). The locus comes from <code>$CHROMSIM_LOCUS</code>, which the
+workflow sets.</p>
 <p><strong>Arguments:</strong></p>
 <table>
 <colgroup>
@@ -908,7 +908,7 @@ params + CTCF track.</td>
 </tr>
 <tr class="even">
 <td><code>--replicate N</code></td>
-<td>Integer replicate index (drives RNG seed).</td>
+<td>Integer replicate index (drives the seed).</td>
 </tr>
 <tr class="odd">
 <td><code>--shard-index I</code></td>
@@ -916,7 +916,7 @@ params + CTCF track.</td>
 </tr>
 <tr class="even">
 <td><code>--n-shards K</code></td>
-<td>Total shards per replicate (default 4).</td>
+<td>Total shards per replicate.</td>
 </tr>
 <tr class="odd">
 <td><code>--gpu I</code></td>
@@ -924,13 +924,8 @@ params + CTCF track.</td>
 </tr>
 <tr class="even">
 <td><code>--output DIR</code></td>
-<td>Output base directory (the workflow passes
-<code>output/sims</code>).</td>
-</tr>
-<tr class="odd">
-<td><code>--shard-index-offset M</code></td>
-<td>Add <code>M</code> to shard index, to extend existing runs without
-overwriting.</td>
+<td>The locus’ sims folder (the workflow passes
+<code>output/loci/&lt;locus&gt;/sims</code>).</td>
 </tr>
 </tbody>
 </table>
@@ -938,33 +933,10 @@ overwriting.</td>
 <code>&lt;output&gt;/&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;r&gt;_shard&lt;i&gt;/</code>.</p>
 <p><strong>What it does:</strong></p>
 <ol type="1">
-<li>Look up the condition → resolve to
-<code>(params_dict, ctcf_type)</code>. Check that the engine in
-<code>sim_run.engine</code> can be imported; stop if not (no silent
-fallback to another engine).</li>
-<li>Build the tiled polymer (<code>N = TILING["chrom_size"]</code>),
-fetch tiled CTCF arrays.</li>
-<li>Warm up <code>LEFSimulator</code> for <code>warmup_blocks</code>
-steps (throw away).</li>
-<li><strong>Pre-compute</strong> all LEF bond states for every block in
-advance. The 1D dynamics are independent of 3D physics, so doing this up
-front lets the polychrom loop replay bonds from a list.</li>
-<li>Register all unique bond pairs as <code>harmonic_bonds</code> at
-<code>k=0</code>; flip <code>k</code> each block (~10× faster than
-adding/removing bonds).</li>
-<li><code>sim.local_energy_minimization()</code> relaxes the starting
-configuration.</li>
-<li>Run <code>total_blocks / n_shards</code> blocks;
-<code>HDF5Reporter</code> saves the conformation of every block
-(<code>hdf5_frames_per_file</code> per file). <code>save_every</code>
-and the 3D side of <code>warmup_blocks</code> are not applied in this
-runner.</li>
-</ol>
-<p><strong>polysim engine</strong>
-(<code>sim_run.engine: polysim</code>). <code>run_shard()</code> hands
-the shard to <code>_run_shard_polysim()</code> before any of the steps
-above:</p>
-<ol type="1">
+<li>Looks up the condition (<code>get_condition</code>), works out the
+shard’s frame count (<code>frames_per_replicate / n_shards</code>) and
+seed (<code>seed_base + replicate × 10000 + shard × 1000</code>), and
+writes <code>params.json</code>.</li>
 <li><code>seed_all(seed)</code> seeds numpy and C
 <code>drand48()</code>. polysim’s Cython LEF model draws every stall,
 unbinding and stepping decision from <code>drand48()</code> and never
@@ -972,18 +944,17 @@ seeds it, so without this every shard would replay one random
 sequence.</li>
 <li><code>polysim_kwargs()</code> builds polysim’s
 <code>SimParams</code>: the tiled chain length, the
-<code>polysim:</code> config block, the condition’s
-<code>lifetime</code> / <code>separation</code> (and optional
-<code>vlef</code>, <code>life_boost_stalled</code>), and the oriented
-CTCF sites as per-site stall probabilities (<code>ctcf_capture</code>):
-+ sites go to <code>ctcf_left</code> (they stop leftward-moving legs), −
-sites to <code>ctcf_right</code>. It checks that frames per shard ×
+<code>polysim:</code> block, the condition’s <code>lifetime</code> /
+<code>separation</code> (and optional <code>vlef</code>,
+<code>life_boost_stalled</code>), and the tiled CTCF sites as per-site
+stall probabilities (<code>ctcf_capture</code>): + sites go to
+<code>ctcf_left</code> (they stop leftward-moving legs), − sites to
+<code>ctcf_right</code>. It checks that frames per shard ×
 <code>saveevery</code> is a multiple of <code>blocks_per_updater</code>
 before any GPU time is spent.</li>
 <li><code>polysim.sim3d.run()</code> writes <code>blocks_*.h5</code>
 into the shard folder (each saved frame also carries the LEF bonds as
-<code>SMCs</code>), which <code>merge_shards.py</code> and the analysis
-read like polychrom output.</li>
+<code>SMCs</code>).</li>
 </ol>
 <p>The <code>preparePolysim</code> rule imports polysim once before the
 shards, so its Cython module (<code>LEF_Dynamics.pyx</code>, built by
@@ -995,16 +966,6 @@ pyximport) is compiled once.</p>
 the analysis expects. Writes <code>merge_metadata.json</code> recording
 which shard IDs contributed.</p>
 <pre><code>--condition, --replicate, --n-shards, --results-dir</code></pre>
-<h3 id="c.-scriptsrun_simulation.py-single-run-local-testing">5c.
-<code>scripts/run_simulation.py</code>: single-run / local testing</h3>
-<p>One-shot simulation without sharding. Useful for local testing or
-LEF-only sanity checks:</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/run_simulation.py <span class="dt">\</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="at">--replicate</span> 0 <span class="at">--gpu</span> 0 <span class="at">--output</span> output/sims</span></code></pre></div>
-<p><code>--engine</code> defaults to <code>sim_run.engine</code>;
-<code>--engine lef_only</code> skips the 3D polymer entirely and writes
-only a 2D contact map from 1D LEF statistics.</p>
 <h2 id="post-simulation-analysis">6. Post-simulation analysis</h2>
 <h3 id="a.-the-orchestrator-scriptsrun_analysis_all.py">6a. The
 orchestrator: <code>scripts/run_analysis_all.py</code></h3>
@@ -1013,13 +974,13 @@ orchestrator: <code>scripts/run_analysis_all.py</code></h3>
 full analysis suite, and writes per-condition outputs. Called by the
 <code>analyzeCondition</code> Snakemake rule.</p>
 <p><strong>How to run directly</strong> (e.g. for one condition):</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/run_analysis_all.py <span class="dt">\</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--results-dir</span> output/sims <span class="dt">\</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output-dir</span> output/analysis/cond1_baseline <span class="dt">\</span></span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="dt">\</span></span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--hic-dir</span> output/mcool <span class="dt">\</span></span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--n-jobs</span> 4 <span class="at">--skip-existing</span> <span class="at">--no-msd</span></span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/run_analysis_all.py <span class="dt">\</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--results-dir</span> output/loci/chr1_fig1/sims <span class="dt">\</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output-dir</span> output/loci/chr1_fig1/analysis/cond1_baseline <span class="dt">\</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="dt">\</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--hic-dir</span> output/mcool <span class="dt">\</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--n-jobs</span> 4 <span class="at">--skip-existing</span> <span class="at">--no-msd</span></span></code></pre></div>
 <p><strong>Selected flags:</strong></p>
 <table>
 <colgroup>
@@ -1183,15 +1144,15 @@ orchestrator)</td>
 <code>scripts/summarize_analysis.py</code></h3>
 <p>Collects scalar metrics from all conditions into one CSV/XLSX
 table:</p>
-<div class="sourceCode" id="cb10"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/summarize_analysis.py <span class="dt">\</span></span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--analysis-dir</span> output/analysis <span class="dt">\</span></span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--reference-condition</span> cond1_baseline</span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/summarize_analysis.py <span class="dt">\</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--analysis-dir</span> output/loci/chr1_fig1/analysis <span class="dt">\</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--reference-condition</span> cond1_baseline</span></code></pre></div>
 <h3 id="d.-scriptscheck_results.py">6d.
 <code>scripts/check_results.py</code></h3>
-<p>Lists every directory under <code>output/sims</code>, its frame
-count, and whether analysis outputs are present. Quick inventory after a
-SLURM batch.</p>
+<p>Lists every directory under a locus’ <code>sims/</code> folder, its
+frame count, and whether analysis outputs are present. Quick inventory
+after a SLURM batch.</p>
 <h2 id="legacy-cluster-scripts-legacycluster">Legacy cluster scripts
 (<code>legacy/cluster/</code>)</h2>
 <p>The pre-Snakemake SLURM scripts were written for the lab’s original
@@ -1217,15 +1178,16 @@ this pattern.</li>
 default).</strong> Monomer index <code>i</code> covers
 <code>REGION_START + i * RESOLUTION</code> to
 <code>REGION_START + (i+1) * RESOLUTION</code>.</li>
-<li><strong>Tiled chromosome.</strong> Simulations run on
-<code>chrom_size</code> (70,000) monomers = 28 copies of the locus with
-padding. Contact maps are averaged back to <code>N_MONOMERS</code>
-(1,960) for comparison. This gives ~28× more contact statistics at no
-extra physics cost.</li>
+<li><strong>Tiled chromosome.</strong> Each locus is simulated on one
+chain of up to <code>tiling.chain_size</code> (70,000) monomers holding
+as many padded copies of it as fit (28 for the 1,960 kb chr1 locus).
+Contact maps are averaged back to the locus’ own size for comparison,
+giving ~28× more contact statistics at no extra physics cost.
+<code>locus_tiling(name)</code> returns each locus’ numbers.</li>
 <li><strong>Output directory names.</strong> Shards:
-<code>output/sims/&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;_shard&lt;S&gt;/</code>.
+<code>output/loci/&lt;locus&gt;/sims/&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;_shard&lt;S&gt;/</code>.
 Merged:
-<code>output/sims/merged_&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;/</code>.
+<code>output/loci/&lt;locus&gt;/sims/merged_&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;/</code>.
 The <code>_ctcf-&lt;type&gt;</code> part separates runs with the same
 cohesin params but different CTCF tracks.</li>
 <li><strong>RNG seed.</strong>
@@ -1276,8 +1238,8 @@ column named in <code>fileNamesFrom</code>.</p>
 <code>Hi-C</code> path in the samplesheet, and
 <code>output/logs/convertHic_&lt;sample&gt;.err</code>.</p>
 <p><strong>Analysis fails with “No results found”.</strong> Check that
-<code>output/sims/merged_*_rep*/</code> directories exist. If shards
-completed but the merged directory is missing, delete
+<code>output/loci/&lt;locus&gt;/sims/merged_*_rep*/</code> directories
+exist. If shards completed but the merged directory is missing, delete
 <code>output/done/mergeShards_&lt;condition&gt;_rep&lt;N&gt;.done</code>
 and resubmit.</p>
 <p><strong>No emails.</strong> Check <code>$CHROMSIM_EMAIL</code> is set

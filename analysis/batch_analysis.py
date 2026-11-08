@@ -3,13 +3,13 @@
 Batch analysis: compute contact maps for all completed conditions and
 generate a multi-panel comparison figure.
 
-Scans output/sims/ for completed simulation directories,
+Scans output/loci/chr1_fig1/sims/ for completed simulation directories,
 runs contact map analysis on each, saves individual PNGs per condition,
 and produces a single multi-panel figure for quick comparison.
 
 Usage:
     python analysis/batch_analysis.py
-    python analysis/batch_analysis.py --results-dir output/sims --n-jobs 4
+    python analysis/batch_analysis.py --results-dir output/loci/chr1_fig1/sims --n-jobs 4
     python analysis/batch_analysis.py --skip-existing   # only analyze new results
 """
 

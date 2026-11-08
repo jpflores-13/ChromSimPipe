@@ -31,8 +31,8 @@ ctcf_motif:
   jaspar_id:   'MA0139.1'
   meme:        ''              # local MEME file; '' = download jaspar_id
   jaspar_url:  'https://jaspar.elixir.no/api/v1/matrix/{jaspar_id}/?format=meme'
-  fimo_thresh: 1.0e-3
-  flank_bp:    100
+  fimo_thresh: 1.0e-4
+  flank_bp:    250
   unoriented:  'drop'          # or 'error'
 
 resolution:   1000             # bp per monomer
@@ -48,20 +48,14 @@ condaEnvs:                     # env file, env name, or env path
   sim:  'envs/cohesin_sim.yml'
   ctcf: 'envs/ctcf_extraction.yml'
 
-locus:      {name, chrom, region_start, region_end, label, anchor_bp}
-conditions: [...]              # see below
-polymer:    {density, bond_length, bond_wiggle_dist, angle_force,
-             collision_rate, error_tol, repulsion_trunc, confinement_k,
-             integrator, precision, platform}
-smc_bond:   {wiggle_dist, bond_dist}
-tiling:     {tile_size, chrom_size, padding}
-sim_run:    {engine, seed_base, smc_steps_per_block, md_steps_per_block,
-             total_blocks, warmup_blocks, save_every, restart_milker_every,
-             contact_radius, hdf5_frames_per_file}
-polysim:    {density, angle_k, bond_wiggle, repel, confinement_k,
+loci:       [{name, chrom, region_start, region_end, label, anchor_bp}, ...]
+conditions: [...]              # see below; each is simulated at every locus
+tiling:     {padding, chain_size}
+sim_run:    {seed_base, frames_per_replicate, contact_radius, hdf5_frames_per_file}
+polysim:    {platform, density, angle_k, bond_wiggle, repel, confinement_k,
              smc_bond_wiggle, smc_bond_dist, vlef, life_boost_stalled,
              integrator, dt, colrate, poly_steps_per_block, saveevery,
-             initsteps, initskip, blocks_per_updater}   # engine: polysim only
+             initsteps, initskip, blocks_per_updater}
 analysis:   {n_jobs, msd, hic_balance, apa, msd_probe, msd_fit, calibration}
 ```
 
@@ -71,14 +65,14 @@ columns named `KR`, `VC` and `VC_SQRT` (default `KR`); `weight` is cooler's
 own ICE balancing; `False` compares raw counts.
 
 ::: {.callout-note}
-`sim_run.engine` must be importable in the simulation environment; the
-workflow stops instead of silently switching to another engine. Oriented CTCF
-BEDs must exist before simulation; there are no placeholder sites.
+polysim must be importable in the simulation environment; the workflow stops
+otherwise. Oriented CTCF BEDs must exist before simulation; there are no
+placeholder sites.
 :::
 
 ## The `polysim:` block
 
-Used with `sim_run.engine: polysim`, the default engine. Defaults are the polysim bootcamp
+The simulation model's settings, shared by all conditions and loci. Defaults are the polysim bootcamp
 tutorial values. Conditions keep `lifetime`, `separation` and `ctcf_capture`
 (and may override `vlef` and `life_boost_stalled` each); `lifetime` is then in
 LEF timesteps, so the extruded length per leg is about `lifetime × vlef`
@@ -86,7 +80,8 @@ monomers.
 
 | Field | Default | Meaning |
 |-------|---------|---------|
-| `density`, `angle_k`, `bond_wiggle`, `repel`, `confinement_k` | 0.3, 0.05, 0.1, 3.0, 1.0 | Polymer (replaces the `polymer:` block) |
+| `platform` | CUDA | `CPU` for testing without a GPU |
+| `density`, `angle_k`, `bond_wiggle`, `repel`, `confinement_k` | 0.3, 0.05, 0.1, 3.0, 1.0 | Polymer |
 | `smc_bond_wiggle`, `smc_bond_dist` | 0.2, 0.5 | Cohesin bond |
 | `vlef` | 0.0025 | Probability a LEF leg steps per timestep (block) |
 | `life_boost_stalled` | 4.0 | Lifetime multiplier while both legs are stalled at CTCF |
@@ -96,8 +91,17 @@ monomers.
 | `initskip` | 0 | Unsaved polymer equilibration; polysim extends it to at least one LEF lifetime |
 | `blocks_per_updater` | 1000 | Frames per shard × `saveevery` must be a multiple of this |
 
-`sim_run.total_blocks` is the number of saved conformations per replicate with
-this engine (split across `n_shards`).
+`sim_run.frames_per_replicate` is the number of saved conformations per
+replicate, split across `n_shards`.
+
+## Loci and tiling
+
+`loci:` lists the windows to simulate. Every condition runs at every locus, in
+`<outputDir>/loci/<name>/`; the converted Hi-C and the motif file are shared.
+The workflow passes each job its locus as `$CHROMSIM_LOCUS`, and
+`configs/parameters.py` then describes that locus (with no variable set, the
+first locus). Each locus is tiled on its own: copies of `locus monomers + 2 ×
+tiling.padding` monomers, as many as fit in `tiling.chain_size`.
 
 ## Paths and environment variables
 
@@ -121,8 +125,7 @@ typically exported in `~/.bashrc`, so they stay out of the shared repo:
 ## Other configs
 
 `config/ChromSimConfig.test.yaml` is a complete copy of the main config with
-one condition, `n_replicates: 1`, `n_shards: 1`, `total_blocks: 2000`
-(saved frames), and `outputDir: 'output_test'`: a 10-job smoke test.
+one condition, `n_replicates: 1`, `n_shards: 1`, `frames_per_replicate: 2000`, and `outputDir: 'output_test'`: a 10-job smoke test.
 Any config passed with `--configfile` must be complete like this one: it
 replaces the default, it is not merged into it.
 
@@ -135,10 +138,12 @@ from configs.parameters import (
     GENOME,                # str: genome FASTA, resolved against the repo root
     SAMPLES,               # dict: sample name -> {metadata, ctcf_peaks, hic}
     RUN_NAME,              # str: metadata shared by every sample, '_'-joined
-    ACTIVE_LOCUS, LOCI,    # locus key and definition
-    CHROM, REGION_START, REGION_END, REGION,
+    LOCI, LOCUS_NAMES,     # every locus in the config
+    ACTIVE_LOCUS,          # $CHROMSIM_LOCUS, else the first locus
+    locus_paths, locus_tiling, ctcf_bed_path,   # per-locus folders, tiling, BEDs
+    CHROM, REGION_START, REGION_END, REGION,    # the active locus
     RESOLUTION, N_MONOMERS,
-    POLYMER, SMC_BOND, TILING, SIM_RUN,
+    TILING, SIM_RUN, POLYSIM,
     N_REPLICATES, N_SHARDS,
     SIMULATION_CONDITIONS, # list[dict]: one dict per condition
     ALL_PARAM_SETS,        # list[dict]: the cohesin params of each condition
@@ -170,10 +175,9 @@ time. The three example conditions:
 conditions:
   - name:         cond1_baseline
     params_name:  baseline
-    lifetime:     75
+    lifetime:     75000
     separation:   240
-    ctcf_capture: 0.125
-    ctcf_release: 0.0033
+    ctcf_capture: 0.5
     ctcf_type:    condition1
     compare_hic:  condition1
 
@@ -185,7 +189,7 @@ conditions:
 
   - name:         cond2_weak-ctcf
     params_name:  weak_ctcf
-    ctcf_capture: 0.0625      # 0.5x the default
+    ctcf_capture: 0.25        # 0.5x the default
     # ...
     ctcf_type:    condition2
     compare_hic:  condition2

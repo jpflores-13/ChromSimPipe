@@ -49,9 +49,9 @@ and cohesin dynamics parameters, the simulation tests user-defined hypotheses.
 ```
 ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C)
     ↓  orientCTCF rule → scripts/extract_ctcf_sites.py  (strand via FIMO)
-Oriented CTCF BED files (output/ctcf/)
-    ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim (default) or polychrom
-Simulated conformations (output/sims/)
+Oriented CTCF BED files (output/loci/<locus>/ctcf/)
+    ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim
+Simulated conformations (output/loci/<locus>/sims/)
     ↓  analyzeCondition rule → scripts/run_analysis_all.py
 Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertHic rule)
 ```
@@ -100,31 +100,32 @@ you when it starts, finishes, or fails (see `notify:` in the config).
 ### The central config: `config/ChromSimConfig.yaml`
 
 This YAML file and the samplesheet are the source of truth for everything.
-`configs/parameters.py` reads both at import time. From the `locus:` block it
-derives `CHROM`, `REGION_START`, `REGION_END`, and `N_MONOMERS` (1,960 for
-the default window at 1 kb per monomer).
+`configs/parameters.py` reads both at import time. `loci:` lists one or more
+windows; every job is told its locus through `$CHROMSIM_LOCUS`, and from that
+entry the module derives `CHROM`, `REGION_START`, `REGION_END`, and
+`N_MONOMERS` (1,960 for the default chr1 window at 1 kb per monomer).
 
 **CTCF auto-loading.** When any script imports `configs.parameters`, it
 opens the oriented CTCF BED for each CTCF sample and locus if it already
-exists (e.g. `output/ctcf/ctcf_oriented_hg38_condition1_<locus>.bed`). It
+exists (e.g. `output/loci/<locus>/ctcf/ctcf_oriented_hg38_condition1.bed`). It
 parses each line into `(monomer_position, orientation)` where `+1` means a
 forward-strand motif and `−1` means reverse. If a BED does not exist yet,
 nothing is loaded, and `get_ctcf_arrays()` raises an error when a script
 asks for those sites. There are no placeholder sites.
 
 **Cohesin parameters.** Each condition has a parameter set, a dict with
-`lifetime` (mean steps before cohesin falls off), `separation` (spacing
-between cohesins), `ctcf_capture` (probability of stalling per CTCF
-encounter), and `ctcf_release` (escape probability per step while stalled).
-Values come from Gabriele et al. 2022 (mESC measurements used as the
-human baseline).
+`lifetime` (mean LEF timesteps before cohesin falls off), `separation`
+(spacing between cohesins) and `ctcf_capture` (probability of stalling per
+CTCF encounter), optionally overriding `vlef` and `life_boost_stalled` from
+the `polysim:` block. Defaults are the polysim bootcamp tutorial values.
 
-**Tiling.** Rather than simulating 1,960 monomers, the simulation runs
-70,000 monomers arranged as 28 back-to-back copies of the locus
-(each tile = 1,960 monomers + 270 padding on each side). All 28 tiles are
-independent, so each GPU run produces ~28× the contact statistics at no
-extra physics cost. Contact maps are averaged back down to 1,960×1,960 for
-comparison. All three numbers are in the `tiling:` block.
+**Tiling.** Rather than simulating one copy of the locus, the simulation
+runs a ~70,000-monomer chain of back-to-back copies (for chr1: 28 copies of
+1,960 monomers + 270 padding on each side). The copies are independent, so
+each GPU run produces ~28× the contact statistics at no extra physics cost.
+Contact maps are averaged back down to one locus-sized map for comparison.
+The copy size and count are computed per locus from `tiling.padding` and
+`tiling.chain_size` (`locus_tiling()`).
 
 ### The CTCF extraction: `scripts/extract_ctcf_sites.py`
 
@@ -146,36 +147,26 @@ This script:
    Orientations are never guessed.
 6. Writes a BED6 file where column 6 is `+` or `−`.
 
-### The 1D engine: `scripts/lef_dynamics.py`
+### The simulation: `scripts/run_simulation_shard.py` + polysim
 
-Before any 3D physics, loop extrusion is modelled as a purely 1D
-stochastic process. `LEFSimulator` runs this:
+The 3D model is the Hansen lab's polysim package
+(github.com/ahansenlab/polysim_bootcamp), pinned in `envs/cohesin_sim.yml`:
 
-- Each cohesin is a pair of arms that step away from each other along the
-  chromatin fiber, one lattice site per simulation tick.
-- An arm stalls when it hits a CTCF site with the blocking orientation,
-  with probability `ctcf_capture`. It escapes with probability
-  `ctcf_release` per step.
-- Arms also stall when they collide with another cohesin (steric
-  exclusion).
-- Each cohesin lives for a geometrically distributed number of steps with
-  mean `lifetime`, then unbinds and is replaced at a random position.
-  Stalled cohesins unbind at the same rate.
+- **Cohesin (1D, Cython).** Each cohesin is a pair of legs that step apart
+  along the chromatin fibre, each with probability `vlef` per LEF timestep.
+  A leg stalls at a CTCF site with the blocking orientation with probability
+  `ctcf_capture` per encounter; legs also block each other. Each cohesin
+  unbinds with probability 1 / `lifetime` per timestep, `life_boost_stalled`
+  times less often while both legs are stalled, and rebinds elsewhere.
+- **Polymer (3D, polychrom / OpenMM on GPU).** Each block is
+  `poly_steps_per_block` Langevin steps; the cohesin bonds are springs between
+  the two leg positions, switched on and off as cohesin moves. Every
+  `saveevery`-th block is saved to `blocks_*.h5`. Contacts (pairs within
+  `contact_radius` = 3.0) are counted later, in the analysis.
 
-### The 3D simulation: `scripts/run_simulation_shard.py`
-
-This is where the 3D model runs on the GPU. With the default `polysim`
-engine, the Hansen lab's polysim package does the work (see section 5a).
-With `engine: polychrom`, ChromSimPipe's original model runs. For each block:
-
-1. `LEFSimulator.step()` advances all cohesins one tick on the 1D lattice.
-2. Cohesin arm positions feed into polychrom as harmonic spring bonds
-   between the two bridged monomers.
-3. OpenMM integrates the polymer under those bonds for
-   `md_steps_per_block` (250) MD steps.
-4. polychrom's `HDF5Reporter` saves the coordinates of the block.
-   Contacts (pairs within `contact_radius` = 3.0) are counted later, in
-   the analysis.
+ChromSimPipe's part (`run_simulation_shard.py`) maps the oriented CTCF sites
+onto polysim's stall arrays, seeds numpy and C `drand48` per shard, and calls
+`polysim.sim3d.run()`; see section 5a.
 
 ### The analysis: `analysis/`
 
@@ -299,8 +290,8 @@ Sections are ordered by pipeline stage:
 3. [Configuration](#1-configuration-configsparameterspy): the single file that controls every simulation
 4. [Hi-C data preparation](#2-hi-c-data-preparation): turning experimental data into comparison matrices
 5. [CTCF annotation](#3-ctcf-annotation): turning CUT&Tag peaks into oriented barrier lists
-6. [The LEF dynamics engine](#4-the-lef-dynamics-engine): the loop-extrusion simulator
-7. [Running simulations](#5-running-simulations): the shard, merge, and single-run entry points
+6. [The simulation model](#4-the-simulation-model-polysim): polysim, the loop-extrusion simulator
+7. [Running simulations](#5-running-simulations): the shard and merge entry points
 8. [Post-simulation analysis](#6-post-simulation-analysis): contact maps, P(s), APA, MSD, calibration
 9. [Legacy cluster scripts](#legacy-cluster-scripts-legacycluster): old sbatch wrappers (superseded by ChromSimPipe.sh)
 10. [Conventions](#conventions): monomers, tiling, output directory names
@@ -336,45 +327,45 @@ unchanged when config values change.
 
 **Key exported names:**
 
-- **Locus** (`CHROM`, `REGION_START`, `REGION_END`, `RESOLUTION`,
-  `N_MONOMERS`, `ACTIVE_LOCUS`). Derived from the `locus:` block in
-  `ChromSimConfig.yaml`. For the included STRS example: hg38,
+- **Loci** (`LOCI`, `LOCUS_NAMES`, `ACTIVE_LOCUS`, `CHROM`, `REGION_START`,
+  `REGION_END`, `RESOLUTION`, `N_MONOMERS`). `LOCI` holds every entry of the
+  `loci:` list; the other names describe the active locus
+  (`$CHROMSIM_LOCUS`, else the first). For the included STRS example: hg38,
   chr1:64,210,000–66,170,000 → 1,960 monomers at 1 kb/monomer.
 
 - **Samples and outputs** (`SAMPLES`, `RUN_NAME`, `OUTPUT_ROOT`,
   `OUTPUT_DIR`, `PATHS`, `GENOME`). Sample names, metadata and input files
-  from the samplesheet; every output directory under `outputDir`. Input
+  from the samplesheet; every output directory under `outputDir`.
+  `locus_paths(name)` gives any locus' folders (`<outputDir>/loci/<name>/...`;
+  `.cool` files and motifs are shared), `PATHS` those of the active locus. Input
   paths (samplesheet files, `genome`) resolve against the repo root; a
   relative `outputDir` resolves against `OUTPUT_ROOT`, which is
   `$CHROMSIM_OUTPUT_ROOT` if set, else the repo root.
 
-- **Polymer physics** (`POLYMER` dict). Bond lengths, bending stiffness
-  (`angle_force`), confinement density, integration tolerance, GPU platform.
-  Rarely changed between projects.
-
-- **LEF ↔ polymer bonds** (`SMC_BOND`). How stiff the cohesin "ring" is in
-  3D, i.e. how strongly it pulls the two loop flanks together.
+- **Simulation model** (`POLYSIM`). The `polysim:` block: polymer
+  (density, stiffness, repulsion), cohesin bond, extrusion speed (`vlef`),
+  stalled-lifetime boost, integration and saving schedule.
 
 - **CTCF tracks** (`CTCF_TYPES`, `CTCF_PEAKS`, `CTCF_BEDS`). One oriented BED
-  per `ctcf_type` used by a condition, under `output/ctcf/`. At import time,
+  per `ctcf_type` used by a condition, under `output/loci/<locus>/ctcf/`. At import time,
   `load_ctcf_from_bed()` reads each file into `CTCF_SITES_BY_TYPE[type]`:
   monomer indices with `+1` / `−1` orientation labels. Type names are
   samplesheet sample names, so any number of CTCF samples is supported.
 
 - **Cohesin parameter sets** (`ALL_PARAM_SETS`). One dict per condition
   hypothesis, each with `lifetime`, `separation`, `ctcf_capture`, and
-  `ctcf_release`. Values from Gabriele et al. 2022.
+  optional `vlef` / `life_boost_stalled` overrides.
 
 - **Condition list** (`SIMULATION_CONDITIONS`). The rows the Snakemake
   pipeline iterates over. Each entry pairs a cohesin parameter set with a
   CTCF track and has a `name` (e.g. `cond1_baseline`).
 
-- **Tiling** (`TILING`). The locus is copied 28× into one long polymer
-  for 28× better contact statistics at no extra physics cost.
-  `TILING["chrom_size"]` is the full polymer length (~70,000 monomers).
+- **Tiling** (`TILING`, `locus_tiling(name)`). The locus is copied into one
+  long chain (28× for chr1) for better contact statistics at no extra physics
+  cost. `TILING["chrom_size"]` is the full chain length (~70,000 monomers).
 
-- **Run parameters** (`SIM_RUN`). `engine`, `seed_base`, `total_blocks`,
-  `md_steps_per_block`, `save_every`, `warmup_blocks`, `hdf5_frames_per_file`.
+- **Run parameters** (`SIM_RUN`). `seed_base`, `frames_per_replicate`,
+  `contact_radius`, `hdf5_frames_per_file`.
 
 - **Analysis** (`ANALYSIS`, `MSD_PROBE`, `MSD_FIT`, `CALIBRATION`). Worker
   count, APA window, MSD probes and fits, and how to map simulation units →
@@ -421,8 +412,8 @@ python scripts/extract_ctcf_sites.py \
     --genome /path/to/genome.fa \
     --motif output/motifs/MA0139.1.meme \
     --assembly hg38 \
-    --fimo-thresh 1e-3 --flank 100 --unoriented drop --resolution 1000 \
-    --output output/ctcf/ctcf_oriented_hg38_condition1_chr1_64210000_66170000.bed
+    --fimo-thresh 1e-4 --flank 250 --unoriented drop --resolution 1000 \
+    --output output/loci/chr1_fig1/ctcf/ctcf_oriented_hg38_condition1.bed
 ```
 
 **Output:** BED6, one row per peak with a FIMO hit; column 6 (`+`/`−`)
@@ -450,109 +441,66 @@ is missing.
 (same position and orientation), and write a conserved-sites BED. Useful for
 testing "CTCF binding didn't change, only cohesin did" scenarios.
 
-## 4. The LEF dynamics engine
+## 4. The simulation model: polysim
 
-### `scripts/lef_dynamics.py`
+ChromSimPipe simulates with the Hansen lab's polysim package
+(github.com/ahansenlab/polysim_bootcamp, MIT license), pinned to one commit in
+`envs/cohesin_sim.yml`. It couples a 1D model of cohesin loop extrusion
+(`LEF_Dynamics.pyx`, Cython) to a 3D polymer on polychrom / OpenMM, as in the
+polychrom loop-extrusion example and Goel et al. 2025.
 
-**Purpose.** A lightweight 1D Python simulator for loop-extruding
-factors (cohesins). No 3D physics, just where the cohesins are on the
-lattice, where they stall, and where they reload after unbinding.
+| polysim setting | Comes from | Default |
+|---|---|---|
+| `life`, `sep` | condition `lifetime`, `separation` | 75,000 timesteps, 240 monomers |
+| `vlef`, `lifebooststalled` | `polysim:` block, or per-condition overrides | 0.0025, 4 |
+| `ctcf_left`, `ctcf_right` | oriented CTCF sites (+ / −), each at the condition's `ctcf_capture` | 0.5 |
+| polymer, integration, saving | `polysim:` block | bootcamp values |
+| `npoly` | the locus' tiled chain (`TILING["chrom_size"]`) | ~70,000 |
+| `numsave` | `sim_run.frames_per_replicate / n_shards` | 5,000 |
 
-**Class: `LEFSimulator`.** Constructor arguments:
-
-- `N`: lattice length in monomers.
-- `n_lefs`: how many cohesins to place.
-- `lifetime`: mean number of steps a cohesin stays bound before
-  unbinding (`unbind probability per step = 1/lifetime`).
-- `ctcf_positions`, `ctcf_orientations`: from `get_ctcf_arrays`.
-- `ctcf_capture`: probability of stalling when a cohesin arm moves
-  onto a CTCF site with the blocking orientation.
-- `ctcf_release`: probability per step that a stalled cohesin lets go.
-- `rng_seed`: for reproducibility.
-
-**What each `step()` call does.**
-
-1. Rebuild the occupancy grid from every cohesin's left / right arm
-   positions (so collisions are up-to-date if arms moved last step).
-2. For each cohesin (in a random permutation, so no directional bias):
-   - Age by one step.
-   - With probability `1/lifetime`, unbind → clear occupancy, call
-     `_place_lef()` to re-seed at a random free pair of positions.
-   - Left arm (moves leftward): if the next position is free and not a
-     blocking CTCF site (or we rolled `> ctcf_capture`), move there. If
-     it is blocking and we rolled `< ctcf_capture`, flag as stalled.
-   - Right arm (moves rightward): mirror logic.
-   - If already stalled on CTCF, roll `< ctcf_release` to escape.
-
-**Public methods.**
-
-- `get_bonds()`: list of `(left, right)` tuples of current cohesin-bridged
-  monomer pairs. Fed to polychrom as harmonic SMC bonds.
-- `get_bond_arrays()`: same but as two parallel NumPy arrays.
-- `get_loop_sizes()`: current loop lengths (in monomers).
-- `run(n_steps)`: convenience: step `n_steps` times, return the list
-  of per-step bond lists.
-
-**Output variables you should know.** After a `step()`, these arrays
-reflect the current state: `left_pos[i]`, `right_pos[i]`, `ages[i]`,
-`left_stalled[i]`, `right_stalled[i]`, `occupied[pos]`.
+ChromSimPipe's earlier built-in model (`scripts/lef_dynamics.py`,
+`scripts/run_simulation.py`) was removed in November 2026: on a CTCF-driven
+control locus it gave the same contact pattern as polysim but about 7× too
+weak. It remains in the git history.
 
 ## 5. Running simulations
 
 ### 5a. `scripts/run_simulation_shard.py`: the Snakemake entry point
 
-This is what every `simulateShard` SLURM job calls (18 jobs with the
-example config: 3 conditions × 3 replicates × 2 shards).
+This is what every `simulateShard` SLURM job calls (18 jobs per locus with the
+example config: 3 conditions × 3 replicates × 2 shards). The locus comes from
+`$CHROMSIM_LOCUS`, which the workflow sets.
 
 **Arguments:**
 
 | Flag | Meaning |
 |------|---------|
 | `--condition NAME` | One of the names in `SIMULATION_CONDITIONS`. Sets cohesin params + CTCF track. |
-| `--replicate N` | Integer replicate index (drives RNG seed). |
+| `--replicate N` | Integer replicate index (drives the seed). |
 | `--shard-index I` | Which shard of this replicate (0…`n_shards-1`). |
-| `--n-shards K` | Total shards per replicate (default 4). |
+| `--n-shards K` | Total shards per replicate. |
 | `--gpu I` | CUDA device index. |
-| `--output DIR` | Output base directory (the workflow passes `output/sims`). |
-| `--shard-index-offset M` | Add `M` to shard index, to extend existing runs without overwriting. |
+| `--output DIR` | The locus' sims folder (the workflow passes `output/loci/<locus>/sims`). |
 
 Shard output goes to `<output>/<params_name>_ctcf-<ctcf_type>_rep<r>_shard<i>/`.
 
 **What it does:**
 
-1. Look up the condition → resolve to `(params_dict, ctcf_type)`. Check that
-   the engine in `sim_run.engine` can be imported; stop if not (no silent
-   fallback to another engine).
-2. Build the tiled polymer (`N = TILING["chrom_size"]`), fetch tiled CTCF
-   arrays.
-3. Warm up `LEFSimulator` for `warmup_blocks` steps (throw away).
-4. **Pre-compute** all LEF bond states for every block in advance. The 1D
-   dynamics are independent of 3D physics, so doing this up front lets the
-   polychrom loop replay bonds from a list.
-5. Register all unique bond pairs as `harmonic_bonds` at `k=0`; flip `k`
-   each block (~10× faster than adding/removing bonds).
-6. `sim.local_energy_minimization()` relaxes the starting configuration.
-7. Run `total_blocks / n_shards` blocks; `HDF5Reporter` saves the
-   conformation of every block (`hdf5_frames_per_file` per file).
-   `save_every` and the 3D side of `warmup_blocks` are not applied in this
-   runner.
-
-**polysim engine** (`sim_run.engine: polysim`). `run_shard()` hands the shard
-to `_run_shard_polysim()` before any of the steps above:
-
-1. `seed_all(seed)` seeds numpy and C `drand48()`. polysim's Cython LEF model
+1. Looks up the condition (`get_condition`), works out the shard's frame count
+   (`frames_per_replicate / n_shards`) and seed
+   (`seed_base + replicate × 10000 + shard × 1000`), and writes `params.json`.
+2. `seed_all(seed)` seeds numpy and C `drand48()`. polysim's Cython LEF model
    draws every stall, unbinding and stepping decision from `drand48()` and never
    seeds it, so without this every shard would replay one random sequence.
-2. `polysim_kwargs()` builds polysim's `SimParams`: the tiled chain length, the
-   `polysim:` config block, the condition's `lifetime` / `separation` (and
-   optional `vlef`, `life_boost_stalled`), and the oriented CTCF sites as
-   per-site stall probabilities (`ctcf_capture`): + sites go to `ctcf_left`
-   (they stop leftward-moving legs), − sites to `ctcf_right`. It checks that
-   frames per shard × `saveevery` is a multiple of `blocks_per_updater`
-   before any GPU time is spent.
-3. `polysim.sim3d.run()` writes `blocks_*.h5` into the shard folder (each
-   saved frame also carries the LEF bonds as `SMCs`), which `merge_shards.py`
-   and the analysis read like polychrom output.
+3. `polysim_kwargs()` builds polysim's `SimParams`: the tiled chain length, the
+   `polysim:` block, the condition's `lifetime` / `separation` (and optional
+   `vlef`, `life_boost_stalled`), and the tiled CTCF sites as per-site stall
+   probabilities (`ctcf_capture`): + sites go to `ctcf_left` (they stop
+   leftward-moving legs), − sites to `ctcf_right`. It checks that frames per
+   shard × `saveevery` is a multiple of `blocks_per_updater` before any GPU
+   time is spent.
+4. `polysim.sim3d.run()` writes `blocks_*.h5` into the shard folder (each saved
+   frame also carries the LEF bonds as `SMCs`).
 
 The `preparePolysim` rule imports polysim once before the shards, so its
 Cython module (`LEF_Dynamics.pyx`, built by pyximport) is compiled once.
@@ -567,19 +515,6 @@ which shard IDs contributed.
 --condition, --replicate, --n-shards, --results-dir
 ```
 
-### 5c. `scripts/run_simulation.py`: single-run / local testing
-
-One-shot simulation without sharding. Useful for local testing or LEF-only
-sanity checks:
-
-```bash
-python scripts/run_simulation.py \
-    --condition cond1_baseline --replicate 0 --gpu 0 --output output/sims
-```
-
-`--engine` defaults to `sim_run.engine`; `--engine lef_only` skips the 3D
-polymer entirely and writes only a 2D contact map from 1D LEF statistics.
-
 ## 6. Post-simulation analysis
 
 ### 6a. The orchestrator: `scripts/run_analysis_all.py`
@@ -592,8 +527,8 @@ the full analysis suite, and writes per-condition outputs. Called by the
 
 ```bash
 CHROMSIM_CONFIG=config/ChromSimConfig.yaml python scripts/run_analysis_all.py \
-    --results-dir output/sims \
-    --output-dir output/analysis/cond1_baseline \
+    --results-dir output/loci/chr1_fig1/sims \
+    --output-dir output/loci/chr1_fig1/analysis/cond1_baseline \
     --condition cond1_baseline \
     --hic-dir output/mcool \
     --n-jobs 4 --skip-existing --no-msd
@@ -646,13 +581,13 @@ Collects scalar metrics from all conditions into one CSV/XLSX table:
 
 ```bash
 python scripts/summarize_analysis.py \
-    --analysis-dir output/analysis \
+    --analysis-dir output/loci/chr1_fig1/analysis \
     --reference-condition cond1_baseline
 ```
 
 ### 6d. `scripts/check_results.py`
 
-Lists every directory under `output/sims`, its frame count, and
+Lists every directory under a locus' `sims/` folder, its frame count, and
 whether analysis outputs are present. Quick inventory after a SLURM batch.
 
 ## Legacy cluster scripts (`legacy/cluster/`)
@@ -676,13 +611,14 @@ Longleaf.
 
 - **Monomer = `resolution` bp (1 kb by default).** Monomer index `i` covers
   `REGION_START + i * RESOLUTION` to `REGION_START + (i+1) * RESOLUTION`.
-- **Tiled chromosome.** Simulations run on `chrom_size` (70,000) monomers =
-  28 copies of the locus with padding. Contact maps are averaged back to
-  `N_MONOMERS` (1,960) for comparison. This gives ~28× more contact statistics at no
-  extra physics cost.
+- **Tiled chromosome.** Each locus is simulated on one chain of up to
+  `tiling.chain_size` (70,000) monomers holding as many padded copies of it as
+  fit (28 for the 1,960 kb chr1 locus). Contact maps are averaged back to the
+  locus' own size for comparison, giving ~28× more contact statistics at no
+  extra physics cost. `locus_tiling(name)` returns each locus' numbers.
 - **Output directory names.** Shards:
-  `output/sims/<params_name>_ctcf-<ctcf_type>_rep<N>_shard<S>/`. Merged:
-  `output/sims/merged_<params_name>_ctcf-<ctcf_type>_rep<N>/`. The
+  `output/loci/<locus>/sims/<params_name>_ctcf-<ctcf_type>_rep<N>_shard<S>/`. Merged:
+  `output/loci/<locus>/sims/merged_<params_name>_ctcf-<ctcf_type>_rep<N>/`. The
   `_ctcf-<type>` part separates runs with the same cohesin params but
   different CTCF tracks.
 - **RNG seed.** `seed_base + replicate * 10000 + shard * 1000`
@@ -728,7 +664,7 @@ every column named in `fileNamesFrom`.
 `output/logs/convertHic_<sample>.err`.
 
 **Analysis fails with "No results found".** Check that
-`output/sims/merged_*_rep*/` directories exist. If shards completed but the
+`output/loci/<locus>/sims/merged_*_rep*/` directories exist. If shards completed but the
 merged directory is missing, delete `output/done/mergeShards_<condition>_rep<N>.done`
 and resubmit.
 

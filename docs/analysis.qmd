@@ -14,10 +14,10 @@ python scripts/run_analysis_all.py \
     --condition cond1_baseline
 ```
 
-Snakemake passes the condition name as a wildcard. Output goes to:
+Snakemake passes the locus and condition as wildcards. Output goes to:
 
 ```
-output/analysis/{condition}/
+output/loci/{locus}/analysis/{condition}/
 ├── *_contact_map.npy          # simulated contact probability matrix
 ├── *_ps_curve.npz             # P(s): contact probability vs. genomic distance
 ├── *_apa.npz                  # aggregate peak analysis (APA)
@@ -61,7 +61,7 @@ at TAD boundaries and loop anchors validates the model.
 1. Add a function to `scripts/analysis/` (or to `run_analysis_all.py` directly
    for simple cases)
 2. Call it inside the `analyze_condition()` function
-3. Write outputs to `output/analysis/{condition}/`
+3. Write outputs to `output/loci/{locus}/analysis/{condition}/`
 
 Snakemake's `analyzeCondition` rule tracks a completion marker in
 `output/done/`, so new output files need no workflow changes.

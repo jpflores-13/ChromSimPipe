@@ -18,7 +18,7 @@ runs the same way.
 
 ```
   ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
-  (one row per sample: metadata,               (locus, conditions, physics,
+  (one row per sample: metadata,               (loci, conditions, polysim,
    CTCF_Peaks, Hi-C)                            genome, motif, envs, outputDir)
           │                                               │
           └───────────────────────┬───────────────────────┘
@@ -26,17 +26,19 @@ runs the same way.
                         configs/parameters.py
                                   │
                                   ▼
-     convertHic ── getMotif ── orientCTCF ── validateCTCF
+     convertHic ── getMotif ── preparePolysim      (shared by all loci)
                                   │
-             simulateShard (condition × replicate × shard, GPU)
+              orientCTCF ── validateCTCF                 (per locus)
                                   │
-                     mergeShards (condition × replicate)
+     simulateShard (locus × condition × replicate × shard, GPU, polysim)
                                   │
-              analyzeCondition (contact map, P(s), APA,
+                mergeShards (locus × condition × replicate)
+                                  │
+         analyzeCondition (locus × condition: contact map, P(s), APA,
                insulation, comparison with Hi-C)
                                   │
                                   ▼
-                       output/analysis/{condition}/
+                 output/loci/{locus}/analysis/{condition}/
 ```
 
 ## Example conditions
@@ -61,24 +63,25 @@ experimental states, `condition1` and `condition2`:
 
 ## Cohesin model
 
-The simulation models cohesin loop extrusion: cohesin rings load onto
-chromatin and extrude DNA into growing loops, stalling when they encounter
-CTCF sites from the correct direction. The default parameter set is derived
-from **Gabriele et al. 2022** (*Science*) single-molecule imaging in mESCs.
+The simulation models cohesin loop extrusion with the Hansen lab's polysim
+package: cohesin rings load onto chromatin and extrude DNA into growing
+loops, stalling when they meet CTCF sites from the correct direction, while a
+3D polymer folds under those loops on a GPU. The defaults are the polysim
+bootcamp tutorial values (after Gabriele et al. 2022 and Goel et al. 2025).
 
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
-| `lifetime` | 75 steps | ~150 kb processivity at 1 kb/monomer |
+| `lifetime` | 75,000 LEF timesteps | With `vlef` 0.0025, ~190 kb extruded per leg |
 | `separation` | 240 monomers | ~8 cohesin rings per 2 Mb locus |
-| `ctcf_capture` | 0.125 | 12.5% stalling probability per CTCF encounter |
-| `ctcf_release` | 0.0033 | Stalled cohesin lives ~4× longer than free cohesin |
+| `ctcf_capture` | 0.5 | 50% stalling probability per CTCF encounter |
+| `polysim: life_boost_stalled` | 4 | Cohesin stalled at CTCF on both legs lives 4× longer |
 
 ## The tiling trick
 
-The 2 Mb locus (~2,000 monomers) is simulated as 28 tiled copies on a
-70,000-monomer polymer. This gives **28× more contact statistics per GPU
-run** at no extra physics cost. Contact maps are folded back to 2,000×2,000
-for comparison. See Yang et al. 2023 *Nat Commun* for details.
+Each locus is simulated as copies placed end to end on one ~70,000-monomer
+chain (28 copies for the 2 Mb chr1 locus). This gives many times more contact
+statistics per GPU run at no extra physics cost. Contact maps are folded back
+to one locus-sized map for comparison. See Yang et al. 2023 *Nat Commun*.
 
 ## References
 
@@ -86,4 +89,6 @@ for comparison. See Yang et al. 2023 *Nat Commun* for details.
 - Fudenberg et al., *Cell Reports* **15**:2038–2049 (2016). Canonical loop-extrusion model.
 - Banigan et al., *eLife* **9**:e53558 (2020). LEF dynamics and CTCF barriers.
 - Gabriele et al., *Science* **376**:496–501 (2022). Live-cell cohesin imaging (parameter source).
+- Goel et al., *Nat Struct Mol Biol* (2025). Simulation code that polysim is based on.
+- Hansen lab polysim bootcamp, <https://github.com/ahansenlab/polysim_bootcamp>. The simulation model ChromSimPipe runs.
 - Yang et al., *Nat Commun* **14**:1913 (2023). Tiling trick for convergence.

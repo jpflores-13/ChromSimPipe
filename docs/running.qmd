@@ -28,7 +28,7 @@ getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF
 | `getMotif` | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | FIMO motif strand → oriented CTCF BED for the locus |
 | `validateCTCF` | Checks every BED parses and maps onto the polymer |
-| `preparePolysim` | Builds polysim's Cython cohesin model once (engine: polysim) |
+| `preparePolysim` | Builds polysim's Cython cohesin model once |
 | `simulateShard` | 3D loop-extrusion simulation on a GPU (polysim by default) |
 | `mergeShards` | Concatenates shard trajectories per replicate |
 | `analyzeCondition` | Contact maps, P(s), insulation, APA, comparison with Hi-C |
@@ -92,12 +92,11 @@ bash unlock.sh                    # release the Snakemake lock
 sbatch ChromSimPipe.sh            # --rerun-incomplete is on by default
 ```
 
-### Changing locus
+### Changing or adding loci
 
-Edit the `locus:` and `tiling:` blocks in the config (or write a new config
-and pass it with `--configfile`), then resubmit. CTCF BED names include the
-locus coordinates, so the workflow orients CTCF for the new window
-automatically.
+Edit the `loci:` list in the config and resubmit. Each locus is simulated in
+its own `output/loci/{locus}/` folder with its own CTCF orientation and tiling;
+loci already finished are not rerun. The converted Hi-C is shared.
 
 ## Output structure
 
@@ -110,15 +109,16 @@ output/
 ├── {runName}_benchmarking.tsv          # wall time / memory per job
 ├── mcool/{sample}.cool
 ├── motifs/{jaspar_id}.meme
-├── ctcf/ctcf_oriented_{assembly}_{sample}_{chrom}_{start}_{end}.bed
-├── sims/
-│   ├── {params_name}_ctcf-{sample}_rep{N}_shard{M}/   # per-shard GPU output
-│   └── merged_{params_name}_ctcf-{sample}_rep{N}/
-├── analysis/{condition}/
-├── logs/{rule}_{wildcards}.out|.err
+├── loci/{locus}/
+│   ├── ctcf/ctcf_oriented_{assembly}_{sample}.bed
+│   ├── sims/
+│   │   ├── {params_name}_ctcf-{sample}_rep{N}_shard{M}/   # per-shard GPU output
+│   │   └── merged_{params_name}_ctcf-{sample}_rep{N}/
+│   ├── analysis/{condition}/
+│   └── done/                           # completion markers
+├── logs/{locus}/{rule}_{wildcards}.out|.err
 ├── logs_slurm/
-├── benchmarks/{rule}_{wildcards}.tsv
-└── done/                               # completion markers
+└── benchmarks/{rule}_{locus}_{wildcards}.tsv
 ```
 
 ## Monitoring
@@ -126,7 +126,7 @@ output/
 | Log | Path |
 |-----|------|
 | Launcher (main Snakemake process) | `ChromSimPipe-{jobid}.out` |
-| Each job's stdout / stderr | `<outputDir>/logs/{rule}_{wildcards}.out` / `.err` |
+| Each job's stdout / stderr | `<outputDir>/logs/{locus}/{rule}_{wildcards}.out` / `.err` (shared steps: `<outputDir>/logs/`) |
 | SLURM job logs | `<outputDir>/logs_slurm/` |
 
 ```bash
@@ -147,5 +147,5 @@ squeue -u $USER
 | Launcher job `OUT_OF_MEMORY` on the first run | Build the conda environments once on a compute node (`srun ... --mem=16g --pty bash`, then `bash ChromSimPipe.sh --conda-create-envs-only`) |
 | `MissingInputException` naming a `data/...` file | Link that file into `data/` on this cluster; `ls -lL data/` shows broken links |
 | Output in the repo folder instead of scratch, or jobs on the wrong cluster's partitions | `CHROMSIM_OUTPUT_ROOT` / `CHROMSIM_PROFILE` not set in the shell that ran `sbatch`; `source ~/.bashrc` and resubmit |
-| A job failed | Read `<outputDir>/logs/{rule}_{wildcards}.err` |
-| Parameter changed but nothing reruns | Snakemake tracks the files in `<outputDir>/done/`; delete the markers for the steps to redo |
+| A job failed | Read `<outputDir>/logs/{locus}/{rule}_{wildcards}.err` |
+| Parameter changed but nothing reruns | Snakemake tracks the files in `<outputDir>/loci/{locus}/done/`; delete the markers for the steps to redo |

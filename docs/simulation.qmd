@@ -2,126 +2,115 @@
 
 ## Overview
 
-Each `simulateShard` SLURM job runs `scripts/run_simulation_shard.py`, which:
+ChromSimPipe simulates with the Hansen lab's
+[polysim](https://github.com/ahansenlab/polysim_bootcamp) package: a 3D polymer
+on polychrom / OpenMM (GPU) coupled to a 1D model of cohesin loop extrusion.
+It is pinned to one commit in `envs/cohesin_sim.yml`.
 
-1. Reads cohesin parameters and CTCF sites from `configs/parameters.py`
-2. Builds the tiled polymer (`tiling:` in the config; by default 28 copies of the locus on 70,000 monomers)
-3. Runs the **loop-extrusion factor (LEF) dynamics engine** for a burn-in period
-4. Runs `polychrom` (OpenMM wrapper) to simulate 3D chromatin folding on a GPU
-5. Writes trajectory blocks to `output/sims/{params_name}_ctcf-{sample}_rep{N}_shard{M}/`
+Each `simulateShard` SLURM job runs `scripts/run_simulation_shard.py` for one
+locus, condition, replicate and shard. It:
 
-With the default `sim_run.engine: polysim`, steps 3–4 are done by the Hansen
-lab's polysim package; `polychrom` runs ChromSimPipe's original model (see
-[Simulation engines](#simulation-engines)).
+1. Reads the condition's cohesin parameters, the `polysim:` settings and the
+   locus' oriented CTCF sites from `configs/parameters.py` (the locus comes from
+   `$CHROMSIM_LOCUS`, set by the workflow).
+2. Tiles the locus along one long chain (see [Tiling](#tiling)).
+3. Seeds numpy and C `drand48` from the shard seed. polysim draws every cohesin
+   decision from `drand48()` and never seeds it, so without this every shard
+   would replay one random sequence.
+4. Calls `polysim.sim3d.run()`, which writes `blocks_*.h5` (each saved frame
+   also carries the cohesin bonds as `SMCs`) into
+   `output/loci/{locus}/sims/{params_name}_ctcf-{sample}_rep{N}_shard{M}/`.
 
-## Simulation engines
+A `preparePolysim` job imports polysim once before the shards start, so its
+Cython module (`LEF_Dynamics.pyx`) is compiled once rather than by every GPU
+job at the same time.
 
-| Setting | `polychrom` (original; reproduces earlier runs) | `polysim` (default) |
-|---|---|---|
-| Model code | ChromSimPipe's own: Python LEF model (`scripts/lef_dynamics.py`) driving polychrom | The Hansen lab's [polysim](https://github.com/ahansenlab/polysim_bootcamp) (Cython LEF model + bond updater on polychrom), pinned in `envs/cohesin_sim.yml` |
-| `lifetime` units | steps; each leg moves every step, so ~`lifetime` kb per leg | LEF timesteps (blocks); each leg moves with probability `vlef` per timestep, so ~`lifetime × vlef` kb per leg |
-| Stalled cohesin | released with `ctcf_release` per step | lives `life_boost_stalled` × longer when both legs are stalled (`ctcf_release` unused) |
-| Extrusion vs polymer motion | 1 LEF step per `md_steps_per_block` (250) MD steps | 1 LEF step per `poly_steps_per_block / vlef` MD steps (13,200 with the defaults) |
-| Polymer | `polymer:` block (density 0.2, stiff chain) | `polysim:` block (density 0.3, flexible chain) |
-| Saved frames | every block; no 3D warm-up | every `saveevery` blocks; optional unsaved equilibration (`initskip`) of at least one LEF lifetime |
-| `total_blocks` means | blocks simulated per replicate | conformations saved per replicate |
+## Cohesin and CTCF
 
-For polysim, the shard runner maps each oriented CTCF site to polysim's stall
-arrays (+ sites stop leftward-moving legs: `ctcf_left`; − sites stop
-rightward-moving legs: `ctcf_right`), each with the condition's `ctcf_capture`,
-seeds numpy and C `drand48` from the shard seed, and calls
-`polysim.sim3d.run()` with the shard folder as output. polysim writes the same
-`blocks_*.h5` files (plus the LEF bonds of each saved frame under `SMCs`), so
-merging and analysis are unchanged. A `preparePolysim` job imports polysim once
-before the shards start, so its Cython module is compiled once rather than by
-every GPU job at the same time.
-
-## The cohesin (LEF) dynamics engine (polychrom engine)
-
-Loop extrusion factors (LEFs = cohesin rings) are simulated as pairs of one-
-dimensional walkers on the polymer lattice.
+Cohesin rings (loop extrusion factors, LEFs) bind, extrude a loop with two
+legs moving apart, and unbind. Oriented CTCF sites stop a leg arriving from the
+correct side.
 
 ```
 5'─────────────────────────────────────────────────────3'
-          ↑ cohesin loads randomly
-          ├──►  ◄──┤  (two feet walk outward)
+          ↑ cohesin loads (uniformly)
+          ├──►  ◄──┤  (two legs extrude outward)
           │          │
           ▼          ▼
-    ←CTCF◄          ►CTCF→  (stalling at oriented CTCF sites)
+    +CTCF◄          ►−CTCF  (each stops the leg arriving from inside the loop)
 ```
 
-| Event | Rate | Notes |
-|-------|------|-------|
-| Load | 1 / `separation` monomers | Poisson process, random position |
-| Step | 1 monomer / LEF step | Each foot moves outward unless blocked |
-| Unload (free) | 1 / `lifetime` | Geometric: ~75 steps = ~75 kb |
-| Capture at CTCF | `ctcf_capture` = 0.125 | 12.5% per encounter |
-| Release (stalled) | `ctcf_release` = 0.0033 | Per-step chance a stalled foot resumes; stalled rings still unload at 1 / `lifetime` |
+| Event | Setting | Default |
+|-------|---------|---------|
+| Number of cohesins | chain length / `separation` | one per 240 kb |
+| Leg step | probability `vlef` per LEF timestep | 0.0025 (one step per 400 timesteps) |
+| Unbinding | probability 1 / `lifetime` per timestep | 75,000 timesteps, so ~190 kb extruded per leg |
+| Stall at CTCF | probability `ctcf_capture` per encounter | 0.5 |
+| Stalled lifetime | × `life_boost_stalled` when both legs are stalled | × 4 |
 
-### Oriented CTCF sites
+Orientation comes from the FIMO motif strand in the `orientCTCF` output
+(`scripts/extract_ctcf_sites.py`): a **+** site stops leftward-moving legs (the
+left anchor of a loop), a **−** site stops rightward-moving legs (the right
+anchor). Convergent pairs (+ … −) therefore hold loops. These map onto
+polysim's `ctcf_left` and `ctcf_right` stall arrays.
 
-CTCF stalls cohesin only from the correct (convergent) direction. The BED files
-produced by the `orientCTCF` rule (`scripts/extract_ctcf_sites.py`) encode orientation as the FIMO motif strand:
+## The 3D polymer
 
-- **Left-facing** CTCF (←): stalls a rightward-moving left foot
-- **Right-facing** CTCF (→): stalls a leftward-moving right foot
+Each monomer is one `resolution` (1 kb) of chromatin. Forces:
 
-Convergent CTCF pairs therefore trap cohesin between them, forming stable loops.
+| Force | What it models | Setting (`polysim:`) |
+|-------|---------------|----------------------|
+| Backbone bonds and bending | Chromatin fibre | `bond_wiggle` 0.1, `angle_k` 0.05 (flexible) |
+| Soft repulsion | Excluded volume | `repel` 3 kT |
+| Spherical confinement | Nuclear volume | `density` 0.3, `confinement_k` 1 |
+| Cohesin bonds | A harmonic spring between the two legs of each cohesin | `smc_bond_wiggle` 0.2, `smc_bond_dist` 0.5 |
 
-## The 3D simulation with the polychrom engine (OpenMM)
-
-Each monomer is a bead. Forces between beads:
-
-| Force | What it models |
-|-------|---------------|
-| Polymer chain bonds | Chromatin backbone (harmonic bonds + angle stiffness) |
-| Excluded volume | Steric repulsion (soft sphere) |
-| Spherical confinement | Nuclear membrane |
-| **LEF bonds** | Cohesin-mediated loop (harmonic spring between extruded monomers) |
-
-LEF positions are updated every `sim_run.md_steps_per_block` MD steps; each saved block is one
-"snapshot" in the trajectory HDF5.
+One block is `poly_steps_per_block` (33) Langevin steps of `dt` 40 fs, which the
+polysim bootcamp equates with about 20 ms; cohesin moves on the same block
+clock (one leg step per 1 / `vlef` blocks). A conformation is saved every
+`saveevery` (50) blocks, after `initsteps` cohesin-only steps and an optional
+unsaved polymer equilibration (`initskip`, extended by polysim to at least one
+cohesin lifetime).
 
 ::: {.callout-note}
-The OpenMM simulation runs on GPU. The SLURM job requests 1 GPU, 4 CPUs, and
-60 GB RAM, set under `set-resources:` in `profiles/<site>/config.yaml`
-(on Longleaf: `l40-gpu,volta-gpu,gpu` partitions, `qos: gpu_access`). All `simulateShard` jobs
-(conditions × replicates × shards) can run in parallel.
+The simulation runs on a GPU. The SLURM job requests 1 GPU, 4 CPUs and 60 GB
+RAM, set under `set-resources:` in `profiles/<site>/config.yaml` (on Longleaf:
+`l40-gpu,volta-gpu,gpu` partitions, `qos: gpu_access`). All `simulateShard`
+jobs (loci × conditions × replicates × shards) can run in parallel.
 :::
 
-## Tiling trick
+## Tiling
 
-To get statistically robust contact maps from a short locus (1,960 monomers by
-default), 28 copies are placed end-to-end on a 70,000-monomer polymer. Each copy folds
-independently (boundary monomers are connected but distant in sequence), giving
-28× the contact statistics per GPU run. After the simulation, contact maps from
-all copies are averaged into one locus-sized map.
-
-See Yang et al. 2023 *Nat Commun* for details on why this is valid.
+To get statistically robust contact maps from one locus, copies of it are
+placed end to end on one long chain, separated by `tiling.padding` monomers on
+each side, as many as fit in `tiling.chain_size` (70,000) monomers. The 1,960 kb
+chr1 locus gives 28 copies of 2,500 monomers. Each copy folds independently,
+and after the simulation the contact maps of all copies are averaged into one
+locus-sized map. See Yang et al. 2023 *Nat Commun* for why this is valid.
 
 ## Entry point
 
 ```bash
-python scripts/run_simulation_shard.py \
+CHROMSIM_LOCUS=chr1_fig1 python scripts/run_simulation_shard.py \
     --condition cond1_baseline \
     --replicate 1 \
     --shard-index 0 \
-    --n-shards 4 \
-    --output output/sims
+    --n-shards 2 \
+    --output output/loci/chr1_fig1/sims
 ```
 
 Arguments come from Snakemake wildcards. Each job writes to:
 
 ```
-output/sims/{params_name}_ctcf-{sample}_rep{replicate}_shard{shard}/
+output/loci/{locus}/sims/{params_name}_ctcf-{sample}_rep{replicate}_shard{shard}/
 ├── params.json        # all parameters, for reproducibility
-└── blocks_*.h5        # HDF5 trajectory blocks
+└── blocks_*.h5        # saved conformations (+ cohesin bonds)
 ```
 
 After all shards finish, `mergeShards` concatenates them:
 
 ```
-output/sims/merged_{params_name}_ctcf-{sample}_rep{replicate}/
+output/loci/{locus}/sims/merged_{params_name}_ctcf-{sample}_rep{replicate}/
 ├── params.json
-└── blocks_*.h5        # full trajectory (4 shards combined)
+└── blocks_*.h5        # full trajectory (all shards combined)
 ```

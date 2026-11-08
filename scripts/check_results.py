@@ -4,7 +4,7 @@ Check simulation results: list all completed replicates per condition.
 
 Usage:
     python scripts/check_results.py
-    python scripts/check_results.py --results-dir output/sims
+    python scripts/check_results.py --results-dir output/loci/chr1_fig1/sims
 """
 
 import os
@@ -137,6 +137,6 @@ def check_results(results_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Check simulation results")
     parser.add_argument("--results-dir", default=PATHS["sims"],
-                        help="Results directory (default: output/sims)")
+                        help="Results directory (default: the active locus sims folder)")
     args = parser.parse_args()
     check_results(args.results_dir)

@@ -42,10 +42,9 @@ accounts, and `module avail` shows the available software.
 `profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
 
 ::: {.callout-warning}
-**Profile status.** The test config (then 9 jobs, polychrom engine) has run end to end on Longleaf
-(GPU simulation included). On Pioneer the test has completed the CTCF steps
-(identical to Longleaf's), the GPU simulation (V100) and the merge. Run the
-test config on any new cluster first.
+**Profile status.** The test config has run end to end with the polysim model
+on Longleaf and on Pioneer (V100/P100 GPUs), and a full chr7 run has completed
+on Longleaf. Run the test config on any new cluster first.
 :::
 
 ### Per-cluster settings
@@ -118,7 +117,7 @@ Longleaf's `anaconda` modules ship conda 24.1, older than Snakemake needs.
 | `getMotif` | general | 1 | 1 GB | 15 min | - |
 | `orientCTCF` | general | 2 | 16 GB | 1 h | - |
 | `validateCTCF` | general | 1 | 4 GB | 15 min | - |
-| `preparePolysim` (engine: polysim only) | general | 1 | 4 GB | 30 min | - |
+| `preparePolysim` | general | 1 | 4 GB | 30 min | - |
 | `simulateShard` | **l40-gpu, volta-gpu, gpu** | 4 | 60 GB | 12 h | **1** |
 | `mergeShards` | general | 4 | 64 GB | 2 h | - |
 | `analyzeCondition` | general | 4 | 64 GB | 24 h | - |
@@ -129,7 +128,7 @@ Longleaf's `anaconda` modules ship conda 24.1, older than Snakemake needs.
 | Log | Path |
 |-----|------|
 | Launcher (main Snakemake process) | `ChromSimPipe-{jobid}.out` |
-| Each job's stdout / stderr | `<outputDir>/logs/{rule}_{wildcards}.out` / `.err` |
+| Each job's stdout / stderr | `<outputDir>/logs/{locus}/{rule}_{wildcards}.out` / `.err` (shared steps: `<outputDir>/logs/`) |
 | SLURM job logs | `<outputDir>/logs_slurm/` (`--slurm-logdir` in `ChromSimPipe.sh`) |
 | Per-job run time / memory | `<outputDir>/benchmarks/`, summarised in `<outputDir>/{runName}_benchmarking.tsv` |
 

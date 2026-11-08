@@ -9,11 +9,16 @@ cluster links its own files into data/). A relative outputDir is resolved
 against $CHROMSIM_OUTPUT_ROOT when that is set (e.g. a scratch directory),
 else against the repo root.
 
+Several loci can be listed under `loci:`. Every value below describes ONE
+active locus: $CHROMSIM_LOCUS if set (the workflow sets it for every job),
+else the first locus in the config. LOCI and locus_paths() describe all of them.
+
 Public API used by the Snakefile and scripts:
 
     CONFIG_PATH, REPO_ROOT, OUTPUT_ROOT, OUTPUT_DIR, PATHS, GENOME
-    ACTIVE_LOCUS, LOCI, CHROM, REGION_START, REGION_END, RESOLUTION, N_MONOMERS
-    POLYMER, SMC_BOND, TILING, SIM_RUN, POLYSIM, N_REPLICATES, N_SHARDS
+    LOCI, LOCUS_NAMES, ACTIVE_LOCUS, locus_paths(), locus_tiling()
+    CHROM, REGION_START, REGION_END, RESOLUTION, N_MONOMERS
+    TILING, SIM_RUN, POLYSIM, N_REPLICATES, N_SHARDS
     SAMPLES, SIMULATION_CONDITIONS, ALL_PARAM_SETS
     GENOME_ASSEMBLY, CTCF_TYPES, CTCF_PEAKS, CTCF_BEDS, CTCF_SITES_BY_TYPE
     HIC_TYPES, HIC_FILES, MCOOL_FILES
@@ -67,77 +72,77 @@ GENOME = _repo_path(_cfg["genome"])
 
 
 # =============================================================================
-# LOCUS
+# LOCI
+# `loci:` is a list; each entry is simulated and analysed separately, in
+# <outputDir>/loci/<name>/. Optional per locus: label and anchor_bp (MSD probe
+# centre). An older single `locus:` block is still accepted.
 # =============================================================================
-_loc         = _cfg["locus"]
-ACTIVE_LOCUS = _loc["name"]
+RESOLUTION = int(_cfg.get("resolution", 1000))
+_ASSEMBLY  = _cfg.get("genome_assembly", "hg38")
+GENOME_ASSEMBLY = _ASSEMBLY
 
-LOCI = {
-    _loc["name"]: dict(
-        chrom        = _loc["chrom"],
-        region_start = int(_loc["region_start"]),
-        region_end   = int(_loc["region_end"]),
-        label        = _loc.get("label", ""),
-        anchor_bp    = int(_loc.get("anchor_bp",
-                           (_loc["region_start"] + _loc["region_end"]) // 2)),
+_loci_cfg = _cfg.get("loci")
+if _loci_cfg is None and "locus" in _cfg:
+    _loci_cfg = [_cfg["locus"]]
+if not _loci_cfg:
+    raise ValueError(f"No loci in {CONFIG_PATH}: add a `loci:` list.")
+
+LOCI = {}
+for _l in _loci_cfg:
+    _name = str(_l["name"])
+    if _name in LOCI or "/" in _name:
+        raise ValueError(f"Locus names must be unique and contain no '/': {_name!r}")
+    _start, _end = int(_l["region_start"]), int(_l["region_end"])
+    if (_end - _start) % RESOLUTION:
+        raise ValueError(f"Locus {_name}: region length must be a multiple of resolution ({RESOLUTION})")
+    LOCI[_name] = dict(
+        chrom        = str(_l["chrom"]),
+        region_start = _start,
+        region_end   = _end,
+        region       = f"{_l['chrom']}:{_start}-{_end}",
+        label        = _l.get("label", ""),
+        anchor_bp    = int(_l.get("anchor_bp", (_start + _end) // 2)),
     )
-}
+LOCUS_NAMES = list(LOCI)
+
+ACTIVE_LOCUS = _os.environ.get("CHROMSIM_LOCUS") or LOCUS_NAMES[0]
+if ACTIVE_LOCUS not in LOCI:
+    raise ValueError(f"CHROMSIM_LOCUS={ACTIVE_LOCUS!r} is not one of the config's loci {LOCUS_NAMES}")
 
 _locus       = LOCI[ACTIVE_LOCUS]
 CHROM        = _locus["chrom"]
 REGION_START = _locus["region_start"]
 REGION_END   = _locus["region_end"]
-RESOLUTION   = int(_cfg.get("resolution", 1000))
 N_MONOMERS   = (REGION_END - REGION_START) // RESOLUTION
-REGION       = f"{CHROM}:{REGION_START}-{REGION_END}"
-
-_ASSEMBLY    = _cfg.get("genome_assembly", "hg38")
-GENOME_ASSEMBLY = _ASSEMBLY
+REGION       = _locus["region"]
 ANCHOR_MONOMER = (_locus["anchor_bp"] - REGION_START) // RESOLUTION
 
 
 # =============================================================================
-# POLYMER PHYSICS
-# =============================================================================
-_poly = _cfg.get("polymer", {})
-POLYMER = dict(
-    N                = N_MONOMERS,
-    density          = _poly.get("density",          0.2),
-    bond_length      = _poly.get("bond_length",      1.0),
-    bond_wiggle_dist = _poly.get("bond_wiggle_dist", 0.05),
-    angle_force      = _poly.get("angle_force",      1.5),
-    collision_rate   = _poly.get("collision_rate",   0.03),
-    error_tol        = _poly.get("error_tol",        0.003),
-    repulsion_trunc  = _poly.get("repulsion_trunc",  3.0),
-    confinement_k    = _poly.get("confinement_k",    1.0),
-    integrator       = _poly.get("integrator",       "variableLangevin"),
-    precision        = _poly.get("precision",        "mixed"),
-    platform         = _poly.get("platform",         "CUDA"),
-)
-
-_smc = _cfg.get("smc_bond", {})
-SMC_BOND = dict(
-    wiggle_dist = _smc.get("wiggle_dist", 0.2),
-    bond_dist   = _smc.get("bond_dist",   0.5),
-)
-
-
-# =============================================================================
 # TILING
+# Each locus is simulated as back-to-back copies on one long chain (more
+# contact statistics per run; Yang et al. 2023 Nat Commun). Per locus:
+#   tile_size = locus monomers + 2 * padding
+#   n_tiles   = chain_size // tile_size, chrom_size = n_tiles * tile_size
 # =============================================================================
-_til = _cfg.get("tiling", {})
-TILING = dict(
-    tile_size  = int(_til.get("tile_size",  2500)),
-    chrom_size = int(_til.get("chrom_size", 70000)),
-    padding    = int(_til.get("padding",    250)),
-)
-TILING["n_tiles"] = TILING["chrom_size"] // TILING["tile_size"]
+_til = _cfg.get("tiling", {}) or {}
+_PADDING    = int(_til.get("padding", 270))
+_CHAIN_SIZE = int(_til.get("chain_size", 70000))
 
-assert TILING["tile_size"] == N_MONOMERS + 2 * TILING["padding"], (
-    f"tile_size ({TILING['tile_size']}) must equal "
-    f"N_MONOMERS ({N_MONOMERS}) + 2*padding ({2*TILING['padding']}). "
-    f"Check the locus and tiling sections in {CONFIG_PATH}."
-)
+
+def locus_tiling(name):
+    """Tiling of one locus (tile_size, n_tiles, chrom_size, padding)."""
+    loc = LOCI[name]
+    n = (loc["region_end"] - loc["region_start"]) // RESOLUTION
+    tile = n + 2 * _PADDING
+    n_tiles = _CHAIN_SIZE // tile
+    if n_tiles < 1:
+        raise ValueError(f"Locus {name} ({n} monomers + padding) is longer than "
+                         f"tiling.chain_size ({_CHAIN_SIZE})")
+    return dict(tile_size=tile, n_tiles=n_tiles, chrom_size=n_tiles * tile, padding=_PADDING)
+
+
+TILING = locus_tiling(ACTIVE_LOCUS)
 
 
 # =============================================================================
@@ -145,15 +150,9 @@ assert TILING["tile_size"] == N_MONOMERS + 2 * TILING["padding"], (
 # =============================================================================
 _run = _cfg.get("sim_run", {})
 SIM_RUN = dict(
-    engine               = str(_run.get("engine",               "polysim")),
     seed_base            = int(_run.get("seed_base",            42)),
     hdf5_frames_per_file = int(_run.get("hdf5_frames_per_file", 100)),
-    smc_steps_per_block  = int(_run.get("smc_steps_per_block",  1)),
-    md_steps_per_block   = int(_run.get("md_steps_per_block",   250)),
-    total_blocks         = int(_run.get("total_blocks",         50000)),
-    warmup_blocks        = int(_run.get("warmup_blocks",        4000)),
-    save_every           = int(_run.get("save_every",           10)),
-    restart_milker_every = int(_run.get("restart_milker_every", 100)),
+    frames_per_replicate = int(_run.get("frames_per_replicate", 10000)),
     contact_radius       = float(_run.get("contact_radius",     3.0)),
     n_replicates         = int(_run.get("n_replicates", _cfg.get("n_replicates", 3))),
 )
@@ -161,11 +160,11 @@ N_REPLICATES = SIM_RUN["n_replicates"]
 
 
 # =============================================================================
-# POLYSIM ENGINE (sim_run.engine: polysim)
+# POLYSIM (the simulation model)
 # Hansen lab polysim package (github.com/ahansenlab/polysim_bootcamp). Defaults
-# are the bootcamp tutorial values (tutorial/sim3D_complete.py). In this engine a
-# condition's `lifetime` is in LEF timesteps (= blocks), and each LEF leg steps
-# with probability vlef per timestep, so the mean extruded length per leg is
+# are the bootcamp tutorial values (tutorial/sim3D_complete.py). A condition's
+# `lifetime` is in LEF timesteps (= blocks), and each LEF leg steps with
+# probability vlef per timestep, so the mean extruded length per leg is
 # lifetime * vlef monomers.
 # =============================================================================
 _ps = _cfg.get("polysim", {}) or {}
@@ -179,6 +178,7 @@ POLYSIM = dict(
     smc_bond_dist        = float(_ps.get("smc_bond_dist",        0.5)),
     vlef                 = float(_ps.get("vlef",                 0.0025)),
     life_boost_stalled   = float(_ps.get("life_boost_stalled",   4.0)),
+    platform             = str(_ps.get("platform",               "CUDA")),
     integrator           = str(_ps.get("integrator",             "langevin")),
     dt                   = int(_ps.get("dt",                     40)),
     colrate              = float(_ps.get("colrate",              0.01)),
@@ -188,28 +188,33 @@ POLYSIM = dict(
     initskip             = int(_ps.get("initskip",               0)),
     blocks_per_updater   = int(_ps.get("blocks_per_updater",     1000)),
 )
-N_SHARDS     = int(_cfg.get("n_shards", 4))
-
-_ENGINES = ("polychrom", "polysim", "openmm", "lef_only")
-if SIM_RUN["engine"] not in _ENGINES:
-    raise ValueError(f"sim_run.engine must be one of {_ENGINES}, got {SIM_RUN['engine']!r}")
+N_SHARDS     = int(_cfg.get("n_shards", 2))
 
 
 # =============================================================================
 # OUTPUT LAYOUT (everything under outputDir)
 # =============================================================================
 OUTPUT_DIR = _output_path(_cfg.get("outputDir", "output"))
-PATHS = dict(
-    mcool      = _os.path.join(OUTPUT_DIR, "mcool"),
-    ctcf       = _os.path.join(OUTPUT_DIR, "ctcf"),
-    motifs     = _os.path.join(OUTPUT_DIR, "motifs"),
-    sims       = _os.path.join(OUTPUT_DIR, "sims"),
-    analysis   = _os.path.join(OUTPUT_DIR, "analysis"),
-    figures    = _os.path.join(OUTPUT_DIR, "figures"),
-    logs       = _os.path.join(OUTPUT_DIR, "logs"),
-    benchmarks = _os.path.join(OUTPUT_DIR, "benchmarks"),
-    done       = _os.path.join(OUTPUT_DIR, "done"),
-)
+
+
+def locus_paths(name):
+    """Output folders of one locus. Hi-C (.cool) and motifs are shared by all loci."""
+    base = _os.path.join(OUTPUT_DIR, "loci", name)
+    return dict(
+        base       = base,
+        mcool      = _os.path.join(OUTPUT_DIR, "mcool"),
+        motifs     = _os.path.join(OUTPUT_DIR, "motifs"),
+        ctcf       = _os.path.join(base, "ctcf"),
+        sims       = _os.path.join(base, "sims"),
+        analysis   = _os.path.join(base, "analysis"),
+        figures    = _os.path.join(base, "figures"),
+        done       = _os.path.join(base, "done"),
+        logs       = _os.path.join(OUTPUT_DIR, "logs", name),
+        benchmarks = _os.path.join(OUTPUT_DIR, "benchmarks"),
+    )
+
+
+PATHS = locus_paths(ACTIVE_LOCUS)
 
 
 # =============================================================================
@@ -261,14 +266,17 @@ RUN_NAME   = "_".join(v for v in _shared if v) or "ChromSimPipe"
 # =============================================================================
 # CTCF BED FILE PATHS
 # =============================================================================
-# Lives in <outputDir>/ctcf/; naming: ctcf_oriented_{assembly}_{ctcf_type}_{chrom}_{start}_{end}.bed
+# Lives in <outputDir>/loci/<locus>/ctcf/ctcf_oriented_{assembly}_{ctcf_type}.bed
 LOCUS_TAG = f"{CHROM}_{REGION_START}_{REGION_END}"
 
 
+def ctcf_bed_path(locus, ctcf_type):
+    return _os.path.join(locus_paths(locus)["ctcf"],
+                         f"ctcf_oriented_{_ASSEMBLY}_{ctcf_type}.bed")
+
+
 def _ctcf_bed_path(ctcf_type):
-    return _os.path.join(
-        PATHS["ctcf"], f"ctcf_oriented_{_ASSEMBLY}_{ctcf_type}_{LOCUS_TAG}.bed"
-    )
+    return ctcf_bed_path(ACTIVE_LOCUS, ctcf_type)
 
 AUTO_LOAD_CTCF_FROM_BED = True
 
@@ -304,9 +312,8 @@ for _c in _cfg.get("conditions", []):
         lifetime     = int(_c["lifetime"]),
         separation   = int(_c["separation"]),
         ctcf_capture = float(_c["ctcf_capture"]),
-        ctcf_release = float(_c.get("ctcf_release", 0.0)),
     )
-    # polysim-only, optional per condition (defaults in the polysim: block)
+    # optional per-condition overrides of the polysim: block
     for _k in ("vlef", "life_boost_stalled"):
         if _k in _c:
             _params[_k] = float(_c[_k])

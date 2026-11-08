@@ -11,10 +11,14 @@ for that project and the lab's original cluster.
 |---|---|
 | `cluster/` | Pre-Snakemake SLURM submit scripts for the original cluster |
 | `notebooks/` | mESC vs neuron comparison notebooks (outputs embed local Windows paths) |
-| `scripts/extract_ctcf_sites.py` | mm10 CTCF extraction (use `scripts/extract_ctcf_sites_hg38.py`) |
+| `scripts/extract_ctcf_sites.py` | mm10 CTCF extraction (use `scripts/extract_ctcf_sites.py`) |
 | `scripts/plot_hic_quicklook.py` | Sox2 Hi-C quick-look plots |
 | `scripts/download_hic.py`, `download_bonev_hic.sh`, `sbatch_bonev_hic.sbatch`, `envs/hic_bonev.yml` | Bonev 2017 (GSE96107) Hi-C download/processing |
 | `scripts/run_batch.py` | mESC/neuron batch runner |
 | `scripts/build_comparable_merge.py` | Depth-matched merges for the mESC/neuron sweep |
 
-The current pipeline is `ChromSimPipe.sh` → `workflows/ChromSimPipe.snakefile`.
+The current pipeline is `ChromSimPipe.sh` → `workflows/ChromSimPipe.snakefile`,
+which simulates with the Hansen lab's polysim package. ChromSimPipe's earlier
+built-in simulation model (`scripts/lef_dynamics.py`, `scripts/run_simulation.py`,
+`analysis/lef_lifetimes.py`) was removed in November 2026; it remains in the git
+history.

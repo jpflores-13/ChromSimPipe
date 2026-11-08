@@ -1,4 +1,4 @@
-"""polysim engine wiring: config parsing and the SimParams arguments built for a shard.
+"""polysim wiring: config parsing and the SimParams arguments built for a shard.
 
 These check ChromSimPipe's side of the integration (orientation mapping, per-site
 stall probabilities, schedule validation). They do not import polysim itself,
@@ -17,28 +17,27 @@ ROOT = Path(__file__).resolve().parents[1]
 _PROBE = r"""
 import json, numpy as np
 from scripts import run_simulation_shard as rs
-from configs.parameters import get_condition, POLYSIM, SIM_RUN
-cond = get_condition("ps_cond1_baseline")
+from configs.parameters import get_condition, POLYSIM
+cond = get_condition("cond1_baseline")
 kw = rs.polysim_kwargs(cond["params"], np.array([10, 20, 30]), np.array([1, -1, 1]),
                        n_frames=FRAMES, gpu=0, shard_dir="/tmp/x")
-print(json.dumps(dict(engine=SIM_RUN["engine"], polysim=POLYSIM, kw={k: v for k, v in kw.items()
+print(json.dumps(dict(polysim=POLYSIM, kw={k: v for k, v in kw.items()
      if k not in ("ctcf_left", "ctcf_right")}, left=kw["ctcf_left"], right=kw["ctcf_right"])))
 """
 
 
 def _run(frames=2000):
     env = {k: v for k, v in os.environ.items() if not k.startswith("CHROMSIM_")}
-    env["CHROMSIM_CONFIG"] = str(ROOT / "config" / "ChromSimConfig.chr7_polysim_test.yaml")
+    env["CHROMSIM_CONFIG"] = str(ROOT / "config" / "ChromSimConfig.test.yaml")
     res = subprocess.run([sys.executable, "-c", _PROBE.replace("FRAMES", str(frames))],
                          cwd=ROOT, env=env, capture_output=True, text=True)
     return res
 
 
-def test_polysim_config_parses():
+def test_polysim_settings_parse():
     res = _run()
     assert res.returncode == 0, res.stderr
     out = json.loads(res.stdout)
-    assert out["engine"] == "polysim"
     assert out["polysim"]["vlef"] == 0.0025
     assert out["polysim"]["life_boost_stalled"] == 4.0
 

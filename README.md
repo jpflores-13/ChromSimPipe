@@ -12,8 +12,11 @@ measurable by **Hi-C**.
 ChromSimPipe is a physics-based polymer simulation framework for testing
 mechanistic hypotheses about 3D chromatin organisation. Given CTCF binding
 data (CUT&Tag or ChIP-seq peaks) and Hi-C maps as input, it simulates
-cohesin loop extrusion under different parameter conditions and compares
-the resulting contact maps to your experimental Hi-C.
+cohesin loop extrusion at one or more loci under different parameter
+conditions and compares the resulting contact maps to your experimental
+Hi-C. The simulations use the Hansen lab's
+[polysim](https://github.com/ahansenlab/polysim_bootcamp) model (polymer +
+loop extrusion on polychrom / OpenMM, GPU).
 
 **Included example.** The default configuration ships with an example from
 the STRS project (Flores et al. 2026): HEK293T cells under hyperosmotic
@@ -28,7 +31,7 @@ A script-by-script description of the code is in
 
 ```
   ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
-  (one row per sample: metadata,               (locus, conditions, physics,
+  (one row per sample: metadata,               (loci, conditions, polysim,
    CTCF_Peaks, Hi-C)                            genome, motif, envs, outputDir)
           │                                               │
           └───────────────────────┬───────────────────────┘
@@ -39,23 +42,25 @@ A script-by-script description of the code is in
                                   ▼
                    workflows/ChromSimPipe.snakefile
                                   │
-     convertHic ── getMotif ── orientCTCF ── validateCTCF
+     convertHic ── getMotif ── preparePolysim      (shared by all loci)
                                   │
-             simulateShard (condition × replicate × shard, GPU)
+              orientCTCF ── validateCTCF                 (per locus)
                                   │
-                     mergeShards (condition × replicate)
+     simulateShard (locus × condition × replicate × shard, GPU, polysim)
                                   │
-              analyzeCondition (contact map, P(s), APA,
+                mergeShards (locus × condition × replicate)
+                                  │
+         analyzeCondition (locus × condition: contact map, P(s), APA,
                insulation, comparison with Hi-C) ── benchmarkSummary
                                   │
                                   ▼
-                       output/analysis/{condition}/
+                 output/loci/{locus}/analysis/{condition}/
 ```
 
 ### Example conditions (STRS use case)
 
-`config/ChromSimConfig.yaml` ships three example conditions comparing two
-experimental samples, `condition1` and `condition2` (each a row in
+`config/ChromSimConfig.yaml` ships three example conditions, each simulated at
+every locus, comparing two experimental samples, `condition1` and `condition2` (each a row in
 `ChromSimSamplesheet.txt` with its own CTCF peaks and Hi-C map). To define
 your own, edit the `conditions:` list there.
 
@@ -65,12 +70,14 @@ your own, edit the `conditions:` list there.
 | 2 | `cond2_ctcf-only`            | polysim bootcamp | Condition 2 | Condition 2 Hi-C | Do condition 2 CTCF sites alone explain condition 2 Hi-C? |
 | 3 | `cond2_weak-ctcf`            | polysim bootcamp (0.5× CTCF capture) | Condition 2 | Condition 2 Hi-C | Weaker CTCF stalling at retained sites? |
 
-### Example locus (STRS use case, hg38, HEK293T)
+### Loci (STRS use case, hg38, HEK293T)
 
 The default configuration simulates the 1.96 Mb chr1 window used in the STRS
-figures. Change the `locus:` block in `config/ChromSimConfig.yaml` to switch
-loci (and the `tiling:` block to match: `tile_size` must equal the locus
-length in monomers + 2 × `padding`).
+figures. `loci:` in `config/ChromSimConfig.yaml` is a list: add entries
+(name, chrom, region_start, region_end) to simulate several windows in one
+run; each gets its own folder under `output/loci/`, and the converted Hi-C is
+shared. Tiling is worked out per locus from `tiling.padding` and
+`tiling.chain_size`.
 
 | Key | Chrom | Window | Genes |
 |-----|-------|--------|-------|
@@ -238,12 +245,12 @@ sbatch ChromSimPipe.sh       # --rerun-incomplete is on by default
 |------|-----------------------|--------------|
 | `convertHic` | 1 per Hi-C sample (2) | `hic2cool convert` `.hic` → `.cool` at `resolution` |
 | `getMotif` | 1 | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped if `ctcf_motif.meme` is set) |
-| `orientCTCF` | 1 per CTCF sample used (2) | FIMO motif strand → oriented CTCF BED for the locus |
-| `validateCTCF` | 1 | Checks every BED parses and maps onto the polymer |
-| `preparePolysim` | 1 | Builds polysim's Cython cohesin model once (engine: polysim) |
-| `simulateShard` | conditions × reps × shards (18, GPU) | 3D loop-extrusion simulation (polysim by default) |
-| `mergeShards` | conditions × reps (9) | Concatenates shard trajectories |
-| `analyzeCondition` | 1 per condition (3) | Contact maps, P(s), insulation, APA, Hi-C comparison |
+| `preparePolysim` | 1 | Builds polysim's Cython cohesin model once |
+| `orientCTCF` | loci × CTCF samples used (2) | FIMO motif strand → oriented CTCF BED for the locus |
+| `validateCTCF` | 1 per locus (1) | Checks every BED parses and maps onto the polymer |
+| `simulateShard` | loci × conditions × reps × shards (18, GPU) | polysim 3D loop-extrusion simulation |
+| `mergeShards` | loci × conditions × reps (9) | Concatenates shard trajectories |
+| `analyzeCondition` | loci × conditions (3) | Contact maps, P(s), insulation, APA, Hi-C comparison |
 | `benchmarkSummary` | 1 | Collects per-job run time / memory into one table |
 
 ## Running on a different cluster
@@ -309,15 +316,16 @@ output/
 ├── {runName}_benchmarking.tsv          # wall time / memory per job
 ├── mcool/{sample}.cool
 ├── motifs/{jaspar_id}.meme
-├── ctcf/ctcf_oriented_{assembly}_{sample}_{chrom}_{start}_{end}.bed
-├── sims/
-│   ├── {params_name}_ctcf-{sample}_rep{N}_shard{M}/   # per-shard GPU output
-│   └── merged_{params_name}_ctcf-{sample}_rep{N}/     # merged per replicate
-├── analysis/{condition}/               # contact maps, P(s), APA, figures, metrics
-├── logs/{rule}_{wildcards}.out|.err    # each job's stdout / stderr
+├── loci/{locus}/
+│   ├── ctcf/ctcf_oriented_{assembly}_{sample}.bed
+│   ├── sims/
+│   │   ├── {params_name}_ctcf-{sample}_rep{N}_shard{M}/   # per-shard GPU output
+│   │   └── merged_{params_name}_ctcf-{sample}_rep{N}/     # merged per replicate
+│   ├── analysis/{condition}/           # contact maps, P(s), APA, figures, metrics
+│   └── done/                           # completion markers Snakemake tracks
+├── logs/{locus}/{rule}_{wildcards}.out|.err   # each job's stdout / stderr
 ├── logs_slurm/                         # SLURM job logs
-├── benchmarks/{rule}_{wildcards}.tsv
-└── done/                               # completion markers Snakemake tracks
+└── benchmarks/{rule}_{locus}_{wildcards}.tsv
 ```
 
 `{runName}` joins the metadata values shared by every sample (here
@@ -346,9 +354,8 @@ output/
 
 ## Cohesin parameters
 
-The defaults are the Hansen lab polysim bootcamp tutorial values (polysim
-engine), themselves based on Gabriele et al. 2022 (*Science*) and Goel et al.
-2025. Adjust the `conditions:` list in `config/ChromSimConfig.yaml` for your
+The defaults are the Hansen lab polysim bootcamp tutorial values, themselves
+based on Gabriele et al. 2022 (*Science*) and Goel et al. 2025. Adjust the `conditions:` list in `config/ChromSimConfig.yaml` for your
 biological context, and the shared settings in its `polysim:` block.
 
 | Parameter | Default value | Meaning |
@@ -359,39 +366,32 @@ biological context, and the shared settings in its `polysim:` block.
 | `polysim: life_boost_stalled` | 4 | Cohesin stalled at CTCF on both legs lives 4× longer |
 | `polysim: vlef` | 0.0025 | Probability a leg steps per timestep: sets extrusion speed relative to polymer motion |
 
-The earlier runs used the `polychrom` engine with `lifetime` 75 steps,
-`ctcf_capture` 0.125 and `ctcf_release` 0.0033; set `sim_run.engine:
-polychrom` (as `config/ChromSimConfig.chr7_157.yaml` does) to reproduce them.
+### The simulation model
 
-### Simulation engines
+ChromSimPipe runs the Hansen lab's [polysim](https://github.com/ahansenlab/polysim_bootcamp)
+package (Cython cohesin model + bond updater on polychrom / OpenMM), pinned in
+`envs/cohesin_sim.yml`. Each oriented CTCF site becomes a stall site with
+probability `ctcf_capture` per encounter (+ sites stop leftward-moving legs, −
+sites rightward-moving ones). Cohesin moves one monomer per `1 / vlef` LEF
+timesteps, each timestep being `poly_steps_per_block` polymer steps, and every
+`saveevery`-th block is saved, after an optional unsaved equilibration
+(`initskip`) of at least one cohesin lifetime. ChromSimPipe seeds polysim's C
+random number generator (`drand48`) per shard; polysim itself does not, so
+unseeded runs would share one random sequence.
 
-`sim_run.engine` picks the 3D model; the default is `polysim`. Everything
-around it (samplesheet, CTCF orientation, tiling, workflow, analysis) is
-shared.
-
-| Setting | `polychrom` (original; reproduces earlier runs) | `polysim` (default) |
-|---|---|---|
-| Model code | ChromSimPipe's own: Python LEF model (`scripts/lef_dynamics.py`) driving polychrom | The Hansen lab's [polysim](https://github.com/ahansenlab/polysim_bootcamp) (Cython LEF model + bond updater on polychrom), pinned in `envs/cohesin_sim.yml` |
-| `lifetime` units | steps; each leg moves every step, so ~`lifetime` kb per leg | LEF timesteps (blocks); each leg moves with probability `vlef` per timestep, so ~`lifetime × vlef` kb per leg |
-| Stalled cohesin | released with `ctcf_release` per step | lives `life_boost_stalled` × longer when both legs are stalled (`ctcf_release` unused) |
-| Extrusion vs polymer motion | 1 LEF step per `md_steps_per_block` (250) MD steps | 1 LEF step per `poly_steps_per_block / vlef` MD steps (13,200 with the defaults) |
-| Polymer | `polymer:` block (density 0.2, stiff chain) | `polysim:` block (density 0.3, flexible chain) |
-| Saved frames | every block; no 3D warm-up | every `saveevery` blocks; optional unsaved equilibration (`initskip`) of at least one LEF lifetime |
-| `total_blocks` means | blocks simulated per replicate | conformations saved per replicate |
-
-The chr7 control locus configs show both: `config/ChromSimConfig.chr7_157.yaml`
-(polychrom) and `config/ChromSimConfig.chr7_polysim.yaml` (polysim, bootcamp
-tutorial parameters: lifetime 75000, vlef 0.0025, separation 240, capture 0.5,
-lifetime boost 4), plus a small `config/ChromSimConfig.chr7_polysim_test.yaml`.
-ChromSimPipe seeds polysim's C random number generator (`drand48`) per shard;
-polysim itself does not, so unseeded runs would share one random sequence.
+On a CTCF-driven control locus (chr7:157.18–158.13 Mb, a loop lost after
+sorbitol), polysim matched the control Hi-C pattern (obs/exp Pearson 0.47,
+SCC 0.32) with a domain and corner as strong as the Hi-C's. ChromSimPipe's
+earlier, simpler model gave the same pattern about 7× too weak, and has been
+removed.
 
 ### Tiling trick
 
-The 1,960-monomer locus is simulated as 28 tiled copies on a 70,000-monomer
-"chromosome" (2,500 monomers/tile = 1,960 locus + 270 padding each side). This
-gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
-*Nat Commun*. All three numbers are set in the `tiling:` block of the config.
+Each locus is simulated as back-to-back copies on one long chain: the
+1,960-monomer chr1 locus becomes 28 copies of 2,500 monomers (1,960 + 270
+padding on each side) on a 70,000-monomer chain, giving 28× more contact
+statistics per GPU run (Yang et al. 2023 *Nat Commun*). The copy size and
+count are worked out per locus from `tiling.padding` and `tiling.chain_size`.
 
 ---
 
@@ -401,16 +401,15 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 |---------|--------------|-----|
 | `Error running conda info` | conda not on `PATH` | Fix the conda line in `profiles/<site>/env.sh` |
 | `CUDA not available` | GPU job on wrong partition | Check `simulateShard` under `set-resources:` in `profiles/<site>/config.yaml` |
-| `sim_run.engine is 'polychrom' but it cannot be imported` | Sim env missing polychrom | Rebuild the `condaEnvs.sim` environment |
-| `sim_run.engine is 'polysim' but it cannot be imported`, or `preparePolysim` fails | Sim env built before polysim was added, or no C compiler | Rebuild the `condaEnvs.sim` environment (it now includes polysim and `c-compiler`); read `<outputDir>/logs/preparePolysim.err` |
-| `polysim needs frames per shard ... multiple of ...` | `total_blocks / n_shards` × `saveevery` is not a multiple of `blocks_per_updater` | Use the frame count the message suggests |
+| `polysim cannot be imported`, or `preparePolysim` fails | Sim env built before polysim was added, or no C compiler | Rebuild the `condaEnvs.sim` environment (it now includes polysim and `c-compiler`); read `<outputDir>/logs/preparePolysim.err` |
+| `polysim needs frames per shard ... multiple of ...` | `frames_per_replicate / n_shards` × `saveevery` is not a multiple of `blocks_per_updater` | Use the frame count the message suggests |
 | Snakemake lock error | Previous run crashed | `bash unlock.sh`, then resubmit |
 | `MissingInputException` naming a `data/...` file | That file is not linked into `data/` on this cluster, or the link is broken | `ls -lL data/`; add or fix the link ([Input data](#input-data)) |
 | Output appears in the repo folder instead of scratch | `CHROMSIM_OUTPUT_ROOT` not set in the shell that ran `sbatch` | `echo $CHROMSIM_OUTPUT_ROOT`; add the export to `~/.bashrc`, `source ~/.bashrc`, resubmit |
 | Jobs go to the wrong cluster's partitions or account | `CHROMSIM_PROFILE` not set, so the config default (`profiles/longleaf`) was used | `echo $CHROMSIM_PROFILE`; set it in `~/.bashrc` or pass `--profile` |
 | `Samplesheet ... has no 'CTCF_Peaks' column` | Header typo, or not tab-separated | Headers must be tab-separated and include `CTCF_Peaks` and `Hi-C` |
 | `Condition ctcf_type '...' has no CTCF_Peaks` | Condition names a sample that isn't in the samplesheet | Sample names come from `fileNamesFrom`; check the spelling |
-| `peaks had no FIMO hit` | `ctcf_motif.unoriented: 'error'` and some peaks lack a motif | Inspect them in `output/logs/orientCTCF_*.err`, or switch to `'drop'` |
+| `peaks had no FIMO hit` | `ctcf_motif.unoriented: 'error'` and some peaks lack a motif | Inspect them in `output/logs/<locus>/orientCTCF_*.err`, or switch to `'drop'` |
 | No emails arrive | `mail` missing or blocked on the cluster | Test `echo test \| mail -s test $CHROMSIM_EMAIL`; change `notify: command:` |
 | Launcher job `OUT_OF_MEMORY` on the first run | Conda environments are built inside the launcher job | Build them once on a compute node: `srun ... --mem=16g --pty bash`, then `bash ChromSimPipe.sh --conda-create-envs-only` |
 | `nvrtc: error: invalid value for --gpu-architecture` | OpenMM built against CUDA 13, which dropped Pascal (GTX 10xx) and Volta (V100) GPUs | `envs/cohesin_sim.yml` pins `cuda-version=12.4`; rebuild the env (`--conda-create-envs-only` on a compute node) |
@@ -420,7 +419,7 @@ gives 28× more contact statistics per GPU run. Reference: Yang et al. 2023
 | `analyzeCondition` ends in `TIMEOUT` | Full runs pool 150,000 frames per condition; on a slow node this can exceed the limit | Raise `analyzeCondition: runtime:` in the profile (default 1440 min), `bash unlock.sh`, resubmit; finished pieces are reused (`--skip-existing`) |
 | `convertHic` ends in `TIMEOUT` | Large `.hic`: a 3.7 GB map takes ~1.6 h | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` (default 480 min) |
 | `UCSC gene fetch failed ... timed out` | Compute nodes have no internet | Harmless: figures are drawn without the gene track |
-| A job failed | - | Its stdout / stderr are in `<outputDir>/logs/{rule}_{wildcards}.out|.err` |
+| A job failed | - | Its stdout / stderr are in `<outputDir>/logs/{locus}/{rule}_{wildcards}.out|.err` (shared steps: `<outputDir>/logs/`) |
 
 For a description of every script, see [`CODE_GUIDE.md`](CODE_GUIDE.md).
 

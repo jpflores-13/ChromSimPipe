@@ -44,13 +44,13 @@ Overlay plot across all conditions:
 
 Usage
 -----
-# Analyse everything found under output/sims/:
-    python scripts/run_analysis_all.py --results-dir output/sims
+# Analyse everything found under output/loci/chr1_fig1/sims/:
+    python scripts/run_analysis_all.py --results-dir output/loci/chr1_fig1/sims
 
 # Each condition is compared with its compare_hic map from the config,
 # looked up as <hic-dir>/<hic_type>.cool (or .npy), else <outputDir>/mcool/:
     python scripts/run_analysis_all.py \\
-        --results-dir output/sims \\
+        --results-dir output/loci/chr1_fig1/sims \\
         --hic-dir output/mcool
 
 Options

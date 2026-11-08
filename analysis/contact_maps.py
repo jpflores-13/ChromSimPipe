@@ -9,7 +9,7 @@ Reads 3D polymer conformations (from polychrom or OpenMM) and computes:
   4. Comparison metrics with experimental Hi-C
 
 Usage:
-    python contact_maps.py --sim-dir ../output/sims/merged_baseline_ctcf-condition1_rep0 --exp-hic condition1.npy
+    python contact_maps.py --sim-dir ../output/loci/chr1_fig1/sims/merged_baseline_ctcf-condition1_rep0 --exp-hic condition1.npy
 """
 
 import os

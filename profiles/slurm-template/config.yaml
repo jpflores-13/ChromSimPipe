@@ -31,7 +31,7 @@ set-resources:
   validateCTCF:
     runtime: 15
     mem_mb: 4000
-  preparePolysim:                 # builds polysim's Cython LEF model once (engine: polysim)
+  preparePolysim:                 # builds polysim's Cython LEF model once
     runtime: 30
     mem_mb: 4000
   simulateShard:

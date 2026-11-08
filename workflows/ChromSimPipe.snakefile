@@ -2,22 +2,24 @@
 # -*- coding: utf-8 -*-
 
 # ==============================================================================
-# ChromSimPipe - cohesin loop-extrusion simulation workflow
+# ChromSimPipe - cohesin loop-extrusion simulation workflow (polysim model)
 #
 # Run with:  sbatch ChromSimPipe.sh
 #
 # All inputs come from the config file (config/ChromSimConfig.yaml) and the
 # samplesheet it names. configs/parameters.py parses both; this file only
-# wires the rules together.
+# wires the rules together. Every locus in the config's `loci:` list is
+# simulated and analysed separately, in <outputDir>/loci/<locus>/.
 #
 #   Rules, in order:
-#     convertHic        per Hi-C sample
+#     convertHic        per Hi-C sample (shared by all loci)
 #     getMotif          once
-#     orientCTCF        per CTCF sample
-#     validateCTCF      once
-#     simulateShard     per condition x replicate x shard (GPU)
-#     mergeShards       per condition x replicate
-#     analyzeCondition  per condition (needs convertHic output)
+#     preparePolysim    once (builds polysim's Cython LEF model)
+#     orientCTCF        per locus x CTCF sample
+#     validateCTCF      per locus
+#     simulateShard     per locus x condition x replicate x shard (GPU)
+#     mergeShards       per locus x condition x replicate
+#     analyzeCondition  per locus x condition (needs convertHic output)
 #     benchmarkSummary  once
 # ==============================================================================
 
@@ -27,7 +29,7 @@ import sys
 ##### Load config and sample sheets #####
 ## `--configfile other.yaml` replaces the default config entirely (it must be
 ## a complete config); configs/parameters.py reads the same file, here and in
-## every job, via $CHROMSIM_CONFIG.
+## every job, via $CHROMSIM_CONFIG. Each per-locus job also gets $CHROMSIM_LOCUS.
 DEFAULT_CONFIG = "config/ChromSimConfig.yaml"
 if not workflow.overwrite_configfiles:
     configfile: DEFAULT_CONFIG
@@ -36,10 +38,9 @@ os.environ["CHROMSIM_CONFIG"] = CONFIGFILE
 
 sys.path.insert(0, os.getcwd())
 from configs.parameters import (
-    SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, CTCF_BEDS,
-    HIC_FILES, MCOOL_FILES, PATHS, SAMPLES, RUN_NAME,
-    REGION, N_REPLICATES, N_SHARDS, ANALYSIS, LOCUS_TAG, GENOME_ASSEMBLY, GENOME,
-    SIM_RUN,
+    SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, HIC_FILES, MCOOL_FILES,
+    SAMPLES, RUN_NAME, N_REPLICATES, N_SHARDS, ANALYSIS, GENOME_ASSEMBLY, GENOME,
+    OUTPUT_DIR, LOCI, LOCUS_NAMES, locus_paths, ctcf_bed_path,
 )
 
 
@@ -62,15 +63,22 @@ def conda_env(key):
 COND_LOOKUP = {c["name"]: c for c in SIMULATION_CONDITIONS}
 COND_NAMES  = list(COND_LOOKUP)
 
-OUT        = rel(os.path.dirname(PATHS["mcool"]))
-MCOOL_DIR  = rel(PATHS["mcool"])
-CTCF_DIR   = rel(PATHS["ctcf"])
-MOTIF_DIR  = rel(PATHS["motifs"])
-SIM_DIR    = rel(PATHS["sims"])
-ANA_DIR    = rel(PATHS["analysis"])
-LOG_DIR    = rel(PATHS["logs"])
-BENCH_DIR  = rel(PATHS["benchmarks"])
-DONE_DIR   = rel(PATHS["done"])
+OUT        = rel(OUTPUT_DIR)
+MCOOL_DIR  = rel(locus_paths(LOCUS_NAMES[0])["mcool"])
+MOTIF_DIR  = rel(locus_paths(LOCUS_NAMES[0])["motifs"])
+LOG_DIR    = f"{OUT}/logs"
+BENCH_DIR  = f"{OUT}/benchmarks"
+
+
+def L(key):
+    """A per-locus folder as a pattern with a {locus} wildcard."""
+    return f"{OUT}/loci/{{locus}}/{key}"
+
+
+def LP(wildcards, key):
+    """A per-locus folder for a job's locus."""
+    return rel(locus_paths(wildcards.locus)[key])
+
 
 ENV_SIM  = conda_env("sim")
 ENV_CTCF = conda_env("ctcf")
@@ -84,6 +92,7 @@ MOTIF_MEME = (os.path.expanduser(MOTIF["meme"]) if MOTIF.get("meme")
 ## venv) can come first on PATH and lacks the env's packages.
 
 wildcard_constraints:
+    locus = r"[^/]+",
     rep   = r"\d+",
     shard = r"\d+"
 
@@ -136,11 +145,11 @@ def log_tail(path, n=40):
 
 ## Define actions on start, success, and error
 onstart:
-    notify("start", f"Started. Conditions: {', '.join(COND_NAMES)}")
+    notify("start", f"Started. Loci: {', '.join(LOCUS_NAMES)}. Conditions: {', '.join(COND_NAMES)}")
 
 onsuccess:
     print("ChromSimPipe completed successfully! Wahoo!")
-    notify("success", f"Finished successfully.\nResults: {os.path.abspath(ANA_DIR)}\n"
+    notify("success", f"Finished successfully.\nResults: {os.path.abspath(OUT)}/loci/<locus>/analysis\n"
                       f"Timings: {os.path.abspath(OUT)}/{RUN_NAME}_benchmarking.tsv")
 
 onerror:
@@ -151,7 +160,8 @@ onerror:
 ##### Define rules #####
 rule all:
     input:
-        expand(f"{DONE_DIR}/analyzeCondition_{{condition}}.done", condition=COND_NAMES),
+        expand(f"{L('done')}/analyzeCondition_{{condition}}.done",
+               locus=LOCUS_NAMES, condition=COND_NAMES),
         f"{OUT}/{RUN_NAME}_benchmarking.tsv"
 
 
@@ -193,20 +203,36 @@ if not MOTIF.get("meme"):
             """
 
 
+## polysim builds its Cython LEF model (LEF_Dynamics.pyx) with pyximport on
+## first import. Do that once here, so parallel shards load the built module
+## instead of compiling it at the same time.
+rule preparePolysim:
+    output:
+        done = f"{OUT}/done/preparePolysim.done"
+    log:
+        err = f"{LOG_DIR}/preparePolysim.err"
+    conda: ENV_SIM
+    shell:
+        """
+        "$CONDA_PREFIX/bin/python" -c "import polysim.extrusion, polysim.sim3d" 2> {log.err}
+        touch {output.done}
+        """
+
+
 rule orientCTCF:
     input:
         peaks  = lambda wildcards: CTCF_PEAKS[wildcards.ctcfType],
         genome = rel(GENOME),
         motif  = MOTIF_MEME
     output:
-        bed = f"{CTCF_DIR}/ctcf_oriented_{GENOME_ASSEMBLY}_{{ctcfType}}_{LOCUS_TAG}.bed"
+        bed = f"{L('ctcf')}/ctcf_oriented_{GENOME_ASSEMBLY}_{{ctcfType}}.bed"
     log:
-        err = f"{LOG_DIR}/orientCTCF_{{ctcfType}}.err",
-        out = f"{LOG_DIR}/orientCTCF_{{ctcfType}}.out"
+        err = f"{LOG_DIR}/{{locus}}/orientCTCF_{{ctcfType}}.err",
+        out = f"{LOG_DIR}/{{locus}}/orientCTCF_{{ctcfType}}.out"
     benchmark:
-        f"{BENCH_DIR}/orientCTCF_{{ctcfType}}.tsv"
+        f"{BENCH_DIR}/orientCTCF_{{locus}}_{{ctcfType}}.tsv"
     params:
-        region     = REGION,
+        region     = lambda wildcards: LOCI[wildcards.locus]["region"],
         assembly   = GENOME_ASSEMBLY,
         thresh     = MOTIF["fimo_thresh"],
         flank      = MOTIF["flank_bp"],
@@ -231,60 +257,47 @@ rule orientCTCF:
 
 rule validateCTCF:
     input:
-        beds = [rel(CTCF_BEDS[t]) for t in CTCF_TYPES]
+        beds = lambda wildcards: [rel(ctcf_bed_path(wildcards.locus, t)) for t in CTCF_TYPES]
     output:
-        done = f"{DONE_DIR}/validateCTCF.done"
+        done = f"{L('done')}/validateCTCF.done"
     log:
-        err = f"{LOG_DIR}/validateCTCF.err",
-        out = f"{LOG_DIR}/validateCTCF.out"
+        err = f"{LOG_DIR}/{{locus}}/validateCTCF.err",
+        out = f"{LOG_DIR}/{{locus}}/validateCTCF.out"
     benchmark:
-        f"{BENCH_DIR}/validateCTCF.tsv"
+        f"{BENCH_DIR}/validateCTCF_{{locus}}.tsv"
     params:
         configfile = CONFIGFILE
     conda: ENV_SIM
     shell:
         """
-        CHROMSIM_CONFIG={params.configfile} "$CONDA_PREFIX/bin/python" scripts/validate_ctcf.py 1> {log.out} 2> {log.err}
-        touch {output.done}
-        """
-
-
-## polysim builds its Cython LEF model (LEF_Dynamics.pyx) with pyximport on
-## first import. Do that once here, so parallel shards load the built module
-## instead of compiling it at the same time.
-rule preparePolysim:
-    output:
-        done = f"{DONE_DIR}/preparePolysim.done"
-    log:
-        err = f"{LOG_DIR}/preparePolysim.err"
-    conda: ENV_SIM
-    shell:
-        """
-        "$CONDA_PREFIX/bin/python" -c "import polysim.extrusion, polysim.sim3d" 2> {log.err}
+        CHROMSIM_CONFIG={params.configfile} CHROMSIM_LOCUS={wildcards.locus} \
+            "$CONDA_PREFIX/bin/python" scripts/validate_ctcf.py 1> {log.out} 2> {log.err}
         touch {output.done}
         """
 
 
 rule simulateShard:
     input:
-        validated = rules.validateCTCF.output.done,
-        engine    = [rules.preparePolysim.output.done] if SIM_RUN["engine"] == "polysim" else [],
-        bed       = lambda wildcards: rel(CTCF_BEDS[COND_LOOKUP[wildcards.condition]["ctcf_type"]])
+        validated = f"{L('done')}/validateCTCF.done",
+        polysim   = rules.preparePolysim.output.done,
+        bed       = lambda wildcards: rel(ctcf_bed_path(
+            wildcards.locus, COND_LOOKUP[wildcards.condition]["ctcf_type"]))
     output:
-        done = f"{DONE_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.done"
+        done = f"{L('done')}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.done"
     log:
-        err = f"{LOG_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.err",
-        out = f"{LOG_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.out"
+        err = f"{LOG_DIR}/{{locus}}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.err",
+        out = f"{LOG_DIR}/{{locus}}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.out"
     benchmark:
-        f"{BENCH_DIR}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.tsv"
+        f"{BENCH_DIR}/simulateShard_{{locus}}_{{condition}}_rep{{rep}}_shard{{shard}}.tsv"
     params:
         configfile = CONFIGFILE,
-        sim_dir    = SIM_DIR,
+        sim_dir    = lambda wildcards: LP(wildcards, "sims"),
         n_shards   = N_SHARDS
     conda: ENV_SIM
     shell:
         """
-        CHROMSIM_CONFIG={params.configfile} "$CONDA_PREFIX/bin/python" scripts/run_simulation_shard.py \
+        CHROMSIM_CONFIG={params.configfile} CHROMSIM_LOCUS={wildcards.locus} \
+            "$CONDA_PREFIX/bin/python" scripts/run_simulation_shard.py \
             --condition {wildcards.condition} \
             --replicate {wildcards.rep} \
             --shard-index {wildcards.shard} \
@@ -297,24 +310,25 @@ rule simulateShard:
 
 rule mergeShards:
     input:
-        lambda wildcards: expand(rules.simulateShard.output.done,
+        lambda wildcards: expand(rules.simulateShard.output.done, locus=wildcards.locus,
                                  condition=wildcards.condition, rep=wildcards.rep,
                                  shard=range(N_SHARDS))
     output:
-        done = f"{DONE_DIR}/mergeShards_{{condition}}_rep{{rep}}.done"
+        done = f"{L('done')}/mergeShards_{{condition}}_rep{{rep}}.done"
     log:
-        err = f"{LOG_DIR}/mergeShards_{{condition}}_rep{{rep}}.err",
-        out = f"{LOG_DIR}/mergeShards_{{condition}}_rep{{rep}}.out"
+        err = f"{LOG_DIR}/{{locus}}/mergeShards_{{condition}}_rep{{rep}}.err",
+        out = f"{LOG_DIR}/{{locus}}/mergeShards_{{condition}}_rep{{rep}}.out"
     benchmark:
-        f"{BENCH_DIR}/mergeShards_{{condition}}_rep{{rep}}.tsv"
+        f"{BENCH_DIR}/mergeShards_{{locus}}_{{condition}}_rep{{rep}}.tsv"
     params:
         configfile = CONFIGFILE,
-        sim_dir    = SIM_DIR,
+        sim_dir    = lambda wildcards: LP(wildcards, "sims"),
         n_shards   = N_SHARDS
     conda: ENV_SIM
     shell:
         """
-        CHROMSIM_CONFIG={params.configfile} "$CONDA_PREFIX/bin/python" scripts/merge_shards.py \
+        CHROMSIM_CONFIG={params.configfile} CHROMSIM_LOCUS={wildcards.locus} \
+            "$CONDA_PREFIX/bin/python" scripts/merge_shards.py \
             --condition {wildcards.condition} \
             --replicate {wildcards.rep} \
             --n-shards {params.n_shards} \
@@ -325,21 +339,21 @@ rule mergeShards:
 
 rule analyzeCondition:
     input:
-        merged = lambda wildcards: expand(rules.mergeShards.output.done,
+        merged = lambda wildcards: expand(rules.mergeShards.output.done, locus=wildcards.locus,
                                           condition=wildcards.condition,
                                           rep=range(N_REPLICATES)),
         mcool  = compare_mcool
     output:
-        done = f"{DONE_DIR}/analyzeCondition_{{condition}}.done"
+        done = f"{L('done')}/analyzeCondition_{{condition}}.done"
     log:
-        err = f"{LOG_DIR}/analyzeCondition_{{condition}}.err",
-        out = f"{LOG_DIR}/analyzeCondition_{{condition}}.out"
+        err = f"{LOG_DIR}/{{locus}}/analyzeCondition_{{condition}}.err",
+        out = f"{LOG_DIR}/{{locus}}/analyzeCondition_{{condition}}.out"
     benchmark:
-        f"{BENCH_DIR}/analyzeCondition_{{condition}}.tsv"
+        f"{BENCH_DIR}/analyzeCondition_{{locus}}_{{condition}}.tsv"
     params:
         configfile = CONFIGFILE,
-        sim_dir    = SIM_DIR,
-        out_dir    = lambda wildcards: f"{ANA_DIR}/{wildcards.condition}",
+        sim_dir    = lambda wildcards: LP(wildcards, "sims"),
+        out_dir    = lambda wildcards: f"{LP(wildcards, 'analysis')}/{wildcards.condition}",
         mcool_dir  = MCOOL_DIR,
         n_jobs     = ANALYSIS["n_jobs"],
         msd_flag   = "" if ANALYSIS["msd"] else "--no-msd"
@@ -347,7 +361,8 @@ rule analyzeCondition:
     shell:
         """
         mkdir -p {params.out_dir}
-        CHROMSIM_CONFIG={params.configfile} "$CONDA_PREFIX/bin/python" scripts/run_analysis_all.py \
+        CHROMSIM_CONFIG={params.configfile} CHROMSIM_LOCUS={wildcards.locus} \
+            "$CONDA_PREFIX/bin/python" scripts/run_analysis_all.py \
             --results-dir {params.sim_dir} \
             --output-dir {params.out_dir} \
             --condition {wildcards.condition} \
@@ -361,7 +376,7 @@ rule analyzeCondition:
 
 rule benchmarkSummary:
     input:
-        expand(rules.analyzeCondition.output.done, condition=COND_NAMES)
+        expand(rules.analyzeCondition.output.done, locus=LOCUS_NAMES, condition=COND_NAMES)
     output:
         f"{OUT}/{RUN_NAME}_benchmarking.tsv"
     log:
