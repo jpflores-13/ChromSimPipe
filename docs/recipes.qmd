@@ -1,0 +1,227 @@
+# Perturbation Recipes
+
+Each recipe below is one or more entries for the `conditions:` list in
+`config/ChromSimConfig.yaml`, with what it models, what to expect, and what to
+watch out for. Every recipe works with the current pipeline: nothing to install
+or code. The numbers are examples of the pattern, not recommendations: run a
+small range and see which value matches your data.
+
+All recipes follow the rules from the [vignette](vignette.qmd#adding-a-condition-to-test-a-hypothesis):
+change **one** setting relative to a condition you already have, give each
+entry a new `name` and `params_name`, and count the cost: every condition adds
+`n_replicates × n_shards` GPU jobs per locus (6 with the shipped settings).
+
+## How the settings relate
+
+The cohesin settings are not independent. Three relations explain most of
+what the recipes do:
+
+| Quantity | Formula | Shipped value |
+|----------|---------|---------------|
+| DNA extruded per cohesin leg before it falls off (processivity) | `lifetime × vlef` monomers | 75,000 × 0.0025 ≈ 190 kb |
+| Number of cohesins on the chain | chain monomers / `separation` | one per 240 kb |
+| Loop coverage: how much of the chain is inside a loop at once | about 2 × processivity / `separation` | ≈ 1.6 |
+
+So doubling `lifetime` doubles how far each cohesin gets; halving `vlef` with
+the same `lifetime` halves it; doubling `separation` halves the number of
+cohesins. One monomer is `resolution` bp (1 kb by default).
+
+All recipes below start from this baseline (the shipped `cond1_baseline`):
+
+```yaml
+  - name:         cond1_baseline
+    params_name:  baseline
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+## Cohesin stays longer (WAPL loss)
+
+**Models:** loss of WAPL, which releases cohesin from DNA, so cohesin stays
+bound and extrudes further.
+
+```yaml
+  - name:         wapl-loss_2x
+    params_name:  wapl_2x
+    lifetime:     150000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    condition1
+    compare_hic:  condition1
+
+  - name:         wapl-loss_5x
+    params_name:  wapl_5x
+    lifetime:     375000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** longer loops, reaching convergent CTCF pairs further apart, and
+stronger stripes, as reported in WAPL-depleted Hi-C.
+
+**Watch out:** a longer `lifetime` also needs longer equilibration; polysim
+extends its warm-up to at least one cohesin lifetime automatically, so these
+jobs take longer.
+
+## Fewer cohesins (NIPBL or RAD21 depletion)
+
+**Models:** partial loss of cohesin loading (NIPBL) or of cohesin itself
+(RAD21 knockdown). Halving the amount of cohesin doubles `separation`.
+
+```yaml
+  - name:         cohesin-50pct
+    params_name:  cohesin_50
+    lifetime:     75000
+    separation:   480
+    ctcf_capture: 0.5
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** weaker loops and domains everywhere, with the same positions.
+
+**Watch out:** complete cohesin loss (`separation` with no cohesin at all)
+isn't expressible yet; very large values (e.g. 5000) approach it.
+
+## Weaker CTCF stalling (partial CTCF depletion)
+
+**Models:** less CTCF bound at every site (a partial knockdown, or a mutant
+that holds cohesin less well), without data on which sites are lost.
+
+```yaml
+  - name:         ctcf-weak_0.25
+    params_name:  ctcf_025
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.25
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** weaker dots and boundaries, and more cohesin reading through
+sites to the next convergent pair.
+
+**Watch out:** this weakens every site equally. If you have CTCF data from the
+perturbed cells, the next recipe is more faithful.
+
+## CTCF degradation, with data
+
+**Models:** a CTCF degron (auxin or dTAG) or any treatment where you profiled
+CTCF. The sites themselves come from the perturbed sample.
+
+Add the perturbed sample to the samplesheet (its Hi-C is optional):
+
+```
+Project  Cell_Type  Condition    CTCF_Peaks                              Hi-C
+MyProj   mESC       untreated    /proj/yourlab/ctcf/untreated.narrowPeak    /proj/yourlab/hic/untreated.mcool
+MyProj   mESC       ctcf_degron  /proj/yourlab/ctcf/auxin_6h.narrowPeak     /proj/yourlab/hic/auxin_6h.mcool
+```
+
+Then one condition per sample, identical except for the CTCF they use:
+
+```yaml
+  - name:         untreated
+    params_name:  untreated
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    untreated
+    compare_hic:  untreated
+
+  - name:         ctcf-degron
+    params_name:  degron
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    ctcf_degron
+    compare_hic:  ctcf_degron
+```
+
+**Expect:** loops lost where the degron removes CTCF from an anchor; this is
+the same design as the sorbitol `cond2_ctcf-only` condition.
+
+**Watch out:** names, paths and assemblies must agree; run
+`bash check_inputs.sh` after adding the samples.
+
+## Stalled cohesin lives longer (or not)
+
+**Models:** how much CTCF stabilizes cohesin once both legs are stalled
+(`life_boost_stalled`, default 4 from the `polysim:` block). `1` means no
+stabilization.
+
+```yaml
+  - name:         no-stall-boost
+    params_name:  boost_1
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    life_boost_stalled: 1
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** with `1`, weaker dots at convergent pairs, since loops there come
+apart as fast as anywhere else; with larger values, stronger dots.
+
+## Slower extrusion
+
+**Models:** cohesin stepping more slowly, e.g. under reduced ATP, or a
+mutant motor.
+
+```yaml
+  - name:         slow-extrusion
+    params_name:  slow
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    vlef:         0.00125
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** with the same `lifetime`, half the processivity (≈ 95 kb per
+leg), so shorter loops and fewer distant dots.
+
+**Watch out:** `vlef` and `lifetime` trade off (processivity is their
+product). To change speed but not loop size, change both: `vlef: 0.00125`
+with `lifetime: 150000`.
+
+## A robustness range
+
+Before trusting a conclusion, check it holds over a few cohesin settings,
+for every condition you compare. For example, three lifetimes for the
+control–treated pair from the sorbitol example (6 conditions):
+
+```yaml
+  - {name: ctl_life-0.5x, params_name: ctl_l05, lifetime: 37500,  separation: 240, ctcf_capture: 0.5, ctcf_type: condition1, compare_hic: condition1}
+  - {name: ctl_life-1x,   params_name: ctl_l1,  lifetime: 75000,  separation: 240, ctcf_capture: 0.5, ctcf_type: condition1, compare_hic: condition1}
+  - {name: ctl_life-2x,   params_name: ctl_l2,  lifetime: 150000, separation: 240, ctcf_capture: 0.5, ctcf_type: condition1, compare_hic: condition1}
+  - {name: trt_life-0.5x, params_name: trt_l05, lifetime: 37500,  separation: 240, ctcf_capture: 0.5, ctcf_type: condition2, compare_hic: condition2}
+  - {name: trt_life-1x,   params_name: trt_l1,  lifetime: 75000,  separation: 240, ctcf_capture: 0.5, ctcf_type: condition2, compare_hic: condition2}
+  - {name: trt_life-2x,   params_name: trt_l2,  lifetime: 150000, separation: 240, ctcf_capture: 0.5, ctcf_type: condition2, compare_hic: condition2}
+```
+
+This is YAML's one-line form of the same entries: each `{...}` is one
+condition. If the control-vs-treated conclusion (e.g. "CTCF explains the lost
+loops") holds at all three lifetimes, it doesn't depend on that choice.
+
+## Simulating without Hi-C
+
+A sample with CTCF peaks but no Hi-C (`NA` in the samplesheet) can still be
+simulated: leave `compare_hic` out of its condition. You get the simulated
+maps, P(s), insulation and APA, without the comparison metrics. This is how to
+make a prediction for a condition you haven't measured yet.
+
+```yaml
+  - name:         prediction_noHiC
+    params_name:  pred
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    my_ctcf_only_sample
+```

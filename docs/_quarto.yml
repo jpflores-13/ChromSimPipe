@@ -16,6 +16,7 @@ book:
     - vignette.qmd
     - setup.qmd
     - running.qmd
+    - recipes.qmd
     - part: "Under the Hood"
       chapters:
         - configuration.qmd

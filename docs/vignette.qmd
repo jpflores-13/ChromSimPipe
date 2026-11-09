@@ -557,6 +557,11 @@ Three rules make a condition a clean test:
 3. **Count the cost.** Each new condition adds `n_replicates × n_shards`
    GPU jobs per locus (6 with the shipped settings).
 
+[Perturbation recipes](recipes.qmd) has ready-made conditions for common
+experiments: WAPL loss, cohesin depletion, weaker CTCF, a CTCF degron with
+data, CTCF-stabilized cohesin, slower extrusion, a robustness range, and
+simulating without Hi-C.
+
 ::: {.callout-tip}
 ### Check conclusions over a few cohesin lifetimes
 

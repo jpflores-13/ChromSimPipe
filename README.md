@@ -128,7 +128,8 @@ and a config, then `sbatch` one launcher.
 
 3. Edit `config/ChromSimConfig.yaml` (`loci:` for where to simulate, with
    coordinates as whole numbers in bp on the 1 kb grid; `conditions:` for
-   what to compare; see `docs/configuration.qmd` for choosing windows).
+   what to compare; see `docs/configuration.qmd` for choosing windows, and
+   `docs/recipes.qmd` for ready-made perturbation conditions).
    `fileNamesFrom` lists the samplesheet
    columns joined to name each sample; conditions refer to samples by that
    name:

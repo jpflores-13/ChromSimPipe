@@ -276,6 +276,9 @@ conditions:
     compare_hic:  condition2
 ```
 
+Ready-made conditions for common perturbations (WAPL loss, cohesin
+depletion, CTCF degrons, ...) are in [Perturbation recipes](recipes.qmd).
+
 To add a condition, add an entry with a unique `name`. Its `ctcf_type` must
 name a samplesheet sample with `CTCF_Peaks`, and its `compare_hic` a sample
 with `Hi-C`. Snakemake picks new conditions up automatically.
