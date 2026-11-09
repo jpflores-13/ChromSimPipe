@@ -13,6 +13,7 @@ book:
 
   chapters:
     - index.qmd
+    - vignette.qmd
     - setup.qmd
     - running.qmd
     - part: "Under the Hood"
