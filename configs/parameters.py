@@ -87,14 +87,44 @@ if _loci_cfg is None and "locus" in _cfg:
 if not _loci_cfg:
     raise ValueError(f"No loci in {CONFIG_PATH}: add a `loci:` list.")
 
+def _chrom_sizes(fasta):
+    """Chromosome lengths from the genome's samtools index, if it exists yet
+    (orientCTCF creates it on first use, before any GPU job)."""
+    fai = f"{fasta}.fai"
+    if not _os.path.isfile(fai):
+        return {}
+    with open(fai) as f:
+        return {r[0]: int(r[1]) for r in (line.split("\t") for line in f) if len(r) > 1}
+
+
+_CHROM_SIZES = _chrom_sizes(GENOME)
+
 LOCI = {}
 for _l in _loci_cfg:
     _name = str(_l["name"])
     if _name in LOCI or "/" in _name:
         raise ValueError(f"Locus names must be unique and contain no '/': {_name!r}")
-    _start, _end = int(_l["region_start"]), int(_l["region_end"])
-    if (_end - _start) % RESOLUTION:
-        raise ValueError(f"Locus {_name}: region length must be a multiple of resolution ({RESOLUTION})")
+    try:
+        _start, _end = int(_l["region_start"]), int(_l["region_end"])
+    except (TypeError, ValueError):
+        raise ValueError(f"Locus {_name}: region_start and region_end must be whole numbers "
+                         f"in bp (e.g. 64210000, not 64.21Mb or 64,210,000)") from None
+    if _start < 0 or _end <= _start:
+        raise ValueError(f"Locus {_name}: need 0 <= region_start < region_end (got {_start}-{_end})")
+    if _start % RESOLUTION or _end % RESOLUTION:
+        raise ValueError(
+            f"Locus {_name}: region_start and region_end must be multiples of resolution "
+            f"({RESOLUTION} bp) so each simulated monomer lines up with one Hi-C bin; "
+            f"e.g. {_start // RESOLUTION * RESOLUTION}-{-(-_end // RESOLUTION) * RESOLUTION}")
+    _chrom = str(_l["chrom"])
+    if _CHROM_SIZES:
+        if _chrom not in _CHROM_SIZES:
+            raise ValueError(f"Locus {_name}: chromosome {_chrom!r} is not in {GENOME} "
+                             f"(it has e.g. {list(_CHROM_SIZES)[:3]}); names must match exactly")
+        if _end > _CHROM_SIZES[_chrom]:
+            raise ValueError(f"Locus {_name}: region_end {_end} is past the end of {_chrom} "
+                             f"({_CHROM_SIZES[_chrom]} bp); use at most "
+                             f"{_CHROM_SIZES[_chrom] // RESOLUTION * RESOLUTION}")
     LOCI[_name] = dict(
         chrom        = str(_l["chrom"]),
         region_start = _start,

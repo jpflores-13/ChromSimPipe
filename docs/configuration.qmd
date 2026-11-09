@@ -104,6 +104,71 @@ The workflow passes each job its locus as `$CHROMSIM_LOCUS`, and
 first locus). Each locus is tiled on its own: copies of `locus monomers + 2 ×
 tiling.padding` monomers, as many as fit in `tiling.chain_size`.
 
+```yaml
+loci:
+  - name:         chr1_fig1
+    chrom:        chr1
+    region_start: 64210000
+    region_end:   66170000
+    label:        "chr1 Fig1 gained+lost (JAK1/AK4/LEPR locus)"   # optional
+    anchor_bp:    65190000                                       # optional
+```
+
+| Field | Format | Notes |
+|-------|--------|-------|
+| `name` | text, no spaces or `/`, unique | becomes the folder `output/loci/<name>/` |
+| `chrom` | exactly as in your peaks, Hi-C and genome | `chr2` and `2` are different chromosomes |
+| `region_start`, `region_end` | whole numbers in bp: `64210000` | not `64.21Mb`, `64,210,000` or `10kb` |
+| `label` | free text | used in figure titles |
+| `anchor_bp` | whole number in bp | picks CTCF pairs for the optional MSD analysis; default the window centre |
+
+### Rules the pipeline checks
+
+`configs/parameters.py` checks every locus when the workflow starts, and
+again in each job, and stops with a message naming the locus if:
+
+- a coordinate is not a whole number (`64.21Mb`);
+- `region_start` is below 0 or not below `region_end`;
+- `region_start` or `region_end` is not a multiple of `resolution` (1,000 bp
+  by default). Each monomer is one `resolution`-sized bin, and Hi-C bins
+  start at 0, 1000, 2000, ... A window starting at `64210500` would sit half
+  a bin off the Hi-C; the message suggests the nearest aligned window;
+- once the genome index (`<genome>.fai`, made by the first `orientCTCF`
+  job) exists: `chrom` is not in the genome, or `region_end` is past the end
+  of the chromosome. The message gives the largest allowed end (the
+  chromosome length rounded down to `resolution`).
+
+### Choosing a window
+
+The window is the stretch of genome that is simulated. Put the loop of
+interest in the middle, with room on both sides for the CTCF sites around
+it: cohesin that slides past a site keeps extruding until the next one, so
+sites outside a tight window still shape the loop.
+
+A simple recipe:
+
+1. From the loop's anchors `a` (left) and `b` (right), take a flank
+   `f = max(250 kb, (b - a) / 2)`.
+2. `region_start = a - f` and `region_end = b + f`, each rounded outward to
+   a whole kb (start down, end up).
+3. Windows of 1–2 Mb are typical. Larger windows are fine but fit fewer
+   copies on the tiled chain, so each GPU job gives fewer contacts per
+   copy.
+
+For a loop at chr1:64.96–65.41 Mb (450 kb): `f` = 250 kb, so the window is
+64,710,000–65,660,000. The shipped `chr1_fig1` uses a wider 64,210,000–66,170,000.
+
+**Near the start or end of a chromosome.** A window cannot extend past
+either end. For a loop near the start, such as chr2:100,000–400,000, start
+the window at 0 and extend it to the right instead: `region_start: 0`,
+`region_end: 1000000`. The simulated chain then simply ends at the window's
+edge, as the chromosome does. Near the end, use at most the chromosome
+length rounded down to `resolution` (the check above prints it). Two
+cautions for such loops: the first and last few kb of many chromosomes are
+unsequenced (N) gaps, and Hi-C coverage and CTCF peak calls are often
+sparse in subtelomeric regions, so both the data and the comparison are less
+reliable there.
+
 ## Paths and environment variables
 
 Relative paths in the config and samplesheet (`samplesheet`, `genome`,
@@ -167,6 +232,21 @@ positions, orientations = get_tiled_ctcf_arrays("condition1")  # repeated per ti
 ```
 
 ## Simulation conditions
+
+`loci:` says **where** to simulate; `conditions:` says **what** to simulate
+there. Each condition is one scenario: cohesin settings (`lifetime`,
+`separation`, `ctcf_capture`), the sample whose CTCF peaks give the stall
+sites (`ctcf_type`), and the sample whose Hi-C the result is compared with
+(`compare_hic`, optional). Every condition runs at every locus, costing
+`n_replicates × n_shards` GPU jobs per locus (6 with the shipped settings).
+
+Treat each condition as an experiment and compare pairs that differ in one
+thing. The shipped set asks: does the model reproduce the control Hi-C
+(control CTCF)? Do the treated sample's CTCF changes alone explain its Hi-C
+(treated CTCF, same cohesin)? Does weaker stalling fit better? A minimal
+two-sample project needs only the first two. To test a non-CTCF mechanism,
+add a condition that keeps the treated CTCF and changes one cohesin setting,
+for example a longer `lifetime`.
 
 Conditions are defined in the `conditions:` list of
 `config/ChromSimConfig.yaml`; `configs/parameters.py` reads them at import

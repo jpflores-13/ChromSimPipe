@@ -75,7 +75,7 @@ Edit `config/ChromSimConfig.yaml`. The fields most runs change:
 | `outputDir` | Where every output goes (default `output`; a relative path goes under `$CHROMSIM_OUTPUT_ROOT` if set) |
 | `genome`, `genome_assembly` | FASTA for FIMO and its assembly name |
 | `ctcf_motif` | JASPAR motif ID (or a local MEME file), FIMO threshold, flank, what to do with unoriented peaks |
-| `loci` | Simulated windows (one or more) |
+| `loci` | Simulated windows (one or more): whole-number bp coordinates on the `resolution` grid; see [choosing a window](configuration.qmd#choosing-a-window) |
 | `tiling` | Spacer per copy (`padding`) and chain length (`chain_size`); copies per locus are worked out |
 | `polysim` | Simulation model settings (bootcamp defaults) |
 | `conditions` | One entry per simulation; `ctcf_type` / `compare_hic` name samples |
@@ -154,5 +154,7 @@ See [Running](running.qmd#test-run-first).
 | `Samplesheet ... has no 'CTCF_Peaks' column` | Header typo, or spaces instead of tabs | Use tabs and the exact headers `CTCF_Peaks`, `Hi-C` |
 | `Duplicate sample name` | `fileNamesFrom` columns don't tell rows apart | Add a column to `fileNamesFrom` |
 | `Condition ctcf_type '...' has no CTCF_Peaks` | Condition names a sample that isn't in the samplesheet | Check sample names against `output/{runName}_ChromSimSamplesheet.txt` |
-| `region length must be a multiple of resolution` | A locus window that does not divide into whole monomers | Round `region_start` / `region_end` to the `resolution` |
+| `must be multiples of resolution` | A locus window off the 1 kb grid | Use the aligned window the message suggests |
+| `region_end ... is past the end of` | A locus window beyond the chromosome's end | Use at most the end the message gives |
+| `chromosome ... is not in` | `chrom` is named differently from the genome (`chr2` vs `2`) | Match the genome's chromosome names |
 | `Error running conda info` | conda not on `PATH` | Fix the conda line in `profiles/<site>/env.sh` |

@@ -63,3 +63,39 @@ def test_each_locus_has_its_own_folders_but_shares_hic(tmp_path):
 def test_unknown_locus_is_rejected(tmp_path):
     res = _load(_config(tmp_path), "nope")
     assert res.returncode != 0 and "not one of the config's loci" in res.stderr
+
+
+def _config_with(tmp_path, locus, genome=None):
+    cfg = yaml.safe_load((ROOT / "config" / "ChromSimConfig.yaml").read_text())
+    cfg["loci"] = [locus]
+    if genome:
+        cfg["genome"] = str(genome)
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml.safe_dump(cfg))
+    return path
+
+
+def test_window_at_chromosome_start_is_accepted(tmp_path):
+    res = _load(_config_with(tmp_path, dict(name="tel", chrom="chr2", region_start=0,
+                                            region_end=1_000_000)))
+    assert res.returncode == 0 and json.loads(res.stdout)["n"] == 1000
+
+
+def test_window_off_the_resolution_grid_is_rejected(tmp_path):
+    res = _load(_config_with(tmp_path, dict(name="off", chrom="chr1", region_start=64_210_500,
+                                            region_end=65_210_500)))
+    assert res.returncode != 0 and "multiples of resolution" in res.stderr
+
+
+def test_coordinates_with_units_are_rejected(tmp_path):
+    res = _load(_config_with(tmp_path, dict(name="mb", chrom="chr1", region_start="64.21Mb",
+                                            region_end="65.21Mb")))
+    assert res.returncode != 0 and "whole numbers" in res.stderr
+
+
+def test_window_past_chromosome_end_is_rejected(tmp_path):
+    genome = tmp_path / "genome.fa"
+    (tmp_path / "genome.fa.fai").write_text("chr1\t248956422\t6\t60\t61\n")
+    res = _load(_config_with(tmp_path, dict(name="end", chrom="chr1", region_start=248_500_000,
+                                            region_end=249_000_000), genome))
+    assert res.returncode != 0 and "past the end of chr1" in res.stderr and "248956000" in res.stderr

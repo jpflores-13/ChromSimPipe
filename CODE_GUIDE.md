@@ -331,7 +331,10 @@ unchanged when config values change.
   `REGION_END`, `RESOLUTION`, `N_MONOMERS`). `LOCI` holds every entry of the
   `loci:` list; the other names describe the active locus
   (`$CHROMSIM_LOCUS`, else the first). For the included STRS example: hg38,
-  chr1:64,210,000–66,170,000 → 1,960 monomers at 1 kb/monomer.
+  chr1:64,210,000–66,170,000 → 1,960 monomers at 1 kb/monomer. Each locus is
+  checked on import: unique names without `/`, whole-number coordinates with
+  0 ≤ start < end, both ends on the `resolution` grid, and, once
+  `<genome>.fai` exists, a chromosome the genome has and an end within it.
 
 - **Samples and outputs** (`SAMPLES`, `RUN_NAME`, `OUTPUT_ROOT`,
   `OUTPUT_DIR`, `PATHS`, `GENOME`). Sample names, metadata and input files

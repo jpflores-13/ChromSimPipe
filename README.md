@@ -126,7 +126,10 @@ and a config, then `sbatch` one launcher.
    cluster; with a single cluster, full paths are simpler. See
    [Input data](#input-data).
 
-3. Edit `config/ChromSimConfig.yaml`. `fileNamesFrom` lists the samplesheet
+3. Edit `config/ChromSimConfig.yaml` (`loci:` for where to simulate, with
+   coordinates as whole numbers in bp on the 1 kb grid; `conditions:` for
+   what to compare; see `docs/configuration.qmd` for choosing windows).
+   `fileNamesFrom` lists the samplesheet
    columns joined to name each sample; conditions refer to samples by that
    name:
 
@@ -411,6 +414,7 @@ count are worked out per locus from `tiling.padding` and `tiling.chain_size`.
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
+| `Locus ...: region_start and region_end must be multiples of resolution` / `is past the end of` / `chromosome ... is not in` | A `loci:` window off the 1 kb grid, beyond the chromosome, or with a chromosome name the genome doesn't use | Use the window the message suggests; match the genome's chromosome names (`docs/configuration.qmd`, "Choosing a window") |
 | `Error running conda info` | conda not on `PATH` | Fix the conda line in `profiles/<site>/env.sh` |
 | `CUDA not available` | GPU job on wrong partition | Check `simulateShard` under `set-resources:` in `profiles/<site>/config.yaml` |
 | `polysim cannot be imported`, or `preparePolysim` fails | Sim env built before polysim was added, or no C compiler | Rebuild the `condaEnvs.sim` environment (it now includes polysim and `c-compiler`); read `<outputDir>/logs/preparePolysim.err` |

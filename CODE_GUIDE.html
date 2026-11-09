@@ -705,7 +705,11 @@ downstream scripts stay unchanged when config values change.</p>
 holds every entry of the <code>loci:</code> list; the other names
 describe the active locus (<code>$CHROMSIM_LOCUS</code>, else the
 first). For the included STRS example: hg38, chr1:64,210,000–66,170,000
-→ 1,960 monomers at 1 kb/monomer.</p></li>
+→ 1,960 monomers at 1 kb/monomer. Each locus is checked on import:
+unique names without <code>/</code>, whole-number coordinates with 0 ≤
+start &lt; end, both ends on the <code>resolution</code> grid, and, once
+<code>&lt;genome&gt;.fai</code> exists, a chromosome the genome has and
+an end within it.</p></li>
 <li><p><strong>Samples and outputs</strong> (<code>SAMPLES</code>,
 <code>RUN_NAME</code>, <code>OUTPUT_ROOT</code>,
 <code>OUTPUT_DIR</code>, <code>PATHS</code>, <code>GENOME</code>).

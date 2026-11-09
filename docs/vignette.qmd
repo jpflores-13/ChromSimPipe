@@ -433,8 +433,12 @@ loci:
 - `name` becomes the folder name `output/loci/chr1_fig1/`, so keep it short
   and free of spaces and slashes.
 - `chrom`, `region_start`, `region_end` define the window (1.96 Mb here).
-  Both ends must be multiples of `resolution`; at 1 kb per monomer this
-  window is a chain of 1,960 monomers.
+  Write coordinates as whole numbers in bp (`64210000`, not `64.21Mb` or
+  `64,210,000`), and `chrom` exactly as in your peak, Hi-C and genome files
+  (`chr1` vs `1` matters). Both ends must be multiples of `resolution`
+  (end in `000` at 1 kb), so each monomer lines up with one Hi-C bin; at 1 kb
+  per monomer this window is a chain of 1,960 monomers. The pipeline stops
+  with a clear message if any of this is off.
 - `label` is free text for figures.
 - `anchor_bp` is only used to pick CTCF pairs for the optional MSD analysis
   (`analysis.msd`, off by default).
@@ -455,6 +459,14 @@ still matter. The shipped windows are about 2 Mb. Behind the scenes each
 window is copied many times along one long chain (`tiling:`, 28 copies for
 the chr1 window), which multiplies the contact statistics per GPU job at no
 extra cost.
+
+A recipe: take a flank of at least 250 kb, or half the loop size if that is
+larger, on each side of the loop's anchors, and round the start down and the
+end up to a whole kb. **Near a chromosome end**, the window cannot extend
+past it: for a loop at chr2:100,000–400,000, use `region_start: 0` and
+`region_end: 1000000`, putting the extra room on the other side. See
+[Configuration: choosing a window](configuration.qmd#choosing-a-window) for
+the full rules.
 :::
 
 ### `conditions`: what to test
