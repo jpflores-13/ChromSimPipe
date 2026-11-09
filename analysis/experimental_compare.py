@@ -62,12 +62,23 @@ def resolve_balance(clr, balance):
     cooler ``balance`` argument for ``clr``: False for raw counts, or the
     bins column holding normalization weights. ``True`` means cooler's
     default ``weight`` (ICE); a string names a column such as ``KR``, which
-    hic2cool writes for Juicer normalizations. Raises if it is missing.
+    hic2cool writes for Juicer normalizations; ``"auto"`` takes ``KR`` if the
+    file has it (a converted .hic), else ``weight`` (a balanced .mcool/.cool).
+    Raises if the column is missing.
     """
     if balance is False or balance is None:
         return False
-    column = "weight" if balance is True else str(balance)
     available = [c for c in clr.bins().columns if c not in ("chrom", "start", "end")]
+    if str(balance).lower() == "auto":
+        for column in ("KR", "weight"):
+            if column in available:
+                return column
+        raise ValueError(
+            f"hic_balance 'auto' found neither KR nor weight in {clr.uri}; available: "
+            f"{available}. Set analysis.hic_balance to one of them, or False for raw counts "
+            "(or balance the file with `cooler balance`)."
+        )
+    column = "weight" if balance is True else str(balance)
     if column not in available:
         raise ValueError(
             f"no '{column}' normalization in {clr.uri}; available: {available}. "

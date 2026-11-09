@@ -6,7 +6,8 @@
 - `python3` ≥ 3.11 and `conda` ≥ 24.7.1 (loaded by your site's `profiles/<site>/env.sh`;
   on Longleaf and Pioneer, a one-time Miniforge install; see
   [Cluster Reference](cluster.qmd#conda-version))
-- CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) and `.hic` maps for your samples
+- CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) for your samples, and optionally
+  their Hi-C maps (`.hic`, `.mcool` or `.cool`)
 - A genome FASTA with the same chromosome names as the peaks
 
 There is no separate setup script: converting Hi-C, orienting CTCF sites,
@@ -20,7 +21,7 @@ Two columns are required; the rest are free-form metadata:
 | Column | Contents |
 |--------|----------|
 | `CTCF_Peaks` | CTCF peak file (narrowPeak/BED), or `NA` |
-| `Hi-C` | `.hic` map to compare simulations against, or `NA` |
+| `Hi-C` | Hi-C map to compare simulations against (`.hic`, `.mcool` or `.cool`), or `NA` |
 | anything else | metadata (`Project`, `Cell_Type`, `Condition`, ...) |
 
 ```
@@ -29,18 +30,26 @@ STRS     HEK293T    condition1  data/control.narrowPeak   data/control.hic
 STRS     HEK293T    condition2  data/sorbitol.narrowPeak  data/sorbitol.hic
 ```
 
-Relative paths resolve against the repo root; absolute paths also work.
-Using `data/<file>` lets one samplesheet serve every cluster: each cluster
-links its own copies into `data/` (next section).
+Paths can be absolute or relative to the repo root. Using `data/<file>`
+lets one samplesheet serve every cluster: each cluster links its own copies
+into `data/` (next section). On a single cluster, absolute paths are simpler
+and no linking is needed.
+
+**Hi-C formats.** `.hic` is converted with `hic2cool`; from an `.mcool` the
+`resolution` set in the config (1 kb by default) is copied out, so the file
+must contain it; a `.cool` must already be binned at `resolution`. Without
+Hi-C, write `NA` and leave `compare_hic` out of the conditions: the
+simulations run as usual, without the comparison.
 
 `fileNamesFrom` in the config lists the columns joined with `_` to name each
 sample (the bagPipes convention). With `fileNamesFrom: ['Condition']` the
 samples above are `condition1` and `condition2`.
 
-### Linking the input files
+### Linking the input files (optional)
 
-On each cluster, link the files named in the samplesheet, and the genome
-FASTA named by `genome`, into `data/` once, from the repo root:
+Only needed when the samplesheet uses `data/<file>` paths. On each cluster,
+link the files named in the samplesheet, and the genome FASTA named by
+`genome`, into `data/` once, from the repo root:
 
 ```bash
 SRC=/path/to/this/clusters/data

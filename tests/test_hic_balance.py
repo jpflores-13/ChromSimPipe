@@ -36,6 +36,19 @@ def test_missing_weight_column_names_the_alternatives():
         exp.resolve_balance(_Cooler(HIC2COOL_COLUMNS), True)
 
 
+def test_auto_prefers_kr_from_hic2cool():
+    assert exp.resolve_balance(_Cooler(HIC2COOL_COLUMNS), "auto") == "KR"
+
+
+def test_auto_uses_weight_from_balanced_mcool():
+    assert exp.resolve_balance(_Cooler(["chrom", "start", "end", "weight"]), "auto") == "weight"
+
+
+def test_auto_without_kr_or_weight_raises():
+    with pytest.raises(ValueError, match="auto"):
+        exp.resolve_balance(_Cooler(["chrom", "start", "end", "VC"]), "auto")
+
+
 def test_unknown_colormap_falls_back():
     pytest.importorskip("matplotlib")
     assert exp._resolve_cmap("viridis") == "viridis"

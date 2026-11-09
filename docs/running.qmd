@@ -24,7 +24,7 @@ getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF
 
 | Rule | What it does |
 |------|--------------|
-| `convertHic` | `hic2cool convert` `.hic` → `.cool` at `resolution` |
+| `convertHic` | `.hic` (hic2cool), `.mcool` or `.cool` → one `.cool` at `resolution` |
 | `getMotif` | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | FIMO motif strand → oriented CTCF BED for the locus |
 | `validateCTCF` | Checks every BED parses and maps onto the polymer |
@@ -142,10 +142,11 @@ squeue -u $USER
 | `CUDA_ERROR_UNSUPPORTED_PTX_VERSION` | The env's CUDA is newer than the node's driver supports (`nvidia-smi` shows the limit); lower `cuda-version` and rebuild |
 | `analyzeCondition` ends in `TIMEOUT` | Raise `analyzeCondition: runtime:` in `profiles/<site>/config.yaml` (default 1440 min), then `bash unlock.sh` and resubmit |
 | `convertHic` ends in `TIMEOUT` | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` |
-| `no 'KR' normalization in ...cool` | Set `analysis.hic_balance` to a column it lists, or `False` |
+| `no 'KR' normalization in ...cool` | Set `analysis.hic_balance` to `auto` or a column it lists, or `False` |
+| `convertHic`: `has no 1000 bp resolution` | The `.mcool` lacks the config's `resolution`; use one that has it |
 | No emails arrive | Test `echo test \| mail -s test $CHROMSIM_EMAIL`; change `notify: command:` |
 | Launcher job `OUT_OF_MEMORY` on the first run | Build the conda environments once on a compute node (`srun ... --mem=16g --pty bash`, then `bash ChromSimPipe.sh --conda-create-envs-only`) |
-| `MissingInputException` naming a `data/...` file | Link that file into `data/` on this cluster; `ls -lL data/` shows broken links |
+| `MissingInputException` naming a `data/...` file | Link that file into `data/` on this cluster, or use its absolute path in the samplesheet; `ls -lL data/` shows broken links |
 | Output in the repo folder instead of scratch, or jobs on the wrong cluster's partitions | `CHROMSIM_OUTPUT_ROOT` / `CHROMSIM_PROFILE` not set in the shell that ran `sbatch`; `source ~/.bashrc` and resubmit |
 | A job failed | Read `<outputDir>/logs/{locus}/{rule}_{wildcards}.err` |
 | Parameter changed but nothing reruns | Snakemake tracks the files in `<outputDir>/loci/{locus}/done/`; delete the markers for the steps to redo |

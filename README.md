@@ -92,7 +92,8 @@ shared. Tiling is worked out per locus from `tiling.padding` and
 - `python3` ≥ 3.11 and `conda` ≥ 24.7.1 (loaded by your site's `profiles/<site>/env.sh`;
   on Longleaf and Pioneer, a one-time Miniforge install in `$HOME/miniforge3`:
   see `profiles/longleaf/env.sh`)
-- CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) and `.hic` maps for your samples
+- CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) for your samples, and optionally
+  their Hi-C maps (`.hic`, `.mcool` or `.cool`) to compare the simulations with
 - A genome FASTA with the same chromosome names as the peaks
 
 ## Quickstart
@@ -110,8 +111,8 @@ and a config, then `sbatch` one launcher.
     ```
 
 2. Edit the tab-separated `ChromSimSamplesheet.txt`. Each row is one
-   experimental sample. `CTCF_Peaks` (narrowPeak/BED) and `Hi-C` (`.hic`)
-   are required columns (write `NA` if a sample has no file of that kind);
+   experimental sample. `CTCF_Peaks` (narrowPeak/BED) and `Hi-C` (`.hic`,
+   `.mcool` or `.cool`) are required columns (write `NA` if a sample has no file of that kind);
    every other column is metadata:
 
     | Project | Cell_Type | Condition  | CTCF_Peaks                | Hi-C                 |
@@ -119,10 +120,11 @@ and a config, then `sbatch` one launcher.
     | STRS    | HEK293T   | condition1 | data/control.narrowPeak   | data/control.hic     |
     | STRS    | HEK293T   | condition2 | data/sorbitol.narrowPeak  | data/sorbitol.hic    |
 
-   Relative paths resolve against the repo root, so one samplesheet works on
-   every cluster. Link each cluster's copies of the files (and the genome
-   FASTA) into `data/` once; see [Input data](#input-data). Absolute paths
-   also work.
+   Paths can be absolute (`/proj/lab/ctcf/control.narrowPeak`) or relative
+   to the repo root. The shipped samplesheet uses `data/<file>` with each
+   cluster's copies linked into `data/`, so one samplesheet works on every
+   cluster; with a single cluster, full paths are simpler. See
+   [Input data](#input-data).
 
 3. Edit `config/ChromSimConfig.yaml`. `fileNamesFrom` lists the samplesheet
    columns joined to name each sample; conditions refer to samples by that
@@ -159,9 +161,12 @@ and a config, then `sbatch` one launcher.
 
 ### Input data
 
-The shipped samplesheet and config name their inputs as `data/<file>`. On
-each cluster, link that cluster's copies into `data/` once, from the repo
-root:
+Linking is optional. The samplesheet and `genome` take absolute paths, so
+on one cluster you can point straight at your files and skip this section.
+
+The shipped samplesheet and config name their inputs as `data/<file>`, so
+the same files work on several clusters. To use them that way, link each
+cluster's copies into `data/` once, from the repo root:
 
 ```bash
 SRC=/path/to/this/clusters/data
@@ -175,6 +180,13 @@ ls -lL data/
 
 Links take no space, and everything in `data/` except its README is
 git-ignored. [`data/README.md`](data/README.md) has the details.
+
+**Hi-C formats.** The `Hi-C` column takes `.hic` (converted with
+`hic2cool`), `.mcool` (the `resolution` in the config, 1 kb by default, is
+copied out of it) or `.cool` (must already be at `resolution`). Each becomes
+`<outputDir>/mcool/<sample>.cool`. Balanced `.mcool`/`.cool` files carry a
+`weight` column and converted `.hic` files carry `KR`;
+`analysis.hic_balance: auto` (the default) picks whichever is there.
 
 ### Dry run first
 
@@ -243,7 +255,7 @@ sbatch ChromSimPipe.sh       # --rerun-incomplete is on by default
 
 | Rule | Jobs (default config) | What it does |
 |------|-----------------------|--------------|
-| `convertHic` | 1 per Hi-C sample (2) | `hic2cool convert` `.hic` → `.cool` at `resolution` |
+| `convertHic` | 1 per Hi-C sample (2) | `.hic` (hic2cool), `.mcool` or `.cool` → one `.cool` at `resolution` |
 | `getMotif` | 1 | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped if `ctcf_motif.meme` is set) |
 | `preparePolysim` | 1 | Builds polysim's Cython cohesin model once |
 | `orientCTCF` | loci × CTCF samples used (2) | FIMO motif strand → oriented CTCF BED for the locus |
@@ -404,7 +416,7 @@ count are worked out per locus from `tiling.padding` and `tiling.chain_size`.
 | `polysim cannot be imported`, or `preparePolysim` fails | Sim env built before polysim was added, or no C compiler | Rebuild the `condaEnvs.sim` environment (it now includes polysim and `c-compiler`); read `<outputDir>/logs/preparePolysim.err` |
 | `polysim needs frames per shard ... multiple of ...` | `frames_per_replicate / n_shards` × `saveevery` is not a multiple of `blocks_per_updater` | Use the frame count the message suggests |
 | Snakemake lock error | Previous run crashed | `bash unlock.sh`, then resubmit |
-| `MissingInputException` naming a `data/...` file | That file is not linked into `data/` on this cluster, or the link is broken | `ls -lL data/`; add or fix the link ([Input data](#input-data)) |
+| `MissingInputException` naming a `data/...` file | That file is not linked into `data/` on this cluster, or the link is broken (or use its absolute path instead) | `ls -lL data/`; add or fix the link ([Input data](#input-data)) |
 | Output appears in the repo folder instead of scratch | `CHROMSIM_OUTPUT_ROOT` not set in the shell that ran `sbatch` | `echo $CHROMSIM_OUTPUT_ROOT`; add the export to `~/.bashrc`, `source ~/.bashrc`, resubmit |
 | Jobs go to the wrong cluster's partitions or account | `CHROMSIM_PROFILE` not set, so the config default (`profiles/longleaf`) was used | `echo $CHROMSIM_PROFILE`; set it in `~/.bashrc` or pass `--profile` |
 | `Samplesheet ... has no 'CTCF_Peaks' column` | Header typo, or not tab-separated | Headers must be tab-separated and include `CTCF_Peaks` and `Hi-C` |
@@ -415,7 +427,7 @@ count are worked out per locus from `tiling.padding` and `tiling.chain_size`.
 | `nvrtc: error: invalid value for --gpu-architecture` | OpenMM built against CUDA 13, which dropped Pascal (GTX 10xx) and Volta (V100) GPUs | `envs/cohesin_sim.yml` pins `cuda-version=12.4`; rebuild the env (`--conda-create-envs-only` on a compute node) |
 | `CUDA_ERROR_UNSUPPORTED_PTX_VERSION` | The env's CUDA is newer than the GPU node's driver supports | Check `nvidia-smi` on a GPU node ("CUDA Version"); `cuda-version` in `envs/cohesin_sim.yml` must not exceed it; rebuild the env |
 | `No module named 'h5py'` (or another package) in a rule | An environment built before the env file listed it, or a different `python` came first on `PATH` | Rules now call `"$CONDA_PREFIX/bin/python"`; rebuild the env if the package is genuinely missing |
-| `no 'KR' normalization in ...cool` | The `.cool` has a different normalization column | Set `analysis.hic_balance` to one it lists (`weight`, `VC`, ...) or `False` for raw counts |
+| `no 'KR' normalization in ...cool` | The `.cool` has a different normalization column | Set `analysis.hic_balance` to `auto` or one it lists (`weight`, `VC`, ...) or `False` for raw counts |
 | `analyzeCondition` ends in `TIMEOUT` | Full runs pool 150,000 frames per condition; on a slow node this can exceed the limit | Raise `analyzeCondition: runtime:` in the profile (default 1440 min), `bash unlock.sh`, resubmit; finished pieces are reused (`--skip-existing`) |
 | `convertHic` ends in `TIMEOUT` | Large `.hic`: a 3.7 GB map takes ~1.6 h | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` (default 480 min) |
 | `UCSC gene fetch failed ... timed out` | Compute nodes have no internet | Harmless: figures are drawn without the gene track |

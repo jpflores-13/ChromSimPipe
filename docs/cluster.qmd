@@ -70,7 +70,7 @@ On Pioneer, inputs and code live in home and compute output goes to scratch:
 
 | What | Where |
 |------|-------|
-| Peaks, `.hic` maps, genome FASTA | a folder in home, linked into `data/` |
+| Peaks, Hi-C maps, genome FASTA | a folder in home, linked into `data/` (or named by absolute path) |
 | The clone (and the conda environments Snakemake builds inside it) | home |
 | Miniforge | `$HOME/miniforge3` |
 | Output (simulations, analysis, logs) | scratch, via `CHROMSIM_OUTPUT_ROOT` |

@@ -53,7 +53,7 @@ Oriented CTCF BED files (output/loci/<locus>/ctcf/)
     ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim
 Simulated conformations (output/loci/<locus>/sims/)
     ↓  analyzeCondition rule → scripts/run_analysis_all.py
-Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertHic rule)
+Comparison figures  ←→  experimental Hi-C (.cool, from .hic/.mcool/.cool via the convertHic rule)
 ```
 
 ### Setup and launch
@@ -218,7 +218,7 @@ dies without cleanup, the lock persists and the next run refuses to start.
 
 | Rule | Runs | What it does |
 |------|------|--------------|
-| `convertHic` | per Hi-C sample | `hic2cool convert` `.hic` → `.cool` at `resolution` |
+| `convertHic` | per Hi-C sample | `scripts/prepare_hic.py`: `.hic` (hic2cool), `.mcool` or `.cool` → one `.cool` at `resolution` |
 | `getMotif` | once | `wget` the JASPAR motif (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | per CTCF sample used by a condition | `extract_ctcf_sites.py` |
 | `validateCTCF` | once | `validate_ctcf.py`: sanity-checks all BED files |
@@ -385,9 +385,17 @@ unchanged when config values change.
 ## 2. Hi-C data preparation
 
 In ChromSimPipe, Hi-C conversion is handled automatically by the `convertHic`
-Snakemake rule: it calls `hic2cool convert` on each `.hic` file in the
+Snakemake rule, which runs `scripts/prepare_hic.py` on each file in the
 samplesheet's `Hi-C` column to produce a single-resolution
-`output/mcool/<sample>.cool` at the configured resolution (default 1 kb).
+`output/mcool/<sample>.cool` at the configured resolution (default 1 kb):
+
+- `.hic`: `hic2cool convert` (Juicer's normalizations become `KR`, `VC`, `VC_SQRT` columns);
+- `.mcool`: the `/resolutions/<resolution>` cooler is copied out; the run stops
+  with the resolutions the file has if `resolution` is not among them;
+- `.cool`: copied after checking its bin size equals `resolution`.
+
+It prints the normalization columns found. `analysis.hic_balance: auto` uses
+`KR` if present, else cooler's `weight`.
 
 The Bonev 2017 mESC/cortical-neuron download scripts and the Sox2
 quick-look plotter from the original lab project now live in `legacy/`
@@ -647,7 +655,7 @@ the GPU node's NVIDIA driver supports. `nvidia-smi` on a GPU node prints
 **No Hi-C comparison in the analysis output.** The analysis catches errors in
 each step, logs a warning and continues, so check
 `output/logs/analyzeCondition_*.err` for `WARNING`. A missing normalization
-column (`no 'KR' normalization`) is fixed with `analysis.hic_balance`.
+column (`no 'KR' normalization`) is fixed with `analysis.hic_balance` (`auto`, or a column it lists).
 
 **Snakemake lock error after a failed run.** Run `bash unlock.sh`, then
 resubmit.
@@ -660,8 +668,9 @@ inserts the repo root onto `sys.path`. Run from the repo root, or set
 must be tab-separated and include the headers `CTCF_Peaks` and `Hi-C`, plus
 every column named in `fileNamesFrom`.
 
-**`hic2cool` fails.** Check the sample's `Hi-C` path in the samplesheet, and
-`output/logs/convertHic_<sample>.err`.
+**`convertHic` fails.** Check the sample's `Hi-C` path and format (`.hic`,
+`.mcool`, `.cool`) in the samplesheet, and `output/logs/convertHic_<sample>.err`
+(an `.mcool` without the config's `resolution` is named there).
 
 **Analysis fails with "No results found".** Check that
 `output/loci/<locus>/sims/merged_*_rep*/` directories exist. If shards completed but the

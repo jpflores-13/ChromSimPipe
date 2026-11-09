@@ -8,11 +8,13 @@
 ## Sample sheet
 ## Tab-separated; one row per experimental sample. Required columns:
 ##   CTCF_Peaks - CTCF peak file (narrowPeak/BED); 'NA' if this sample has none
-##   Hi-C       - .hic map to compare simulations against; 'NA' if none
+##   Hi-C       - Hi-C map to compare simulations against: .hic, .mcool (must
+##                contain the `resolution` below) or .cool; 'NA' if none
 ## Every other column is free-form metadata (Project, Cell_Type, Condition, ...).
-## Relative paths resolve against the repo root. The shipped samplesheet uses
-## data/<file> so it works on every cluster: link each cluster's copies into
-## data/ (see data/README.md).
+## Paths may be absolute, or relative to the repo root. The shipped samplesheet
+## uses data/<file> with each cluster's files linked into data/ (see
+## data/README.md), so one samplesheet works on every cluster; with one cluster,
+## full paths are just as good.
 samplesheet: 'ChromSimSamplesheet.txt'
 
 ## Columns joined with '_' to build each sample's name. Conditions below refer
@@ -214,8 +216,9 @@ analysis:
 
   ## Hi-C normalization used when comparing with experiment: a weights column
   ## in the .cool bins table. hic2cool copies Juicer's as KR, VC, VC_SQRT;
-  ## 'weight' is cooler's ICE; False compares raw counts.
-  hic_balance: KR
+  ## 'weight' is cooler's ICE (what balanced .mcool/.cool files carry);
+  ## 'auto' takes KR if present, else weight; False compares raw counts.
+  hic_balance: auto
 
   ## APA / absolute loop quantification over convergent CTCF pairs
   apa:

@@ -16,7 +16,8 @@ If someone has already set up ChromSimPipe on your cluster and you just want
 a run, these are the five steps. Each one is explained in the sections below.
 
 1. Clone the repository and `cd` into it ([Setup](#one-time-setup)).
-2. Link the input files into `data/` and check them with `ls -lL data/`
+2. Point the samplesheet at your input files: full paths, or links in
+   `data/` checked with `ls -lL data/`
    ([Linking the input files](#link-the-input-files-into-data)).
 3. Set `CHROMSIM_PROFILE` and `CHROMSIM_OUTPUT_ROOT` in `~/.bashrc`
    ([Per-cluster settings](#tell-chromsimpipe-which-cluster-you-are-on)).
@@ -151,7 +152,7 @@ ChromSimPipe wraps that in a Snakemake workflow. Every box below is a
 flowchart TD
   S["ChromSimSamplesheet.txt<br/>(CTCF peaks, Hi-C per sample)"] --> P
   C["config/ChromSimConfig.yaml<br/>(loci, conditions, physics)"] --> P
-  P["configs/parameters.py<br/>(reads both)"] --> HIC["convertHic<br/>.hic → .cool"]
+  P["configs/parameters.py<br/>(reads both)"] --> HIC["convertHic<br/>.hic / .mcool / .cool → .cool"]
   P --> MOT["getMotif<br/>JASPAR MA0139.1"]
   P --> PREP["preparePolysim<br/>build cohesin model once"]
   MOT --> OR["orientCTCF (per locus × sample)<br/>FIMO strand → oriented BED"]
@@ -206,6 +207,11 @@ fine): it is small, and outputs go elsewhere (see
 [below](#tell-chromsimpipe-which-cluster-you-are-on)).
 
 ### Link the input files into `data/`
+
+**Linking is optional.** The samplesheet and `genome:` also take absolute
+paths, such as `/proj/mylab/ctcf/control.narrowPeak`. On a single cluster
+that is simpler: write the full paths and skip this section. Links pay off
+when one samplesheet has to work on several clusters.
 
 The shipped samplesheet names every input file as `data/<file name>`, for
 example `data/STRS_HEK293_eGFP-YAP_CTCF_cont_0h_peaks.narrowPeak`. The real
@@ -352,7 +358,12 @@ experimental sample. The shipped file is:
 
 - `CTCF_Peaks`: the CTCF peak file (narrowPeak or BED) for this sample. The
   summit (narrowPeak column 10) is what FIMO scans around.
-- `Hi-C`: the `.hic` map to compare simulations against.
+- `Hi-C`: the Hi-C map to compare simulations against, as `.hic`, `.mcool`
+  or `.cool`. The `convertHic` step turns each into a single-resolution
+  `.cool` at the config's `resolution`: a `.hic` is converted with
+  `hic2cool`, the matching resolution is copied out of an `.mcool` (so the
+  file must contain 1 kb bins with the default `resolution`), and a `.cool`
+  must already be at that resolution.
 
 Write `NA` (or leave the cell empty) when a sample has no file of that kind,
 for example a CTCF-only sample with no Hi-C. Such a sample can still supply
@@ -432,7 +443,7 @@ To simulate more windows in the same run, add more entries with the same
 keys. Every condition is run at every locus, so each extra locus adds
 `conditions × n_replicates × n_shards` GPU jobs (18 with the shipped
 settings). The Hi-C conversion is shared, so adding loci does not convert the
-`.hic` files again.
+Hi-C files again.
 
 ::: {.callout-tip}
 ### Choosing a window
@@ -570,7 +581,8 @@ and nothing is written except the parsed samplesheet. Run it with `bash`, not
 What to check in the output:
 
 - It finishes without `MissingInputException`. If one appears, it names the
-  `data/...` file it cannot find: fix that link (`ls -lL data/`).
+  `data/...` file it cannot find: fix that link (`ls -lL data/`), or use
+  the file's absolute path in the samplesheet.
 - The "Job stats" table at the end lists one row per rule. For the shipped
   config and one locus, `simulateShard` should be 18
   (3 conditions × 3 replicates × 2 shards), `mergeShards` 9 and
@@ -867,8 +879,9 @@ plotMatrix(hic, use.scores = "count")
 - `import(CoolFile(...), focus = ...)` reads only that window into a
   `HiCExperiment` object, not the whole genome.
 - `plotMatrix(..., use.scores = "count")` draws the raw counts. The pipeline
-  itself compares against the `KR`-normalized map (`analysis.hic_balance` in
-  the config), which `hic2cool` stores as a separate column; for a visual
+  itself compares against a balanced map (`analysis.hic_balance` in the
+  config; `auto` uses `KR`, which `hic2cool` stores as a separate column for
+  a converted `.hic`, else cooler's `weight` from a balanced `.mcool`); for a visual
   side-by-side, raw counts on a log scale are fine.
 
 Finally, the agreement scores for every condition at this locus, collected

@@ -339,7 +339,7 @@ Oriented CTCF BED files (output/loci/&lt;locus&gt;/ctcf/)
     ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim
 Simulated conformations (output/loci/&lt;locus&gt;/sims/)
     ↓  analyzeCondition rule → scripts/run_analysis_all.py
-Comparison figures  ←→  experimental Hi-C (.cool, from .hic via the convertHic rule)</code></pre>
+Comparison figures  ←→  experimental Hi-C (.cool, from .hic/.mcool/.cool via the convertHic rule)</code></pre>
 <h3 id="setup-and-launch">Setup and launch</h3>
 <p>The workflow follows the PhanstielLab Snakemake pattern (bagPipes,
 dietJuicer): edit a samplesheet and a config, then submit one launcher.
@@ -539,8 +539,9 @@ the DAG</h3>
 <tr class="odd">
 <td><code>convertHic</code></td>
 <td>per Hi-C sample</td>
-<td><code>hic2cool convert</code> <code>.hic</code> → <code>.cool</code>
-at <code>resolution</code></td>
+<td><code>scripts/prepare_hic.py</code>: <code>.hic</code> (hic2cool),
+<code>.mcool</code> or <code>.cool</code> → one <code>.cool</code> at
+<code>resolution</code></td>
 </tr>
 <tr class="even">
 <td><code>getMotif</code></td>
@@ -770,11 +771,25 @@ across the tiled polymer (what the simulations actually use).</li>
 </ul>
 <h2 id="hi-c-data-preparation">2. Hi-C data preparation</h2>
 <p>In ChromSimPipe, Hi-C conversion is handled automatically by the
-<code>convertHic</code> Snakemake rule: it calls
-<code>hic2cool convert</code> on each <code>.hic</code> file in the
-samplesheet’s <code>Hi-C</code> column to produce a single-resolution
+<code>convertHic</code> Snakemake rule, which runs
+<code>scripts/prepare_hic.py</code> on each file in the samplesheet’s
+<code>Hi-C</code> column to produce a single-resolution
 <code>output/mcool/&lt;sample&gt;.cool</code> at the configured
-resolution (default 1 kb).</p>
+resolution (default 1 kb):</p>
+<ul>
+<li><code>.hic</code>: <code>hic2cool convert</code> (Juicer’s
+normalizations become <code>KR</code>, <code>VC</code>,
+<code>VC_SQRT</code> columns);</li>
+<li><code>.mcool</code>: the
+<code>/resolutions/&lt;resolution&gt;</code> cooler is copied out; the
+run stops with the resolutions the file has if <code>resolution</code>
+is not among them;</li>
+<li><code>.cool</code>: copied after checking its bin size equals
+<code>resolution</code>.</li>
+</ul>
+<p>It prints the normalization columns found.
+<code>analysis.hic_balance: auto</code> uses <code>KR</code> if present,
+else cooler’s <code>weight</code>.</p>
 <p>The Bonev 2017 mESC/cortical-neuron download scripts and the Sox2
 quick-look plotter from the original lab project now live in
 <code>legacy/</code> (see <code>legacy/README.md</code>); they are not
@@ -1223,7 +1238,8 @@ analysis catches errors in each step, logs a warning and continues, so
 check <code>output/logs/analyzeCondition_*.err</code> for
 <code>WARNING</code>. A missing normalization column
 (<code>no 'KR' normalization</code>) is fixed with
-<code>analysis.hic_balance</code>.</p>
+<code>analysis.hic_balance</code> (<code>auto</code>, or a column it
+lists).</p>
 <p><strong>Snakemake lock error after a failed run.</strong> Run
 <code>bash unlock.sh</code>, then resubmit.</p>
 <p><strong><code>ModuleNotFoundError: configs</code> or
@@ -1234,9 +1250,12 @@ root, or set <code>PYTHONPATH=/path/to/ChromSimPipe</code>.</p>
 <code>ChromSimSamplesheet.txt</code> must be tab-separated and include
 the headers <code>CTCF_Peaks</code> and <code>Hi-C</code>, plus every
 column named in <code>fileNamesFrom</code>.</p>
-<p><strong><code>hic2cool</code> fails.</strong> Check the sample’s
-<code>Hi-C</code> path in the samplesheet, and
-<code>output/logs/convertHic_&lt;sample&gt;.err</code>.</p>
+<p><strong><code>convertHic</code> fails.</strong> Check the sample’s
+<code>Hi-C</code> path and format (<code>.hic</code>,
+<code>.mcool</code>, <code>.cool</code>) in the samplesheet, and
+<code>output/logs/convertHic_&lt;sample&gt;.err</code> (an
+<code>.mcool</code> without the config’s <code>resolution</code> is
+named there).</p>
 <p><strong>Analysis fails with “No results found”.</strong> Check that
 <code>output/loci/&lt;locus&gt;/sims/merged_*_rep*/</code> directories
 exist. If shards completed but the merged directory is missing, delete

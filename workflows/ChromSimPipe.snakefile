@@ -180,7 +180,8 @@ rule convertHic:
     conda: ENV_SIM
     shell:
         """
-        hic2cool convert {input.hic} {output.cool} -r {params.resolution} 1> {log.out} 2> {log.err}
+        "$CONDA_PREFIX/bin/python" scripts/prepare_hic.py --input {input.hic} --output {output.cool} \
+            --resolution {params.resolution} 1> {log.out} 2> {log.err}
         """
 
 

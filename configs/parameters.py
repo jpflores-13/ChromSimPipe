@@ -425,6 +425,11 @@ def get_tiled_ctcf_arrays(condition):
 # Hi-C maps come from the samplesheet's Hi-C column; each is converted to
 # <outputDir>/mcool/<sample>.cool.
 HIC_FILES   = {k: v["hic"] for k, v in SAMPLES.items() if v["hic"]}
+HIC_FORMATS = (".hic", ".mcool", ".cool")
+for _k, _f in HIC_FILES.items():
+    if not _f.lower().endswith(HIC_FORMATS):
+        raise ValueError(f"Hi-C for sample '{_k}' is {_f}; the samplesheet's Hi-C column "
+                         f"takes {', '.join(HIC_FORMATS)} files (or NA).")
 HIC_TYPES   = list(HIC_FILES)
 MCOOL_FILES = {t: _os.path.join(PATHS["mcool"], f"{t}.cool") for t in HIC_TYPES}
 
@@ -450,7 +455,7 @@ _apa = _ana.get("apa", {}) or {}
 ANALYSIS = dict(
     n_jobs = int(_ana.get("n_jobs", 4)),
     msd    = bool(_ana.get("msd", False)),
-    hic_balance = _ana.get("hic_balance", "KR"),
+    hic_balance = _ana.get("hic_balance", "auto"),
     apa    = dict(
         min_size_bins = int(_apa.get("min_size_bins", 20)),
         max_size_bins = int(_apa.get("max_size_bins", 1000)),

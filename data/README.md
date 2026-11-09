@@ -1,6 +1,11 @@
 # data/
 
-Input files for a run: the CTCF peak files and `.hic` maps named in
+Linking files here is optional: the samplesheet and `genome` also take
+absolute paths, which is simpler on a single cluster. Linking pays off when
+one samplesheet serves several clusters.
+
+Input files for a run: the CTCF peak files and Hi-C maps (`.hic`, `.mcool`
+or `.cool`) named in
 `ChromSimSamplesheet.txt`, and the genome FASTA named by `genome` in
 `config/ChromSimConfig.yaml`. Everything in this folder except this README is
 git-ignored.
