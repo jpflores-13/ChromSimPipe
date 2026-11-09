@@ -513,6 +513,26 @@ the same way as in <code>configs/parameters.py</code>, including
 <p>Any extra arguments go to <code>snakemake</code> (<code>-n</code> for
 a dry run, <code>--configfile other.yaml</code>,
 <code>--until validateCTCF</code>, …).</p>
+<h3
+id="check_inputs.sh-check-the-inputs-before-a-run"><code>check_inputs.sh</code>:
+check the inputs before a run</h3>
+<p><code>bash check_inputs.sh</code> finds the simulation conda
+environment (the copy of <code>envs/cohesin_sim.yml</code> Snakemake
+keeps under <code>.snakemake/conda/</code>) and runs
+<code>scripts/check_inputs.py</code> with it. That script imports
+<code>configs/parameters.py</code> (so the config and samplesheet are
+read exactly as in a run) and, for every locus and sample, checks: the
+locus chromosome is in the genome and the window fits (lengths from
+<code>&lt;genome&gt;.fai</code>, else by reading the FASTA); the CTCF
+peaks use the same chromosome names, have peaks in each window and none
+past a chromosome’s end; the Hi-C has <code>resolution</code>, the same
+chromosome names, and chromosome lengths identical to the genome’s
+(<code>.hic</code> headers are read with hic2cool’s
+<code>read_header</code>, <code>.mcool</code>/<code>.cool</code> with
+cooler), and for <code>.mcool</code>/<code>.cool</code> the
+normalization <code>analysis.hic_balance</code> resolves to. It prints
+PASS / WARN / FAIL lines and exits 1 on any FAIL. Nothing is
+written.</p>
 <h3 id="unlock.sh-release-lock-after-failure"><code>unlock.sh</code>:
 release lock after failure</h3>
 <p>Snakemake writes a <code>.snakemake/locks/</code> directory while

@@ -208,6 +208,21 @@ Submit with `sbatch ChromSimPipe.sh`. It:
 Any extra arguments go to `snakemake` (`-n` for a dry run,
 `--configfile other.yaml`, `--until validateCTCF`, ...).
 
+### `check_inputs.sh`: check the inputs before a run
+
+`bash check_inputs.sh` finds the simulation conda environment (the copy of
+`envs/cohesin_sim.yml` Snakemake keeps under `.snakemake/conda/`) and runs
+`scripts/check_inputs.py` with it. That script imports `configs/parameters.py`
+(so the config and samplesheet are read exactly as in a run) and, for every
+locus and sample, checks: the locus chromosome is in the genome and the window
+fits (lengths from `<genome>.fai`, else by reading the FASTA); the CTCF peaks
+use the same chromosome names, have peaks in each window and none past a
+chromosome's end; the Hi-C has `resolution`, the same chromosome names, and
+chromosome lengths identical to the genome's (`.hic` headers are read with
+hic2cool's `read_header`, `.mcool`/`.cool` with cooler), and for
+`.mcool`/`.cool` the normalization `analysis.hic_balance` resolves to. It
+prints PASS / WARN / FAIL lines and exits 1 on any FAIL. Nothing is written.
+
 ### `unlock.sh`: release lock after failure
 
 Snakemake writes a `.snakemake/locks/` directory while running. If the job

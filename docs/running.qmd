@@ -37,6 +37,19 @@ getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF
 Resources for each rule are in `profiles/<site>/config.yaml` under
 `set-resources:`.
 
+## Check the inputs first
+
+```bash
+bash check_inputs.sh
+```
+
+Before the first run with new data, this checks the samplesheet's files
+against each other and the config, without running anything: chromosome
+names, assemblies (chromosome lengths of the genome and the Hi-C), the Hi-C
+resolution and normalization, and CTCF peaks in each locus window. Each check
+prints `PASS`, `WARN` or `FAIL`. It needs the conda environments (built by the
+first run, or by `bash ChromSimPipe.sh --conda-create-envs-only`).
+
 ## Test run first
 
 `config/ChromSimConfig.test.yaml` is the full config cut down to a cheap

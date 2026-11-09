@@ -191,6 +191,18 @@ copied out of it) or `.cool` (must already be at `resolution`). Each becomes
 `weight` column and converted `.hic` files carry `KR`;
 `analysis.hic_balance: auto` (the default) picks whichever is there.
 
+### Check the inputs
+
+```bash
+bash check_inputs.sh
+```
+
+Checks the samplesheet's files against each other and the config without
+running anything: chromosome names, assemblies (genome vs. Hi-C chromosome
+lengths), the Hi-C resolution and normalization, and CTCF peaks in each
+locus window. Each check prints `PASS`, `WARN` or `FAIL`. It needs the conda
+environments built (see above).
+
 ### Dry run first
 
 ```bash
@@ -354,6 +366,7 @@ output/
 |------|---------|
 | `ChromSimPipe.sh` | sbatch entry point; run this to launch the workflow |
 | `unlock.sh` | Release the Snakemake lock after a failed run |
+| `check_inputs.sh` | Check the samplesheet's files against each other and the config before a run (`scripts/check_inputs.py`) |
 | `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
 | `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, notifications, compute site |
 | `config/ChromSimConfig.test.yaml` | Small 10-job version of the config for testing a new setup |

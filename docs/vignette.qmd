@@ -13,7 +13,7 @@ format:
 ### Quick start
 
 If someone has already set up ChromSimPipe on your cluster and you just want
-a run, these are the five steps. Each one is explained in the sections below.
+a run, these are the six steps. Each one is explained in the sections below.
 
 1. Clone the repository and `cd` into it ([Setup](#one-time-setup)).
 2. Point the samplesheet at your input files: full paths, or links in
@@ -21,11 +21,13 @@ a run, these are the five steps. Each one is explained in the sections below.
    ([Linking the input files](#link-the-input-files-into-data)).
 3. Set `CHROMSIM_PROFILE` and `CHROMSIM_OUTPUT_ROOT` in `~/.bashrc`
    ([Per-cluster settings](#tell-chromsimpipe-which-cluster-you-are-on)).
-4. Dry run, then the one-GPU test config:
+4. Check that the inputs agree with each other: `bash check_inputs.sh`
+   ([Checking the inputs](#check-names-and-assemblies-before-you-run)).
+5. Dry run, then the one-GPU test config:
    `bash ChromSimPipe.sh -n`, then
    `sbatch ChromSimPipe.sh --configfile config/ChromSimConfig.test.yaml`
    ([Running](#running-the-pipeline)).
-5. Full run: `sbatch ChromSimPipe.sh`, then read
+6. Full run: `sbatch ChromSimPipe.sh`, then read
    `output/loci/<locus>/analysis/<condition>/` ([Outputs](#reading-the-outputs)).
 :::
 
@@ -1102,6 +1104,129 @@ the model's limits directly:
   simulation pixel values.
 
 Both limits are explained in the next section.
+
+## Your own project: an example journey
+
+The sections above follow the shipped HEK293T example. This one follows a
+different project from start to finish, to show which choices change when the
+data are your own: **two loci in mouse brain, compared between two
+conditions** (two genotypes, two cell types or two ages). Names and paths in
+the snippets are placeholders for your own.
+
+| Stage | What you do | Where | Watch out for |
+|-------|-------------|-------|---------------|
+| 1. Frame the question | Pick the two conditions and the loops you care about | | ChromSimPipe tests one thing: is the CTCF change enough to explain the loop change? |
+| 2. Gather data | CTCF peaks (CUT&Tag or ChIP narrowPeak) for each condition; Hi-C if you have it | | Bulk brain mixes neurons and glia, so its peaks are a union of cell types. Sorted nuclei (e.g. NeuN+) give cleaner sites |
+| 3. Check formats | Hi-C as `.hic`, `.mcool` or `.cool`, or none | | An `.mcool` must contain 1 kb bins. Without Hi-C, write `NA`: you still get simulations, just no comparison |
+| 4. Samplesheet | One row per condition, with full paths to your files | `ChromSimSamplesheet.txt` | Linking into `data/` is optional. Peaks, Hi-C and genome must share one assembly (mm10 or mm39) |
+| 5. Config: inputs | Mouse genome FASTA and `genome_assembly` | `config/ChromSimConfig.yaml` | Chromosome names must match the peaks and Hi-C exactly (`chr7` vs `7`). The CTCF motif (MA0139.1) works for mouse. [How to check](#check-names-and-assemblies-before-you-run) |
+| 6. Config: loci | Two windows of about 1–2 Mb around your loops | `loci:` | Whole numbers in bp, both ends on the 1 kb grid; near a chromosome end, start at 0 or stop at the chromosome length |
+| 7. Config: conditions | One per condition: its CTCF, compared with its Hi-C | `conditions:` | 2 loci × 2 conditions × 3 replicates × 2 shards = 24 GPU jobs |
+| 8. Dry run, test run | `bash ChromSimPipe.sh -n`, then the test config | | Most mistakes (paths, names, windows) stop here, with a message, before any GPU job |
+| 9. Full run | `sbatch ChromSimPipe.sh`; monitor | | Never edit the config while it runs. After a crash: `bash unlock.sh`, resubmit |
+| 10. Check CTCF at the anchors | Oriented sites the model used | `output/loci/<locus>/ctcf/` | Peaks without a CTCF motif are dropped; that decides whether a loop can form in the model |
+| 11. Read the result | Pooled maps and comparison metrics | `output/loci/<locus>/analysis/` | A loop the model misses is a result: CTCF positions don't explain it |
+
+### Check names and assemblies before you run
+
+Stages 4 and 5 are where projects with outside data most often go wrong, and
+the mistake is silent: FIMO reads the wrong DNA, or the Hi-C window comes back
+empty. Once the samplesheet and config are filled in, and the conda
+environments are built, check everything against everything else from the
+repo folder:
+
+```{bash}
+#| eval: false
+#| label: check-inputs
+bash check_inputs.sh
+```
+
+It reads the same config and samplesheet the pipeline will, writes nothing,
+and is quick enough for a login node. For a config other than the default,
+add `--configfile <file>`. For each locus and each sample it checks:
+
+| Input | Check |
+|-------|-------|
+| Genome | each locus' chromosome is there, and the window fits inside it |
+| CTCF peaks | the same chromosome names as the genome; peaks inside each window; no peak past a chromosome's end, which would mean another assembly |
+| Hi-C (`.hic`, `.mcool`, `.cool`) | the config's resolution (1 kb) is in the file; the same chromosome names; chromosome lengths identical to the genome's, i.e. the same assembly; for `.mcool`/`.cool`, the normalization `analysis.hic_balance` asks for |
+
+Each check prints `PASS`, `WARN` or `FAIL`, ending in a count. When names
+differ only in style, the message says so (for example, the genome has `chr7`
+but the peaks have `7`). A `WARN` (such as no peaks in a window) doesn't stop
+a run but is worth reading; fix every `FAIL` before running, for example by
+lifting the peaks over to the genome's assembly or using a genome whose
+names match. The pipeline itself re-checks only the windows against the
+genome, so this is the one place a peak or Hi-C file from another assembly
+is caught.
+
+### What the files look like
+
+A samplesheet for this project, with full paths and no `data/` links. The
+`Hi-C` column mixes formats to show that each row can use its own:
+
+```
+Project  Cell_Type  Condition  CTCF_Peaks                                   Hi-C
+Brain    neuron     WT         /proj/yourlab/ctcf/WT_neuron_peaks.narrowPeak  /proj/yourlab/hic/WT_neuron.mcool
+Brain    neuron     KO         /proj/yourlab/ctcf/KO_neuron_peaks.narrowPeak  /proj/yourlab/hic/KO_neuron.hic
+```
+
+With `fileNamesFrom: ['Condition']` the samples are `WT` and `KO`. The parts
+of the config that change:
+
+```yaml
+genome:          '/proj/yourlab/genomes/mm10.fa'
+genome_assembly: 'mm10'
+
+loci:
+  - name:         locus1
+    chrom:        chr18
+    region_start: 37000000
+    region_end:   38500000
+  - name:         locus2
+    chrom:        chr2
+    region_start: 0
+    region_end:   1000000
+
+conditions:
+  - name:         WT_baseline
+    params_name:  wt
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    WT
+    compare_hic:  WT
+  - name:         KO_ctcf-only
+    params_name:  ko
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    KO
+    compare_hic:  KO
+```
+
+Line by line:
+
+- `genome` points straight at the FASTA; `genome_assembly` only labels the
+  oriented CTCF files.
+- `locus1` is an ordinary window, 1.5 Mb on the 1 kb grid. `locus2` sits at
+  the start of chr2, so it begins at 0 and extends 1 Mb to the right. Both
+  are placeholders: centre yours on your loops (see
+  [choosing a window](configuration.qmd#choosing-a-window)).
+- The two conditions share every cohesin setting and differ only in whose
+  CTCF peaks they use, so comparing them isolates the CTCF change, exactly as
+  `cond1_baseline` and `cond2_ctcf-only` do in the shipped config. The third
+  shipped condition is left out, which keeps the run at 24 GPU jobs.
+- `analysis.hic_balance: auto` (the default) uses `KR` from the converted
+  `.hic` and cooler's `weight` from the `.mcool`, so mixed formats need no
+  extra setting.
+
+::: {.callout-tip}
+### A positive control
+If you can, add a third locus where CTCF is known to shape neuronal loops,
+such as the protocadherin cluster. If the model reproduces that one, a miss
+at your own loci is more convincing.
+:::
 
 ## Pitfalls and limits
 
