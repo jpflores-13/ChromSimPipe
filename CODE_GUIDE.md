@@ -208,6 +208,22 @@ Submit with `sbatch ChromSimPipe.sh`. It:
 Any extra arguments go to `snakemake` (`-n` for a dry run,
 `--configfile other.yaml`, `--until validateCTCF`, ...).
 
+### `sweep_1d.sh`: a cheap 1D screen
+
+`bash sweep_1d.sh` runs `scripts/sweep_1d.py` with the simulation
+environment (found as in `check_inputs.sh`). For one locus and condition it
+builds polysim's 1D cohesin engine (`extrusion.build_lef_arrays` +
+`make_translocator`, with the condition's CTCF stall sites and loading /
+pausing profiles), runs it for every combination of the given lifetime,
+separation, ctcf_capture, vlef and life_boost_stalled values, equilibrates
+for `--lifetimes-equil` (boosted) lifetimes, then records `--frames`
+snapshots. `score_frame()` scores each snapshot: per loop, the fraction of
+locus copies where one cohesin has its left leg at one anchor and its right
+leg at the other (within `--tol` monomers); the mean loop size; and the
+fraction of the chain inside a loop. Loops are every convergent CTCF pair
+between `--min-kb` and `--max-kb`, or those in `--loops`. Writes one TSV row
+per setting. No polymer, no GPU.
+
 ### `check_inputs.sh`: check the inputs before a run
 
 `bash check_inputs.sh` finds the simulation conda environment (the copy of
@@ -518,15 +534,33 @@ Shard output goes to `<output>/<params_name>_ctcf-<ctcf_type>_rep<r>_shard<i>/`.
 2. `seed_all(seed)` seeds numpy and C `drand48()`. polysim's Cython LEF model
    draws every stall, unbinding and stepping decision from `drand48()` and never
    seeds it, so without this every shard would replay one random sequence.
-3. `polysim_kwargs()` builds polysim's `SimParams`: the tiled chain length, the
-   `polysim:` block, the condition's `lifetime` / `separation` (and optional
-   `vlef`, `life_boost_stalled`), and the tiled CTCF sites as per-site stall
-   probabilities (`ctcf_capture`): + sites go to `ctcf_left` (they stop
-   leftward-moving legs), − sites to `ctcf_right`. It checks that frames per
-   shard × `saveevery` is a multiple of `blocks_per_updater` before any GPU
-   time is spent.
-4. `polysim.sim3d.run()` writes `blocks_*.h5` into the shard folder (each saved
-   frame also carries the LEF bonds as `SMCs`).
+3. `ctcf_stall_sites()` turns the tiled CTCF sites into polysim's
+   `ctcf_left` / `ctcf_right` dicts {monomer: stall probability}: + sites
+   stop leftward-moving legs, − sites rightward-moving ones. The probability
+   is `ctcf_capture`, or, for `ctcf_capture: {min, max}`, each site's rank by
+   peak signal (`get_ctcf_signals`, the narrowPeak signalValue of the peak the
+   site came from) mapped onto [min, max].
+4. `condition_features()` reads the peak files of the condition's `sticky`,
+   `loading` and `pausing` options (`condition_peak_files`, from samplesheet
+   columns), maps them onto the locus' beads and tiles them
+   (`scripts/sim_features.py`). Sticky factors become `monomer_types` and an
+   `interaction_matrix` (one type per combination of factors on a bead);
+   loading and pausing become (bead indices, factor) pairs.
+5. `polysim_kwargs()` builds polysim's `SimParams`: the tiled chain length, the
+   `polysim:` block, the condition's `lifetime` / `separation` (`None` = no
+   cohesin) and optional `vlef`, `life_boost_stalled`, `attraction_energy`,
+   the stall dicts, and the sticky types. A condition that sets
+   `attraction_energy` without sticky factors gets one bead type, because
+   polysim applies that energy only with its heteropolymer force. It checks
+   that frames per shard × `saveevery` is a multiple of `blocks_per_updater`
+   before any GPU time is spent.
+6. `polysim.sim3d.run()`, inside `sim_features.lef_profiles()`, writes
+   `blocks_*.h5` into the shard folder (each saved frame also carries the LEF
+   bonds as `SMCs`, unless there is no cohesin). `lef_profiles` wraps
+   `polysim.extrusion.build_lef_arrays` for that one run, multiplying the
+   loading array (`birth`) at loading peaks and lowering the stepping
+   probability (`1 − pause`) at pausing peaks; polysim itself fills both
+   uniformly.
 
 The `preparePolysim` rule imports polysim once before the shards, so its
 Cython module (`LEF_Dynamics.pyx`, built by pyximport) is compiled once.
@@ -586,6 +620,15 @@ CHROMSIM_CONFIG=config/ChromSimConfig.yaml python scripts/run_analysis_all.py \
 | `comparison_metrics.json` | Pearson + stratum-adjusted correlations with experimental Hi-C |
 | `msd_<label>.npz` | Two-point MSD curves (if `--no-msd` not set) |
 | `calibration.json` | Physical-unit mapping: nm/monomer, sec/frame |
+
+The calibration anchor is `analysis.calibration.default_anchor` (the
+`--calibrate-with` default). Experimental MSD CSVs come from
+`calibration.msd.expt_msd`, keyed by condition name or `ctcf_type`
+(`expt_msd_for`), plus any `--expt-msd`. With
+`calibration.msd.reference_condition`, every other condition loads that
+condition's `*_pooled_calibration.json` (`reference_calibration_for`) instead
+of calibrating on its own, and the Snakefile makes its `analyzeCondition` wait
+for the reference's.
 
 ### 6b. Analysis modules (`analysis/`)
 

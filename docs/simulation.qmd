@@ -79,6 +79,32 @@ RAM, set under `set-resources:` in `profiles/<site>/config.yaml` (on Longleaf:
 jobs (loci × conditions × replicates × shards) can run in parallel.
 :::
 
+## Beyond CTCF and uniform cohesin
+
+Each condition can switch on more of polysim's model (full list in
+[Configuration](configuration.qmd#every-condition-option), examples in
+[Perturbation recipes](recipes.qmd)):
+
+| Option | Layer | What changes | Implemented through |
+|--------|-------|--------------|---------------------|
+| `separation: none` | cohesin | no cohesin at all | polysim `sep=None` |
+| `ctcf_capture: {min, max}` | cohesin | each CTCF site's stall probability follows its peak signal | polysim per-site stall probabilities |
+| `loading` | cohesin | cohesin loads preferentially at peaks | polysim's per-bead loading array |
+| `pausing` | cohesin | cohesin steps more slowly at peaks | polysim's per-bead pause array |
+| `sticky`, `sticky_cross` | polymer | beads under a factor's peaks attract each other | polysim `monomer_types` + `interaction_matrix` |
+| `attraction_energy` | polymer | all beads attract weakly (compaction) | polysim `attraction_energy` |
+
+polysim's own settings fill loading and pausing uniformly; ChromSimPipe
+passes the profiles by wrapping polysim's `extrusion.build_lef_arrays` for
+the duration of one run (`scripts/sim_features.py`), without changing
+polysim. Sticky sites and `attraction_energy` use polysim's
+heteropolymer force (`heteropolymer_SSW`) instead of the default repulsion,
+so compare them against a condition with `attraction_energy: 0`.
+
+`bash sweep_1d.sh` runs the cohesin layer alone (no polymer, CPU only) for a
+grid of settings, as a cheap screen
+([recipe](recipes.qmd#a-1d-screen-before-3d-runs)).
+
 ## Tiling
 
 To get statistically robust contact maps from one locus, copies of it are

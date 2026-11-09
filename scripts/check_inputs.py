@@ -6,6 +6,8 @@ For every sample in the samplesheet and every locus in the config:
   - the genome has each locus' chromosome, and the window fits inside it;
   - the CTCF peaks use the same chromosome names, have peaks in each window,
     and none lie past a chromosome's end (which would mean another assembly);
+  - peak files named by a condition's sticky / loading / pausing options exist
+    and have peaks in each window;
   - the Hi-C (.hic, .mcool or .cool) has the config's resolution, the same
     chromosome names, the same chromosome lengths as the genome (the same
     assembly), and, for .mcool/.cool, the normalization analysis.hic_balance
@@ -188,6 +190,27 @@ def main():
                     report("PASS", f"normalization: {col if col else 'raw counts'}")
                 except ValueError as e:
                     report("FAIL", str(e))
+
+    factor_files = {}
+    for cond in p.SIMULATION_CONDITIONS:
+        for label, path in p.condition_peak_files(cond).items():
+            factor_files.setdefault(path, []).append(f"{cond['name']} {label}")
+    for path, uses in factor_files.items():
+        print(f"\nFactor peaks: {path}")
+        print(f"    used by {', '.join(uses)}")
+        if not os.path.isfile(path):
+            report("FAIL", "file not found")
+            continue
+        peaks = read_peaks(path)
+        print(f"    {sum(len(v) for v in peaks.values()):,} peaks, named like {', '.join(list(peaks)[:3])}")
+        for name, loc in p.LOCI.items():
+            c = loc["chrom"]
+            if c not in peaks:
+                report("FAIL", f"{name}: no peaks on {c!r}{name_hint(c, peaks)}")
+                continue
+            inside = sum(1 for st, e in peaks[c] if e > loc["region_start"] and st < loc["region_end"])
+            report("PASS" if inside else "WARN", f"{name}: {inside} peaks in the window"
+                   + ("" if inside else " (the option has no effect there)"))
 
     print(f"\n{counts['PASS']} passed, {counts['WARN']} warnings, {counts['FAIL']} failed")
     sys.exit(1 if counts["FAIL"] else 0)

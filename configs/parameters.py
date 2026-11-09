@@ -208,6 +208,7 @@ POLYSIM = dict(
     smc_bond_dist        = float(_ps.get("smc_bond_dist",        0.5)),
     vlef                 = float(_ps.get("vlef",                 0.0025)),
     life_boost_stalled   = float(_ps.get("life_boost_stalled",   4.0)),
+    attraction_energy    = float(_ps.get("attraction_energy",    0.0)),
     platform             = str(_ps.get("platform",               "CUDA")),
     integrator           = str(_ps.get("integrator",             "langevin")),
     dt                   = int(_ps.get("dt",                     40)),
@@ -328,6 +329,7 @@ CTCF_BEDS  = {t: _ctcf_bed_path(t) for t in CTCF_TYPES}
 # CTCF SITE STORAGE (filled at import time by autoload below)
 # =============================================================================
 CTCF_SITES_BY_TYPE = {}
+CTCF_SITE_NAMES_BY_TYPE = {}
 
 
 # =============================================================================
@@ -335,18 +337,85 @@ CTCF_SITES_BY_TYPE = {}
 # =============================================================================
 SIMULATION_CONDITIONS = []
 
+def _no_value(v):
+    """True for YAML null, 'none' or 'off' (used to switch a feature off)."""
+    return v is None or (isinstance(v, str) and v.strip().lower() in ("none", "null", "off"))
+
+
+def _parse_capture(name, v):
+    """ctcf_capture: one probability for every site, or {min, max} scaled by peak signal."""
+    if isinstance(v, dict):
+        lo, hi = float(v.get("min", 0.1)), float(v.get("max", 0.9))
+        if not 0.0 <= lo <= hi <= 1.0:
+            raise ValueError(f"Condition {name}: ctcf_capture needs 0 <= min <= max <= 1")
+        return dict(min=lo, max=hi, by="signal")
+    p = float(v)
+    if not 0.0 <= p <= 1.0:
+        raise ValueError(f"Condition {name}: ctcf_capture must be between 0 and 1")
+    return p
+
+
+def _parse_peak_feature(name, key, v, value_key, default):
+    """loading / pausing: {peaks: <samplesheet column>, <value_key>: number, sample?, span?}."""
+    if not isinstance(v, dict) or "peaks" not in v:
+        raise ValueError(f"Condition {name}: {key} needs a `peaks:` samplesheet column")
+    out = dict(peaks=str(v["peaks"]), sample=v.get("sample"),
+               span=str(v.get("span", "summit")), **{value_key: float(v.get(value_key, default))})
+    if out["span"] not in ("summit", "peak"):
+        raise ValueError(f"Condition {name}: {key} span must be summit or peak")
+    if out[value_key] <= 0:
+        raise ValueError(f"Condition {name}: {key} {value_key} must be positive")
+    return out
+
+
+def _parse_sticky(name, entries, cross):
+    """sticky: [{factor, peaks, energy, sample?, span?}], sticky_cross: [{factors: [A, B], energy}]."""
+    if isinstance(entries, dict):
+        entries = [entries]
+    factors = []
+    for e in entries or []:
+        if not isinstance(e, dict) or "peaks" not in e or "energy" not in e:
+            raise ValueError(f"Condition {name}: each sticky entry needs `peaks:` and `energy:`")
+        f = dict(factor=str(e.get("factor", e["peaks"])), peaks=str(e["peaks"]),
+                 energy=float(e["energy"]), sample=e.get("sample"),
+                 span=str(e.get("span", "summit")))
+        if f["span"] not in ("summit", "peak"):
+            raise ValueError(f"Condition {name}: sticky span must be summit or peak")
+        factors.append(f)
+    names = [f["factor"] for f in factors]
+    if len(set(names)) != len(names):
+        raise ValueError(f"Condition {name}: sticky factor names must be unique")
+    pairs = []
+    for x in cross or []:
+        pair = [str(a) for a in x.get("factors", [])]
+        if len(pair) != 2 or any(a not in names for a in pair):
+            raise ValueError(f"Condition {name}: sticky_cross needs `factors: [A, B]` "
+                             f"naming two sticky factors ({names})")
+        pairs.append(dict(factors=pair, energy=float(x["energy"])))
+    return factors, pairs
+
+
 for _c in _cfg.get("conditions", []):
+    _sep = _c.get("separation")
+    _no_cohesin = _no_value(_sep)
     _params = dict(
         name         = _c.get("params_name", _c["name"]),
         description  = _c.get("description", _c["name"]),
-        lifetime     = int(_c["lifetime"]),
-        separation   = int(_c["separation"]),
-        ctcf_capture = float(_c["ctcf_capture"]),
+        lifetime     = int(_c.get("lifetime", 75000)) if _no_cohesin else int(_c["lifetime"]),
+        separation   = None if _no_cohesin else int(_sep),
+        ctcf_capture = _parse_capture(_c["name"], _c.get("ctcf_capture", 0.5)),
     )
     # optional per-condition overrides of the polysim: block
-    for _k in ("vlef", "life_boost_stalled"):
+    for _k in ("vlef", "life_boost_stalled", "attraction_energy"):
         if _k in _c:
             _params[_k] = float(_c[_k])
+    if _c.get("sticky"):
+        _params["sticky"], _params["sticky_cross"] = _parse_sticky(
+            _c["name"], _c["sticky"], _c.get("sticky_cross"))
+    if _c.get("loading"):
+        _params["loading"] = _parse_peak_feature(_c["name"], "loading", _c["loading"], "boost", 10.0)
+    if _c.get("pausing"):
+        _params["pausing"] = _parse_peak_feature(_c["name"], "pausing", _c["pausing"], "slowdown", 4.0)
     _cond = dict(
         name        = _c["name"],
         description = _c.get("description", _c["name"]),
@@ -357,6 +426,39 @@ for _c in _cfg.get("conditions", []):
     SIMULATION_CONDITIONS.append(_cond)
 
 ALL_PARAM_SETS = [c["params"] for c in SIMULATION_CONDITIONS]
+
+
+def sample_file(sample, column):
+    """A samplesheet file column for one sample, resolved like CTCF_Peaks (None if NA)."""
+    if sample not in SAMPLES:
+        raise ValueError(f"Sample '{sample}' is not in {SAMPLESHEET_PATH}; samples: {list(SAMPLES)}")
+    row = SAMPLES[sample]["metadata"]
+    if column not in row:
+        raise KeyError(f"The samplesheet {SAMPLESHEET_PATH} has no '{column}' column")
+    return _value_or_none(row[column])
+
+
+def condition_peak_files(cond):
+    """{feature label: peak file} for a condition's sticky / loading / pausing options.
+
+    Each option reads `peaks:` (a samplesheet column) from the row named by its
+    `sample:`, else the condition's ctcf_type sample.
+    """
+    params, out = cond["params"], {}
+    entries = [(f"sticky:{f['factor']}", f) for f in params.get("sticky", [])]
+    entries += [(k, params[k]) for k in ("loading", "pausing") if k in params]
+    for label, opt in entries:
+        sample = opt.get("sample") or cond["ctcf_type"]
+        path = sample_file(sample, opt["peaks"])
+        if path is None:
+            raise ValueError(f"Condition {cond['name']}: {label} reads the '{opt['peaks']}' column "
+                             f"of sample '{sample}', which is NA")
+        out[label] = path
+    return out
+
+
+for _cond in SIMULATION_CONDITIONS:
+    condition_peak_files(_cond)   # fail at start-up on a missing column or NA
 
 
 def get_condition(name):
@@ -428,11 +530,39 @@ def load_ctcf_from_bed(bed_path, condition, region_start=None, resolution=None):
             summit  = (start + end) // 2
             monomer = (summit - region_start) // resolution
             if 0 <= monomer < N_MONOMERS:
-                sites.append((monomer, +1 if strand == "+" else -1))
+                name = fields[3] if len(fields) > 3 else ""
+                sites.append((monomer, +1 if strand == "+" else -1, name))
 
     sites.sort(key=lambda x: x[0])
+    CTCF_SITE_NAMES_BY_TYPE[condition] = [s[2] for s in sites]
+    sites = [(m, o) for m, o, _ in sites]
     CTCF_SITES_BY_TYPE[condition] = sites
     return sites
+
+
+def get_ctcf_signals(ctcf_type):
+    """Peak signal of each site from get_ctcf_arrays(ctcf_type), in the same order:
+    the narrowPeak signalValue (column 7, else the score in column 5) of the peak
+    each oriented site came from, matched by peak name. Unmatched sites get the
+    median, so they sit in the middle of the range."""
+    names = CTCF_SITE_NAMES_BY_TYPE.get(ctcf_type)
+    if names is None:
+        get_ctcf_arrays(ctcf_type)   # raises with the reason
+    by_name = {}
+    with open(CTCF_PEAKS[ctcf_type]) as fh:
+        for line in fh:
+            r = line.rstrip("\n").split("\t")
+            if len(r) < 5 or line.startswith(("#", "track", "browser")):
+                continue
+            try:
+                by_name[r[3]] = float(r[6]) if len(r) > 6 else float(r[4])
+            except ValueError:
+                continue
+    values = np.array([by_name.get(n, np.nan) for n in names], dtype=float)
+    if np.isnan(values).all():
+        return np.ones(len(names))
+    values[np.isnan(values)] = np.nanmedian(values)
+    return values
 
 
 def get_tiled_ctcf_arrays(condition):
@@ -536,8 +666,13 @@ CALIBRATION = dict(
     msd = dict(
         expt_msd      = {k: _repo_path(v) for k, v in (_cal_msd.get("expt_msd") or {}).items()},
         loc_error_um2 = float(_cal_msd.get("loc_error_um2", 0.0)),
+        reference_condition = str(_cal_msd.get("reference_condition") or ""),
     ),
 )
+if CALIBRATION["msd"]["reference_condition"] and \
+        CALIBRATION["msd"]["reference_condition"] not in [c["name"] for c in SIMULATION_CONDITIONS]:
+    raise ValueError(f"analysis.calibration.msd.reference_condition "
+                     f"'{CALIBRATION['msd']['reference_condition']}' is not one of the conditions")
 
 
 def get_msd_pairs(ctcf_type):

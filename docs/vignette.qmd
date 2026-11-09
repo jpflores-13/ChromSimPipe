@@ -370,7 +370,10 @@ experimental sample. The shipped file is:
 Write `NA` (or leave the cell empty) when a sample has no file of that kind,
 for example a CTCF-only sample with no Hi-C. Such a sample can still supply
 CTCF sites to a condition; it just cannot be named as that condition's
-`compare_hic`. Every other column is free-form metadata.
+`compare_hic`. Every other column is free-form metadata, except columns a
+condition names with `peaks:` (for example `YY1_Peaks` for a sticky factor,
+see [recipes](recipes.qmd#other-factors-sticky-sites)), which hold peak
+files like `CTCF_Peaks`.
 
 **Sample names.** Conditions in the config refer to samples by name, and the
 name is built from the columns listed in `fileNamesFrom:` in the config,
@@ -558,9 +561,12 @@ Three rules make a condition a clean test:
    GPU jobs per locus (6 with the shipped settings).
 
 [Perturbation recipes](recipes.qmd) has ready-made conditions for common
-experiments: WAPL loss, cohesin depletion, weaker CTCF, a CTCF degron with
-data, CTCF-stabilized cohesin, slower extrusion, a robustness range, and
-simulating without Hi-C.
+experiments: WAPL loss, cohesin depletion or complete loss, weaker CTCF, CTCF
+strength from peak signal, a CTCF degron with data, other factors as sticky
+sites (YY1, LDB1, condensates), chromatin compaction, targeted cohesin loading,
+cohesin pausing, calibration to live imaging, a cheap 1D screen, a
+robustness range, and simulating without Hi-C. The full list of condition
+options is in [Configuration](configuration.qmd#every-condition-option).
 
 ::: {.callout-tip}
 ### Check conclusions over a few cohesin lifetimes
@@ -1258,13 +1264,16 @@ at your own loci is more convincing.
 ::: {.callout-important}
 ### Limits of the model
 
-- **Every CTCF site is equally strong.** Each site stops cohesin with the
-  same probability (`ctcf_capture`); peak height and occupancy are ignored.
-  Real sites differ a lot, so simulations **over-predict dots**: every
-  convergent pair makes one.
-- **No compartments.** The chain is a homopolymer (every bead the same), so
-  there is no A/B compartmentalisation. Any Hi-C change driven by
-  compartments cannot appear in the simulation.
+- **Every CTCF site is equally strong, by default.** Each site stops cohesin
+  with the same probability (`ctcf_capture`), so simulations **over-predict
+  dots**: every convergent pair makes one. `ctcf_capture: {min, max}` scales
+  each site by its peak signal instead
+  ([recipe](recipes.qmd#ctcf-strength-from-peak-signal)).
+- **No compartments or bridging factors, by default.** The chain is a
+  homopolymer (every bead the same), so A/B compartments and loops held by
+  factors like YY1 or LDB1 cannot appear. `sticky:` adds them: beads under a
+  factor's peaks attract each other
+  ([recipe](recipes.qmd#other-factors-sticky-sites)).
 - **Contacts decay faster with distance than in Hi-C.** The simulated P(s)
   falls more steeply, so long-range contrast in observed maps is weaker in
   the simulation. Compare O/E, or within-simulation changes, rather than raw

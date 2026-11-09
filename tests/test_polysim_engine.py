@@ -19,7 +19,9 @@ import json, numpy as np
 from scripts import run_simulation_shard as rs
 from configs.parameters import get_condition, POLYSIM
 cond = get_condition("cond1_baseline")
-kw = rs.polysim_kwargs(cond["params"], np.array([10, 20, 30]), np.array([1, -1, 1]),
+left, right = rs.ctcf_stall_sites(cond["params"], "condition1",
+                                  np.array([10, 20, 30]), np.array([1, -1, 1]))
+kw = rs.polysim_kwargs(cond["params"], left, right,
                        n_frames=FRAMES, gpu=0, shard_dir="/tmp/x")
 print(json.dumps(dict(polysim=POLYSIM, kw={k: v for k, v in kw.items()
      if k not in ("ctcf_left", "ctcf_right")}, left=kw["ctcf_left"], right=kw["ctcf_right"])))

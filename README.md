@@ -367,6 +367,7 @@ output/
 |------|---------|
 | `ChromSimPipe.sh` | sbatch entry point; run this to launch the workflow |
 | `unlock.sh` | Release the Snakemake lock after a failed run |
+| `sweep_1d.sh` | Cheap 1D sweep of cohesin settings on the CTCF track, no GPU (`scripts/sweep_1d.py`) |
 | `check_inputs.sh` | Check the samplesheet's files against each other and the config before a run (`scripts/check_inputs.py`) |
 | `ChromSimSamplesheet.txt` | One row per sample: metadata, CTCF peaks, Hi-C |
 | `config/ChromSimConfig.yaml` | Locus, conditions, physics, paths, notifications, compute site |
@@ -394,6 +395,14 @@ biological context, and the shared settings in its `polysim:` block.
 | `ctcf_capture` | 0.5 | 50% stalling probability per CTCF encounter |
 | `polysim: life_boost_stalled` | 4 | Cohesin stalled at CTCF on both legs lives 4× longer |
 | `polysim: vlef` | 0.0025 | Probability a leg steps per timestep: sets extrusion speed relative to polymer motion |
+
+Each condition can also use more of polysim's model: no cohesin
+(`separation: none`), CTCF strength from peak signal (`ctcf_capture: {min,
+max}`), other factors as sticky sites (`sticky:`, e.g. YY1, LDB1, condensates),
+chromatin compaction (`attraction_energy`), and targeted cohesin loading or
+pausing (`loading:`, `pausing:`). `docs/configuration.qmd` lists every option
+and `docs/recipes.qmd` has a worked example of each, including calibrating
+simulated time to live imaging and a cheap 1D screen (`bash sweep_1d.sh`).
 
 ### The simulation model
 

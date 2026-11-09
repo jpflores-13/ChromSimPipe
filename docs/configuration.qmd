@@ -54,7 +54,7 @@ tiling:     {padding, chain_size}
 sim_run:    {seed_base, frames_per_replicate, contact_radius, hdf5_frames_per_file}
 polysim:    {platform, density, angle_k, bond_wiggle, repel, confinement_k,
              smc_bond_wiggle, smc_bond_dist, vlef, life_boost_stalled,
-             integrator, dt, colrate, poly_steps_per_block, saveevery,
+             attraction_energy, integrator, dt, colrate, poly_steps_per_block, saveevery,
              initsteps, initskip, blocks_per_updater}
 analysis:   {n_jobs, msd, hic_balance, apa, msd_probe, msd_fit, calibration}
 ```
@@ -64,6 +64,15 @@ comparing with experiment. `hic2cool` copies Juicer's normalizations as
 columns named `KR`, `VC` and `VC_SQRT`; `weight` is cooler's own ICE
 balancing, which balanced `.mcool`/`.cool` files carry; `auto` (the default)
 takes `KR` if present, else `weight`; `False` compares raw counts.
+
+`analysis.calibration` converts simulation units to nm and seconds.
+`default_anchor` picks how: `hic` (P(s) against the Hi-C), `msd` (the
+two-point MSD against an imaging MSD; needs `msd: True`), or `none`.
+`msd.expt_msd` maps a condition name or a `ctcf_type` to a CSV of
+imaging MSD (`dt_s`, `msd_um2`). `msd.reference_condition` names one
+condition, typically a no-cohesin one, whose calibration every other condition
+reuses; the others' analysis waits for it. See
+[Calibrating to live imaging](recipes.qmd#calibrating-to-live-imaging).
 
 ::: {.callout-note}
 polysim must be importable in the simulation environment; the workflow stops
@@ -278,6 +287,33 @@ conditions:
 
 Ready-made conditions for common perturbations (WAPL loss, cohesin
 depletion, CTCF degrons, ...) are in [Perturbation recipes](recipes.qmd).
+
+### Every condition option
+
+| Key | Value | Default | What it does |
+|-----|-------|---------|--------------|
+| `name` | text | required | unique condition name; folder names under `analysis/` |
+| `params_name` | text | `name` | prefix of the simulation folders (unique within a `ctcf_type`) |
+| `ctcf_type` | samplesheet sample | required | whose CTCF peaks give the stall sites |
+| `compare_hic` | samplesheet sample | none | whose Hi-C the result is compared with |
+| `lifetime` | LEF timesteps | required (unless no cohesin) | cohesin residence; processivity per leg ≈ `lifetime × vlef` monomers |
+| `separation` | monomers, or `none` | required | one cohesin per `separation` monomers; `none` = no cohesin, a plain polymer |
+| `ctcf_capture` | 0–1, or `{min, max}` | 0.5 | stall probability per encounter, for every site, or per site scaled by its peak signal (by rank, `min` for the weakest, `max` for the strongest) |
+| `vlef` | 0–1 | `polysim: vlef` | per-leg step probability per timestep |
+| `life_boost_stalled` | > 0 | `polysim: life_boost_stalled` | lifetime multiplier while both legs are stalled |
+| `attraction_energy` | kT | off | weak attraction between all beads (compaction); setting it, even to 0, switches to polysim's attraction-capable polymer force |
+| `sticky` | list of `{factor, peaks, energy, sample?, span?}` | none | beads under a factor's peaks attract each other (`energy` kT) |
+| `sticky_cross` | list of `{factors: [A, B], energy}` | none | attraction between two sticky factors' sites |
+| `loading` | `{peaks, boost, sample?, span?}` | none | cohesin loads `boost` times more often at the peaks |
+| `pausing` | `{peaks, slowdown, sample?, span?}` | none | cohesin legs step `slowdown` times less often at the peaks |
+
+`peaks:` names a **samplesheet column** (e.g. `YY1_Peaks`), read from the
+condition's `ctcf_type` row unless `sample:` names another row. `span:
+summit` (default) marks the bead at each peak summit; `span: peak` marks every
+bead the peak covers. A missing column, or `NA` in the row used, stops the
+workflow at start-up; `bash check_inputs.sh` also checks these files.
+Every peak-based option is applied in every copy of the tiled locus. See
+[Perturbation recipes](recipes.qmd) for an example of each.
 
 To add a condition, add an entry with a unique `name`. Its `ctcf_type` must
 name a samplesheet sample with `CTCF_Peaks`, and its `compare_hic` a sample

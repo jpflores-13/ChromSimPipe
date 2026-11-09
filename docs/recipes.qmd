@@ -85,8 +85,8 @@ jobs take longer.
 
 **Expect:** weaker loops and domains everywhere, with the same positions.
 
-**Watch out:** complete cohesin loss (`separation` with no cohesin at all)
-isn't expressible yet; very large values (e.g. 5000) approach it.
+**Watch out:** for complete cohesin loss, use `separation: none` (see
+[No cohesin at all](#no-cohesin-at-all)).
 
 ## Weaker CTCF stalling (partial CTCF depletion)
 
@@ -190,6 +190,257 @@ leg), so shorter loops and fewer distant dots.
 **Watch out:** `vlef` and `lifetime` trade off (processivity is their
 product). To change speed but not loop size, change both: `vlef: 0.00125`
 with `lifetime: 150000`.
+
+## No cohesin at all
+
+**Models:** complete cohesin loss (e.g. RAD21 degradation). The chain is
+simulated as a polymer with no loop extrusion; `lifetime` and the CTCF sites
+are ignored.
+
+```yaml
+  - name:         no-cohesin
+    params_name:  no_cohesin
+    separation:   none
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** loops, stripes and domains disappear, and contacts fall off
+smoothly with distance. Whatever remains is what the polymer does without
+extrusion, which makes this the control for asking whether a feature needs
+cohesin at all (see [sticky sites](#other-factors-sticky-sites)).
+
+## CTCF strength from peak signal
+
+**Models:** CTCF sites that differ in occupancy. Instead of one stall
+probability for every site, each site's probability follows its CUT&Tag peak
+signal: the weakest site in the locus gets `min`, the strongest `max`, and the
+rest are spread evenly between them by rank.
+
+```yaml
+  - name:         ctcf-by-signal
+    params_name:  ctcf_signal
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: {min: 0.2, max: 0.9}
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** fewer, more realistic dots: weak sites become leaky, so the
+simulation stops drawing a strong dot at every convergent pair.
+
+**Watch out:** the signal is the narrowPeak `signalValue` (column 7) of the
+peak each site came from. Ranks are used, not raw values, so the peak
+caller's scale doesn't matter, but the result does depend on `min` and `max`.
+
+## Other factors: sticky sites
+
+**Models:** factors that hold distant DNA together without extrusion:
+dimerising bridges (YY1, LDB1), condensates (e.g. YAP under hyperosmotic
+stress), enhancer–promoter contacts. The beads under a factor's peaks attract
+each other in 3D, with an energy in kT; there is no orientation rule, and no
+cohesin is needed.
+
+Each factor's peaks come from a **new samplesheet column**, read from the row
+of the condition's `ctcf_type` sample (or the one named by `sample:`):
+
+```
+Project  Cell_Type  Condition  CTCF_Peaks                       Hi-C                         YY1_Peaks                       LDB1_Peaks
+MyProj   K562       control    /proj/yourlab/ctcf/ctl.narrowPeak  /proj/yourlab/hic/ctl.mcool    /proj/yourlab/yy1/ctl.narrowPeak  /proj/yourlab/ldb1/ctl.narrowPeak
+```
+
+One factor (YY1), with its like-for-like control:
+
+```yaml
+  - name:         yy1-control
+    params_name:  yy1_ctl
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    attraction_energy: 0
+    ctcf_type:    control
+    compare_hic:  control
+
+  - name:         yy1-sticky
+    params_name:  yy1_2kT
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    sticky:
+      - {factor: YY1, peaks: YY1_Peaks, energy: 2.0}
+    ctcf_type:    control
+    compare_hic:  control
+```
+
+Two factors, with an attraction between them too:
+
+```yaml
+  - name:         yy1-ldb1-sticky
+    params_name:  yy1_ldb1
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    sticky:
+      - {factor: YY1,  peaks: YY1_Peaks,  energy: 1.5}
+      - {factor: LDB1, peaks: LDB1_Peaks, energy: 2.5}
+    sticky_cross:
+      - {factors: [YY1, LDB1], energy: 1.0}
+    ctcf_type:    control
+    compare_hic:  control
+```
+
+Options for each `sticky` entry: `factor` (a name), `peaks` (the samplesheet
+column), `energy` (kT between two of its sites), `sample` (another sample's
+row), `span` (`summit`, the default: the bead at each summit; or `peak`: every
+bead the peak covers). A bead under several factors' peaks attracts each of
+them with the strongest energy that applies.
+
+**Expect:** dots between sticky sites in any orientation, including between
+sites with no CTCF; with many sites, a checkerboard of contacts among them.
+To test whether a loop is a bridge rather than extrusion, add the same
+`sticky` to a `separation: none` condition: a bridge loop survives without
+cohesin, an extrusion loop doesn't.
+
+**Watch out:**
+
+- **Use the control above** (`attraction_energy: 0`). Sticky beads switch
+  polysim to its attraction-capable polymer force, whose repulsion has a
+  slightly different shape from the default; a control that sets
+  `attraction_energy` uses the same force, so the comparison is like for
+  like.
+- **The energy is unknown;** run a range (e.g. 1, 2, 3 kT). polysim's own
+  enhancer–promoter example uses 3 kT. Too strong, and the sticky beads
+  collapse into one cluster.
+- **Peaks are a population average,** so a peak-based model overstates
+  co-binding in any one cell.
+- **For a factor without a DNA-binding domain** (LDB1 is recruited by GATA1,
+  TAL1 or LHX proteins), use the factor's own ChIP or CUT&Tag if you have it:
+  partner peaks overcount.
+
+## Chromatin compaction
+
+**Models:** chromatin as a whole becoming stickier or more compact, e.g.
+under hyperosmotic stress. Every bead attracts every other bead weakly.
+
+```yaml
+  - name:         compact-0.1
+    params_name:  compact_01
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    attraction_energy: 0.1
+    ctcf_type:    condition2
+    compare_hic:  condition2
+```
+
+**Expect:** more long-range contacts overall, so contact frequency falls
+off more slowly with distance.
+
+**Watch out:** compare against a condition with `attraction_energy: 0` (the
+same polymer force; see the sticky-site control). Small values matter: start
+around 0.05–0.2 kT.
+
+## Where cohesin loads
+
+**Models:** cohesin loading concentrated at some sites (e.g. NIPBL peaks,
+active enhancers) instead of uniformly. Loading at the peaks is `boost` times
+the background rate.
+
+```yaml
+  - name:         loading-at-enhancers
+    params_name:  load_enh
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    loading:      {peaks: H3K27ac_Peaks, boost: 10}
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** stripes starting at loading sites, even where there is no CTCF.
+
+**Watch out:** the total number of cohesins is unchanged (`separation`); only
+where they land changes. polysim never loads cohesin at strong CTCF sites
+(stall probability above 0.9).
+
+## Where cohesin slows down
+
+**Models:** obstacles to extrusion, e.g. RNA Pol II in transcribed genes.
+At the peaks, cohesin legs step `slowdown` times less often.
+
+```yaml
+  - name:         pausing-at-polII
+    params_name:  pause_pol2
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    pausing:      {peaks: PolII_Peaks, slowdown: 4, span: peak}
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** weaker or fuzzier boundaries at transcribed regions, and loops
+shifted along them. `span: peak` slows cohesin across each whole peak, which
+suits broad gene-body signal.
+
+## Calibrating to live imaging
+
+**Models:** nothing new; it converts simulation units (monomers, frames) into
+nm and seconds, so simulated loop lifetimes and distances can be compared with
+imaging. This follows the polysim tutorial: simulate a chain **without
+cohesin**, and match its two-point MSD to an imaging MSD from
+cohesin-depleted cells (e.g. the Fbn2 ΔRAD21 data of Gabriele et al. 2022);
+every other condition then reuses those units.
+
+```yaml
+conditions:
+  - name:         no-cohesin
+    params_name:  no_cohesin
+    separation:   none
+    ctcf_type:    condition1
+  # ... your other conditions ...
+
+analysis:
+  msd: True
+  calibration:
+    default_anchor: msd
+    msd:
+      expt_msd:            {no-cohesin: /proj/yourlab/imaging/fbn2_dRAD21_msd.csv}
+      reference_condition: no-cohesin
+```
+
+The CSV has two columns, `dt_s` and `msd_um2`: lag time in seconds and MSD
+in µm². The no-cohesin condition is calibrated against it; every other
+condition waits for it and writes the same nm/monomer and s/frame into its
+`*_calibration.json`.
+
+**Watch out:** the imaging probes should sit about as far apart as the
+simulated MSD probe pairs (`analysis.msd_probe`). `msd: True` makes the
+analysis much slower.
+
+## A 1D screen before 3D runs
+
+Every 3D condition costs GPU time. The 1D engine alone (cohesin moving on the
+CTCF track, no polymer) runs in seconds to minutes on a CPU, and tells you,
+for each setting, how often each convergent CTCF pair is held by a cohesin
+(its **looped fraction**), the mean loop size, and how much of the chain is
+inside loops:
+
+```bash
+bash sweep_1d.sh --condition cond1_baseline --lifetime 37500,75000,150000 --ctcf-capture 0.25,0.5 --out sweep_1d.tsv
+```
+
+Every combination of the comma-separated values is run (6 here); any
+setting not given keeps the condition's value (`--separation`, `--vlef`,
+`--life-boost-stalled` work the same way). `--loops` scores the loops in a
+TSV (columns `chrom`, `anchor1`, `anchor2`) instead of every convergent pair.
+It needs the oriented CTCF files of a run (`sbatch ChromSimPipe.sh --until
+validateCTCF`), and loading and pausing options apply; sticky sites act in
+3D only and are ignored. Run larger sweeps on a compute node.
+
+**Use it to:** pick a sensible range before a 3D robustness run, or check
+that a perturbation changes the loops you care about at all.
 
 ## A robustness range
 

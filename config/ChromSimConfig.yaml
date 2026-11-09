@@ -256,5 +256,9 @@ analysis:
       persistence_nm: 50.0
       nm_per_bp:      0.34
     msd:
-      expt_msd:      {}        # {ctcf_type: CSV path}
+      expt_msd:      {}        # {condition name or ctcf_type: CSV with dt_s, msd_um2}
       loc_error_um2: 0.0
+      ## A condition (e.g. one with `separation: none`) whose MSD calibration every
+      ## other condition reuses, so all share one nm/monomer and s/frame. '' = each
+      ## condition calibrates on its own. Needs default_anchor: msd and msd: True.
+      reference_condition: ''

@@ -39,8 +39,8 @@ os.environ["CHROMSIM_CONFIG"] = CONFIGFILE
 sys.path.insert(0, os.getcwd())
 from configs.parameters import (
     SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, HIC_FILES, MCOOL_FILES,
-    SAMPLES, RUN_NAME, N_REPLICATES, N_SHARDS, ANALYSIS, GENOME_ASSEMBLY, GENOME,
-    OUTPUT_DIR, LOCI, LOCUS_NAMES, locus_paths, ctcf_bed_path,
+    SAMPLES, RUN_NAME, N_REPLICATES, N_SHARDS, ANALYSIS, CALIBRATION, GENOME_ASSEMBLY, GENOME,
+    OUTPUT_DIR, LOCI, LOCUS_NAMES, locus_paths, ctcf_bed_path, condition_peak_files,
 )
 
 
@@ -282,7 +282,10 @@ rule simulateShard:
         validated = f"{L('done')}/validateCTCF.done",
         polysim   = rules.preparePolysim.output.done,
         bed       = lambda wildcards: rel(ctcf_bed_path(
-            wildcards.locus, COND_LOOKUP[wildcards.condition]["ctcf_type"]))
+            wildcards.locus, COND_LOOKUP[wildcards.condition]["ctcf_type"])),
+        ## peak files for the condition's sticky / loading / pausing options (none by default)
+        features  = lambda wildcards: [rel(f) for f in
+                                       condition_peak_files(COND_LOOKUP[wildcards.condition]).values()]
     output:
         done = f"{L('done')}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.done"
     log:
@@ -343,7 +346,13 @@ rule analyzeCondition:
         merged = lambda wildcards: expand(rules.mergeShards.output.done, locus=wildcards.locus,
                                           condition=wildcards.condition,
                                           rep=range(N_REPLICATES)),
-        mcool  = compare_mcool
+        mcool  = compare_mcool,
+        ## with calibration.msd.reference_condition, other conditions wait for its units
+        reference = lambda wildcards: (
+            [f"{OUT}/loci/{wildcards.locus}/done/analyzeCondition_{CALIBRATION['msd']['reference_condition']}.done"]
+            if CALIBRATION["msd"]["reference_condition"]
+            and CALIBRATION["default_anchor"] == "msd"
+            and wildcards.condition != CALIBRATION["msd"]["reference_condition"] else [])
     output:
         done = f"{L('done')}/analyzeCondition_{{condition}}.done"
     log:

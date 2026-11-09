@@ -126,7 +126,7 @@ logger = logging.getLogger(__name__)
 # which CTCF set was simulated and which Hi-C map (compare_hic) to compare to.
 
 from configs.parameters import (  # noqa: E402
-    SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_BEDS, MCOOL_FILES, ANALYSIS, PATHS,
+    SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_BEDS, MCOOL_FILES, ANALYSIS, PATHS, CALIBRATION,
 )
 _APA = ANALYSIS["apa"]
 _HIC_BALANCE = ANALYSIS["hic_balance"]
@@ -146,6 +146,28 @@ def parse_type_overrides(values: list[str] | None, flag: str) -> dict[str, str]:
         k, path = v.split("=", 1)
         out[k] = path
     return out
+
+
+def expt_msd_for(overrides: dict | None, condition_name: str, ctcf_type: str) -> str | None:
+    """Experimental MSD CSV for a condition: keyed by condition name, else ctcf_type."""
+    overrides = overrides or {}
+    return overrides.get(condition_name) or overrides.get(ctcf_type)
+
+
+def reference_calibration_for(condition_name: str, calibrate_with: str,
+                              common_dir: str) -> str | None:
+    """With calibration.msd.reference_condition set, the pooled calibration JSON of
+    that condition (a sibling folder of common_dir), for every other condition."""
+    ref = CALIBRATION["msd"].get("reference_condition")
+    if not ref or condition_name == ref or calibrate_with != "msd":
+        return None
+    hits = sorted(glob.glob(os.path.join(os.path.dirname(common_dir.rstrip("/")), ref,
+                                         "*_pooled_calibration.json")))
+    if not hits:
+        logger.warning(f"    [calibration] reference condition {ref!r} has no calibration yet; "
+                       f"calibrating {condition_name} on its own")
+        return None
+    return hits[0]
 
 
 def lookup_condition(base_name: str) -> dict | None:
@@ -360,6 +382,7 @@ def _run_msd_and_dynamics(
     expt_msd_csv: str | None = None,
     expt_ps_curve: tuple | None = None,
     sim_ps_curve: tuple | None = None,
+    reference_calibration: str | None = None,
 ) -> dict:
     """
     Run two-point MSD, polymer-dynamics diagnostics, and physical-units
@@ -545,7 +568,13 @@ def _run_msd_and_dynamics(
     calib = None
     try:
         hic_cfg = CALIBRATION["hic"]
-        if calibrate_with == "hic":
+        if reference_calibration:
+            # calibration.msd.reference_condition: reuse that condition's units
+            with open(reference_calibration) as f:
+                d = json.load(f)
+            calib = cal_mod.Calibration(**d)
+            calib.source = f"{d.get('source', '')} (from {os.path.basename(os.path.dirname(reference_calibration))})"
+        elif calibrate_with == "hic":
             if sim_ps_curve is not None and expt_ps_curve is not None:
                 sim_d, sim_p = sim_ps_curve
                 exp_d, exp_p = expt_ps_curve
@@ -1182,7 +1211,11 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                         except Exception as e:
                             logger.info(f"    [calib hic] expt P(s) unavailable: {e}")
 
-                    expt_msd_csv = (expt_msd_overrides or {}).get(cell_type)
+                    cfg_cond = lookup_condition(condition)
+                    cond_name = cfg_cond["name"] if cfg_cond else condition
+                    expt_msd_csv = expt_msd_for(expt_msd_overrides, cond_name, cell_type)
+                    reference_calibration = reference_calibration_for(
+                        cond_name, calibrate_with, common_dir)
 
                     _run_msd_and_dynamics(
                         all_conformations, cell_type=cell_type,
@@ -1194,6 +1227,7 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                         expt_msd_csv=expt_msd_csv,
                         expt_ps_curve=expt_ps_curve,
                         sim_ps_curve=(distances, ps),
+                        reference_calibration=reference_calibration,
                     )
                 except Exception as e:
                     logger.warning(f"    pooled MSD / dynamics failed: {e}")
@@ -1384,7 +1418,7 @@ def main():
                         help="Skip R_g / dwell-time / looped-fraction / "
                              "pair-distance analyses.")
     parser.add_argument("--calibrate-with", choices=("hic", "msd", "none"),
-                        default="hic",
+                        default=CALIBRATION["default_anchor"],
                         help="Physical-units anchor strategy. "
                              "'hic': match sim P(s) to experimental Hi-C P(s) "
                              "at a reference separation (default; uses the "
@@ -1433,7 +1467,8 @@ def main():
     mcool_overrides    = parse_type_overrides(args.mcool, "--mcool")
     ctcf_bed_overrides = parse_type_overrides(args.ctcf_bed, "--ctcf-bed")
     elements_overrides = parse_type_overrides(args.elements_bed, "--elements-bed")
-    expt_msd_overrides = parse_type_overrides(args.expt_msd, "--expt-msd")
+    expt_msd_overrides = {**CALIBRATION["msd"]["expt_msd"],
+                          **parse_type_overrides(args.expt_msd, "--expt-msd")}
 
     if not os.path.isdir(args.results_dir):
         logger.error(f"Results directory not found: {args.results_dir}")
@@ -1489,7 +1524,9 @@ def main():
         )
         mcool_path = resolve_mcool(base_name, args.hic_dir, mcool_overrides)
         elements_bed = resolve_elements_bed(base_name, elements_overrides)
-        expt_msd_csv = expt_msd_overrides.get(cell_type)
+        cfg_cond = lookup_condition(base_name)
+        expt_msd_csv = expt_msd_for(expt_msd_overrides,
+                                    cfg_cond["name"] if cfg_cond else base_name, cell_type)
         work_items.append(dict(
             sim_dir=sim_dir,
             hic_path=hic_path,
