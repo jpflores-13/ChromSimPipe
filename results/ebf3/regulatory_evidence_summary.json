@@ -1,0 +1,76 @@
+{
+ "window": "chr7:135800000-137700000",
+ "promoter_flank_bp": 1000,
+ "excluded_TSS": {
+  "Mgmt": [
+   136894614
+  ],
+  "Glrx3": [
+   137437614,
+   137437655,
+   137437656,
+   137437665,
+   137437689
+  ],
+  "9430038I01Rik": [
+   137410732,
+   137410735,
+   137410756,
+   137410762
+  ],
+  "Ebf3": [
+   137226802,
+   137267538,
+   137313916,
+   137313986,
+   137314414,
+   137314445
+  ]
+ },
+ "files": {
+  "data/peaks/ES_enhancers_tier1.narrowPeak": [
+   "hs737"
+  ],
+  "data/peaks/ES_enhancers_tier2.narrowPeak": [
+   "mm1590",
+   "hs737",
+   "hs699"
+  ],
+  "data/peaks/ES_enhancers_tier3.narrowPeak": "NOT WRITTEN: GSE96107 has no ES H3K27ac IDR peaks",
+  "data/peaks/NPC_enhancers_tier1.narrowPeak": [
+   "hs737"
+  ],
+  "data/peaks/NPC_enhancers_tier2.narrowPeak": [
+   "mm1590",
+   "hs737",
+   "hs699"
+  ],
+  "data/peaks/NPC_enhancers_tier3.narrowPeak": {
+   "n": 6,
+   "dropped_at_excluded_promoters": 8,
+   "kept_but_near_other_annotated_TSS": []
+  },
+  "data/peaks/CN_enhancers_tier1.narrowPeak": [
+   "hs737"
+  ],
+  "data/peaks/CN_enhancers_tier2.narrowPeak": [
+   "mm1590",
+   "hs737",
+   "hs699"
+  ],
+  "data/peaks/CN_enhancers_tier3.narrowPeak": {
+   "n": 13,
+   "dropped_at_excluded_promoters": 8,
+   "kept_but_near_other_annotated_TSS": []
+  },
+  "data/peaks/Ebf3_promoter.narrowPeak": {
+   "tss": 137314445,
+   "summit_monomer": 1514,
+   "peak_monomers": [
+    1513,
+    1514
+   ]
+  }
+ },
+ "E_P_shared_bin": []
+}
