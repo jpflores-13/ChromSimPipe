@@ -519,14 +519,20 @@ What each field means:
   extrudes about 75,000 × 0.0025 ≈ 190 monomers (≈ 190 kb) in a lifetime.
 - `separation`: average spacing between cohesins in monomers; 240 gives
   roughly 8 cohesins per 2 Mb.
-- `ctcf_capture`: probability that a CTCF site stops a passing leg. The same
-  value applies to **every** site in the condition.
+- `ctcf_capture`: probability that a CTCF site stops a passing leg. A single
+  number applies to **every** site in the condition; `{min: 0.2, max: 0.9}`
+  instead scales each site by its peak signal.
 - `ctcf_type`: which sample's CTCF sites to use (a sample name from the
   samplesheet).
 - `compare_hic`: which sample's Hi-C to compare against. Omit it for no
   comparison.
 - Optional `vlef` and `life_boost_stalled` override the `polysim:` block for
   this condition only.
+- Further optional keys switch on more of the model: `separation: none` (no
+  cohesin), `sticky:` (other factors as sticky sites), `attraction_energy:`
+  (compaction), `loading:` and `pausing:` (where cohesin lands or slows). All
+  are listed in [Configuration](configuration.qmd#every-condition-option),
+  with examples in [Perturbation recipes](recipes.qmd).
 
 Read the first two conditions as a pair: they have **identical cohesin
 parameters** and differ **only** in `ctcf_type`. That pair is the core test
@@ -1105,8 +1111,9 @@ the model's limits directly:
 ![The same four loops as log10 observed contacts. Note the different colour scales of Hi-C and simulation, the faster fall-off of simulated contacts away from the diagonal, and the many sharp simulated dots.](images/loop_array_obs.png){#fig-loop-obs fig-alt="The same 4 by 4 grid as observed contact counts on a log10 scale."}
 
 - In the O/E figure the simulated maps have **many more sharp dots** than
-  Hi-C, at nearly every convergent pair: every site in the model is an
-  equally strong barrier.
+  Hi-C, at nearly every convergent pair: with the shipped `ctcf_capture: 0.5`,
+  every site in the model is an equally strong barrier (`ctcf_capture: {min,
+  max}` scales them by peak signal instead).
 - In @fig-loop-obs the simulated signal **falls away from the diagonal
   faster** than Hi-C's.
 - The colour scales differ between Hi-C and simulation panels (Hi-C spans

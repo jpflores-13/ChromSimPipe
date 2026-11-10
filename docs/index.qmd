@@ -76,6 +76,12 @@ bootcamp tutorial values (after Gabriele et al. 2022 and Goel et al. 2025).
 | `ctcf_capture` | 0.5 | 50% stalling probability per CTCF encounter |
 | `polysim: life_boost_stalled` | 4 | Cohesin stalled at CTCF on both legs lives 4× longer |
 
+Each condition can also switch on more of the model: no cohesin, CTCF
+strength from peak signal, other factors such as YY1 or LDB1 as sticky
+sites, chromatin compaction, and targeted cohesin loading or pausing. See
+[Perturbation recipes](recipes.qmd) for examples and
+[Configuration](configuration.qmd#every-condition-option) for every option.
+
 ## The tiling trick
 
 Each locus is simulated as copies placed end to end on one ~70,000-monomer

@@ -33,7 +33,7 @@ correct side.
 
 ```
 5'─────────────────────────────────────────────────────3'
-          ↑ cohesin loads (uniformly)
+          ↑ cohesin loads (uniformly, unless `loading:` is set)
           ├──►  ◄──┤  (two legs extrude outward)
           │          │
           ▼          ▼
