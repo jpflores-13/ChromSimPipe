@@ -1,0 +1,20 @@
+{
+ "ES": {
+  "full": 1.348,
+  "half_A": 1.421,
+  "half_B": 1.269,
+  "half_diff": 0.152
+ },
+ "ncx_NPC": {
+  "full": 2.001,
+  "half_A": 2.064,
+  "half_B": 1.963,
+  "half_diff": 0.102
+ },
+ "ncx_CN": {
+  "full": 2.238,
+  "half_A": 2.099,
+  "half_B": 2.377,
+  "half_diff": 0.277
+ }
+}
