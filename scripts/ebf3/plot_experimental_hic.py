@@ -45,6 +45,24 @@ def genes(ws, we):
     return out
 
 
+RNA_STATE = {"ES": "ES", "ncx_NPC": "ncx_NPC", "ncx_CN": "ncx_CN", "iv_NPC": "NPC", "iv_CN": "CN"}
+_RNA = {}
+
+
+def rna_fpkm(state):
+    """{gene symbol: mean FPKM of the 2 replicates} from GSE96107 per-GSM tables
+    (RNA from the SAME cell source as the Hi-C column)."""
+    import glob
+    if state not in _RNA:
+        reps = []
+        for p in sorted(glob.glob(f"data/raw/gse96107_rna/GSM*_{state}_rep*.txt.gz")):
+            with gzip.open(p, "rt") as f:
+                next(f)
+                reps.append({r[2]: float(r[1]) for r in (l.rstrip("\n").split("\t") for l in f) if len(r) > 2})
+        _RNA[state] = {g: float(np.mean([d.get(g, np.nan) for d in reps])) for g in reps[0]}
+    return _RNA[state]
+
+
 def ctcf(sample):
     p = f"output_ebf3/loci/ebf3_hs737/ctcf/ctcf_oriented_mm10_{sample}.bed"
     return [((int(r[1]) + int(r[2])) // 2, r[5].strip()) for r in
@@ -87,12 +105,13 @@ def panel(fig, ax, state, chip, res, ws, we, vmin, vmax, ep_oe, show_cbar=False)
     ax.set_title(TITLE[state], fontsize=8, color=style.TEXT, pad=8)
     div = make_axes_locatable(ax)
     tg = div.append_axes("bottom", size="14%", pad=0.04, sharex=ax)
+    te = div.append_axes("bottom", size="12%", pad=0.02, sharex=ax)
     tc = div.append_axes("bottom", size="9%", pad=0.02, sharex=ax)
     tk = div.append_axes("bottom", size="12%", pad=0.02, sharex=ax)
     tx = div.append_axes("bottom", size="12%", pad=0.02, sharex=ax)
     tv = div.append_axes("bottom", size="8%", pad=0.02, sharex=ax)
     ta = div.append_axes("bottom", size="13%", pad=0.02, sharex=ax)
-    for a in (tg, tc, tk, tx, tv, ta):
+    for a in (tg, te, tc, tk, tx, tv, ta):
         a.set_yticks([]); a.tick_params(labelbottom=False)
         for s in ("left", "right", "top"):
             a.spines[s].set_visible(False)
@@ -109,6 +128,16 @@ def panel(fig, ax, state, chip, res, ws, we, vmin, vmax, ep_oe, show_cbar=False)
             tg.text(s0 - span * 0.01 if left else e0 + span * 0.01, y, n, fontsize=5.5, style="italic",
                     ha="right" if left else "left", va="center", clip_on=True)
     tg.set_ylim(-0.1, 1.2)
+    # expression: one bar per protein-coding gene over its body, mean FPKM of 2 replicates
+    fp = rna_fpkm(RNA_STATE[state])
+    for s, e, st, n in genes(ws, we):
+        v = fp.get(n, np.nan)
+        if np.isfinite(v):
+            s0, e0 = max(s, ws), min(e, we)
+            te.add_patch(Rectangle((s0, 0), e0 - s0, np.log10(v + 1), color=style.CELL[chip], lw=0))
+            if n == "Ebf3":
+                te.text((s0 + e0) / 2, np.log10(v + 1) + 0.15, f"Ebf3 {v:.2g}", fontsize=5.5, ha="center", va="bottom")
+    te.set_ylim(0, 3.0)
     for x, st in ctcf(chip):
         dx = span * 0.008 * (1 if st == "+" else -1)
         tc.annotate("", xy=(x + dx, 0.5), xytext=(x - dx * 0.2, 0.5),
@@ -145,7 +174,7 @@ def panel(fig, ax, state, chip, res, ws, we, vmin, vmax, ep_oe, show_cbar=False)
     step = 400_000 if span > 1_000_000 else 100_000
     ticks = np.arange(-(-ws // step) * step, we + 1, step)
     ta.set_xticks(ticks); ta.set_xticklabels([f"{t / 1e6:.1f}" for t in ticks], fontsize=6)
-    return im, (tg, tc, tk, tx, tv, ta)
+    return im, (tg, te, tc, tk, tx, tv, ta)
 
 
 def figure(res, ws, we, out, title):
@@ -166,7 +195,7 @@ def figure(res, ws, we, out, title):
     for k, (ax, (st, chip, _)) in enumerate(zip(axes, STATES)):
         im, tr = panel(fig, ax, st, chip, res, ws, we, vmin, vmax, oe[st])
         if k == 0:
-            for a, lab in zip(tr, ("genes", "CTCF", "H3K27ac", "ATAC*", "VISTA", "E–P")):
+            for a, lab in zip(tr, ("genes", "RNA\nlog10 FPKM", "CTCF", "H3K27ac", "ATAC*", "VISTA", "E–P")):
                 a.set_ylabel(lab, rotation=0, ha="right", va="center", fontsize=6)
     cax = fig.add_axes([0.92, 0.55, 0.012, 0.3])
     cb = fig.colorbar(im, cax=cax); cb.set_label("ICE-balanced contact", fontsize=6); cb.ax.tick_params(labelsize=5.5)
@@ -178,7 +207,7 @@ def figure(res, ws, we, out, title):
              "O/E = pixel / mean of its diagonal within chr7:135.8–137.7 Mb.\n"
              "Tracks: CTCF = GSE96107 IDR peaks oriented by FIMO; H3K27ac = GSE96107 bigWig. ncx_ (neocortex) Hi-C is "
              "paired with IN VITRO NPC / CN ChIP: a cell-source MISMATCH (Ebf3 30–79 FPKM in vitro CN vs 1–4 in ncx_CN). "
-             "ES has no H3K27ac in GSE96107.\n*ATAC = PROXY: ENCODE ENCSR810HQR bulk E14.5 forebrain "
+             "ES has no H3K27ac in GSE96107. RNA: GSE96107 gene-level FPKM (mean of 2 replicates) from the SAME cell source as each Hi-C column; bar = log10(FPKM+1) over the gene body, Ebf3 value printed.\n*ATAC = PROXY: ENCODE ENCSR810HQR bulk E14.5 forebrain "
              "(fold change, ENCFF097JFT), identical in every column; not from these cells. Triangles: conserved candidate CTCF loop anchors. VISTA: hs737 black, "
              "other elements grey. Unlabelled gene between Ebf3 and Glrx3: 9430038I01Rik. White lines: bins removed by "
              "ICE balancing (low coverage).")
