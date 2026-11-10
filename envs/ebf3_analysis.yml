@@ -1,0 +1,22 @@
+name: ebf3_analysis
+## Ebf3 project analysis (scripts/ebf3, scripts/analysis): bigWig/bigBed reading,
+## Hi-C QC, insulation, figures. Kept separate from cohesin_sim so the simulation
+## environment the pipeline hashes is unchanged.
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.10
+  - numpy<2
+  - scipy
+  - pandas
+  - h5py
+  - pyyaml
+  - matplotlib
+  - cooler=0.12.1          # same as cohesin_sim
+  - cooltools=0.7.1        # same as cohesin_sim
+  - pybigwig
+  - ucsc-bigbedtobed
+  - ucsc-bigwigtobedgraph
+  - htslib                 # tabix / bgzip
+  - samtools

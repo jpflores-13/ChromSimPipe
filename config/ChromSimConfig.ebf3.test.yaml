@@ -1,0 +1,193 @@
+## =============================================================================
+## SMOKE TEST copy of config/ChromSimConfig.ebf3.yaml (1 rep, 1 shard, 2,000 frames).
+## Results are a pipeline check, not data. Otherwise identical.
+## ChromSimPipe configuration: Ebf3 / hs737 enhancer-promoter locus (mm10)
+##
+## Question: is cohesin loop extrusion with CTCF barriers sufficient for the
+## hs737 <-> Ebf3-promoter contact (1.23 Mb), or is an attractive E-P
+## interaction additionally needed? Rationale for every value:
+## docs/ebf3/04_config_rationale.md. This file is complete (a --configfile
+## replaces the default config, it is not merged into it).
+##
+## Hi-C caveat (docs/ebf3/01_hic_qc.md): the NPC / CN Hi-C here is GSE161259's
+## reanalysis of the NEOCORTEX-SORTED (ncx_) samples; the CTCF and H3K27ac are
+## from the IN VITRO NPC / CN. Ebf3 is 30-79 FPKM in vitro CN, 1-4 in ncx_CN.
+## =============================================================================
+
+samplesheet:   'ChromSimSamplesheet.ebf3.txt'
+fileNamesFrom: ['Condition']           # sample names: ES, NPC, CN
+outputDir:     'output_test_ebf3'
+
+## UCSC mm10, primary chromosomes only (chr1-19, X, Y, M); md5 of the source
+## mm10.fa.gz checked against UCSC's md5sum.txt. See docs/ebf3/00_environment_audit.md.
+genome:          'data/mm10.primary.fa'
+genome_assembly: 'mm10'
+
+ctcf_motif:
+  jaspar_id:   'MA0139.1'              # vertebrate CTCF core motif; conserved in mouse
+  meme:        ''
+  jaspar_url:  'https://jaspar.elixir.no/api/v1/matrix/{jaspar_id}/?format=meme'
+  fimo_thresh: 1.0e-4
+  flank_bp:    250
+  unoriented:  'drop'
+
+resolution:   1000
+n_replicates: 1
+n_shards:     1
+
+hpcProfile: 'profiles/longleaf'
+notify:
+  email:   ''
+  events:  ['start', 'success', 'error']
+  command: 'mail -s {subject} {email}'
+condaEnvs:
+  sim:  'envs/cohesin_sim.yml'
+  ctcf: 'envs/ctcf_extraction.yml'
+
+## =============================================================================
+## Locus: 1.90 Mb, 1,900 monomers. 283 kb flank left of hs737, 386 kb right of
+## the Ebf3 TSS; encloses the conserved CTCF clusters at 135.84-135.89 and
+## 137.47-137.60 Mb. Both edges are multiples of `resolution`.
+## anchor_bp is the Ebf3 promoter bin (TSS chr7:137,314,445 -> monomer 1514).
+## =============================================================================
+loci:
+  - name:         ebf3_hs737
+    chrom:        chr7
+    region_start: 135800000
+    region_end:   137700000
+    label:        "Ebf3 / hs737 enhancer-promoter locus (mm10)"
+    anchor_bp:    137314000
+
+## =============================================================================
+## Conditions. Compare B to A (same default force), C and D to A0 (the
+## heteropolymer force that sticky sites switch on). Never compare C to A.
+## Sticky: E-E = 0, P-P = 0, E-P = 3 kT via sticky_cross (see rationale doc,
+## which pastes the sticky_types() matrix for this locus).
+## =============================================================================
+conditions:
+  # ---- A: plain polymer, default repulsion. Control for B.
+  - name:         A_polymer
+    description:  "No cohesin, default polymer force (control for B)"
+    params_name:  polymer
+    separation:   none
+    ctcf_type:    CN
+    compare_hic:  CN
+
+  # ---- A0: plain polymer, attraction-capable force. Control for C and D.
+  - name:         A0_polymer_attr
+    description:  "No cohesin, heteropolymer force at 0 kT (control for C, D)"
+    params_name:  polymer_attr
+    separation:   none
+    attraction_energy: 0
+    ctcf_type:    CN
+    compare_hic:  CN
+
+  # ---- B: loop extrusion + CTCF barriers
+  - name:         B_extrusion
+    description:  "Cohesin extrusion + CN CTCF barriers"
+    params_name:  extrusion
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    CN
+    compare_hic:  CN
+
+  # ---- C: sticky E-P only, no cohesin (tier 1: hs737 + Ebf3 promoter)
+  - name:         C_sticky_t1
+    description:  "No cohesin, hs737-Ebf3 promoter attraction 3 kT (tier 1)"
+    params_name:  sticky_t1
+    separation:   none
+    ctcf_type:    CN
+    compare_hic:  CN
+    sticky:
+      - {factor: Enhancer, peaks: Enhancer_Peaks, energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer, Promoter], energy: 3.0}
+
+  # ---- D: extrusion + CTCF + sticky E-P (tier 1)
+  - name:         D_combined_t1
+    description:  "Cohesin + CN CTCF + hs737-Ebf3 promoter attraction 3 kT (tier 1)"
+    params_name:  combined_t1
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    CN
+    compare_hic:  CN
+    sticky:
+      - {factor: Enhancer, peaks: Enhancer_Peaks, energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer, Promoter], energy: 3.0}
+
+## =============================================================================
+## Identical for every condition: matched sampling makes A/A0/B/C/D comparable.
+## 1,900 + 2 x 270 = 2,440 monomers per copy -> 28 copies on a 68,320-monomer chain.
+## =============================================================================
+tiling:
+  padding:    270
+  chain_size: 70000
+
+sim_run:
+  seed_base:            42
+  frames_per_replicate: 2000           # smoke test: 1 shard x 2,000 x saveevery 50 = 100,000 blocks
+  contact_radius:       3.0
+  hdf5_frames_per_file: 100
+
+polysim:
+  platform:             CUDA
+  density:              0.3
+  angle_k:              0.05
+  bond_wiggle:          0.1
+  repel:                3.0
+  confinement_k:        1.0
+  smc_bond_wiggle:      0.2
+  smc_bond_dist:        0.5
+  vlef:                 0.0025
+  life_boost_stalled:   4.0
+  integrator:           langevin
+  dt:                   40
+  colrate:              0.01
+  poly_steps_per_block: 33
+  saveevery:            50
+  initsteps:            540000
+  initskip:             20
+  blocks_per_updater:   1000
+
+analysis:
+  n_jobs: 4
+  msd:    False
+  hic_balance: weight                  # cooler ICE (cis-only) from zoomify --balance
+  apa:
+    min_size_bins: 20
+    max_size_bins: 1000
+    pad:           10
+  msd_probe:
+    pairs:  {}
+    labels: {}
+    auto:
+      min_sep_monomers:       200
+      max_sep_monomers:       1500
+      require_convergent:     True
+      n_pairs:                2
+      require_conserved:      True
+      conserved_tol_monomers: 0
+      prefer_flanking:        True
+      disjoint_anchors:       True
+      relax_if_missing:       True
+  msd_fit:
+    lag_min_frames:     1
+    lag_max_frac:       0.3333333333333333
+    fit_lag_min:        5
+    fit_lag_max_frac:   0.25
+    min_n_lags_for_fit: 6
+  calibration:
+    default_anchor: hic
+    hic:
+      s_ref_bp:       100000
+      persistence_nm: 50.0
+      nm_per_bp:      0.34
+    msd:
+      expt_msd:      {}
+      loc_error_um2: 0.0
+      reference_condition: ''

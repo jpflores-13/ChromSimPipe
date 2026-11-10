@@ -38,3 +38,5 @@ build/
 .DS_Store
 .snakemake_venv/
 env/
+!data/peaks/
+/.conda_envs/
