@@ -1,0 +1,49 @@
+Config: /work/users/j/p/jpflores/projects/ChromSimPipe/config/ChromSimConfig.ebf3.yaml
+Resolution: 1000 bp
+Loci: ebf3_hs737 (chr7:135800000-137700000)
+
+Genome: /work/users/j/p/jpflores/projects/ChromSimPipe/data/mm10.primary.fa
+    22 sequences, named like chr1, chr2, chr3
+    [PASS] ebf3_hs737: chr7 is 145,441,459 bp; the window fits
+
+Sample ES
+  CTCF peaks: /work/users/j/p/jpflores/projects/ChromSimPipe/data/peaks/ES_CTCF.narrowPeak
+    7,586 peaks on 1 chromosomes, named like chr7
+    [PASS] ebf3_hs737: 82 peaks in the window
+    [PASS] every peak lies within the genome's chromosomes
+  Hi-C: /work/users/j/p/jpflores/projects/ChromSimPipe/data/mcool/ES_chr7.mcool
+    [PASS] resolutions [1000, 5000, 10000, 25000, 50000, 100000]
+    [PASS] chr7 has the same length in the Hi-C and the genome
+    [PASS] normalization: weight
+
+Sample NPC
+  CTCF peaks: /work/users/j/p/jpflores/projects/ChromSimPipe/data/peaks/NPC_CTCF.narrowPeak
+    2,069 peaks on 1 chromosomes, named like chr7
+    [PASS] ebf3_hs737: 24 peaks in the window
+    [PASS] every peak lies within the genome's chromosomes
+  Hi-C: /work/users/j/p/jpflores/projects/ChromSimPipe/data/mcool/ncx_NPC_chr7.mcool
+    [PASS] resolutions [1000, 5000, 10000, 25000, 50000, 100000]
+    [PASS] chr7 has the same length in the Hi-C and the genome
+    [PASS] normalization: weight
+
+Sample CN
+  CTCF peaks: /work/users/j/p/jpflores/projects/ChromSimPipe/data/peaks/CN_CTCF.narrowPeak
+    1,831 peaks on 1 chromosomes, named like chr7
+    [PASS] ebf3_hs737: 13 peaks in the window
+    [PASS] every peak lies within the genome's chromosomes
+  Hi-C: /work/users/j/p/jpflores/projects/ChromSimPipe/data/mcool/ncx_CN_chr7.mcool
+    [PASS] resolutions [1000, 5000, 10000, 25000, 50000, 100000]
+    [PASS] chr7 has the same length in the Hi-C and the genome
+    [PASS] normalization: weight
+
+Factor peaks: /work/users/j/p/jpflores/projects/ChromSimPipe/data/peaks/CN_enhancers_tier1.narrowPeak
+    used by C_sticky_t1 sticky:Enhancer, D_combined_t1 sticky:Enhancer
+    1 peaks, named like chr7
+    [PASS] ebf3_hs737: 1 peaks in the window
+
+Factor peaks: /work/users/j/p/jpflores/projects/ChromSimPipe/data/peaks/Ebf3_promoter.narrowPeak
+    used by C_sticky_t1 sticky:Promoter, D_combined_t1 sticky:Promoter
+    1 peaks, named like chr7
+    [PASS] ebf3_hs737: 1 peaks in the window
+
+18 passed, 0 warnings, 0 failed

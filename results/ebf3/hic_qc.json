@@ -1,0 +1,276 @@
+{
+ "pre_registered": {
+  "min_raw": 30,
+  "edge_tol_bp": 20000,
+  "ins_res": 10000,
+  "oe_expected": "diagonal mean inside chr7:135,800,000-137,700,000"
+ },
+ "states": {
+  "ES": {
+   "resolutions": [
+    1000,
+    5000,
+    10000,
+    25000,
+    50000,
+    100000
+   ],
+   "sum_contacts_1kb_cooler": 138707503,
+   "valid_pairs_in_file": 138707503,
+   "cis_chr7": 138707503,
+   "trans": 0,
+   "cis_lt_1kb": 7458864,
+   "cis_1_20kb": 24994982,
+   "cis_ge_20kb": 106253657,
+   "window_1kb_bins_filtered_frac": 0.06210526315789474,
+   "window_raw_contacts_10kb": 1360492,
+   "ep_pixel": [
+    {
+     "res": 1000,
+     "bin_i": 136083,
+     "bin_j": 137314,
+     "sep_bins": 1231,
+     "raw": 0,
+     "balanced": 0.0,
+     "expected_in_window": 6.742138262973789e-05,
+     "oe": 0.0,
+     "n_diag_pixels": 577
+    },
+    {
+     "res": 5000,
+     "bin_i": 27216,
+     "bin_j": 27462,
+     "sep_bins": 246,
+     "raw": 9,
+     "balanced": 0.0005758721770173393,
+     "expected_in_window": 0.000347715311504103,
+     "oe": 1.6561599617983578,
+     "n_diag_pixels": 130
+    },
+    {
+     "res": 10000,
+     "bin_i": 13608,
+     "bin_j": 13731,
+     "sep_bins": 123,
+     "raw": 31,
+     "balanced": 0.001003867524055827,
+     "expected_in_window": 0.0007448795780762235,
+     "oe": 1.347691027653736,
+     "n_diag_pixels": 67
+    },
+    {
+     "res": 25000,
+     "bin_i": 5443,
+     "bin_j": 5492,
+     "sep_bins": 49,
+     "raw": 132,
+     "balanced": 0.0023931890464387595,
+     "expected_in_window": 0.002046259553064597,
+     "oe": 1.1695432492200615,
+     "n_diag_pixels": 27
+    }
+   ]
+  },
+  "ncx_NPC": {
+   "resolutions": [
+    1000,
+    5000,
+    10000,
+    25000,
+    50000,
+    100000
+   ],
+   "sum_contacts_1kb_cooler": 147238051,
+   "valid_pairs_in_file": 147238051,
+   "cis_chr7": 147238051,
+   "trans": 0,
+   "cis_lt_1kb": 868030,
+   "cis_1_20kb": 15662798,
+   "cis_ge_20kb": 130707223,
+   "window_1kb_bins_filtered_frac": 0.06842105263157895,
+   "window_raw_contacts_10kb": 1499172,
+   "ep_pixel": [
+    {
+     "res": 1000,
+     "bin_i": 136083,
+     "bin_j": 137314,
+     "sep_bins": 1231,
+     "raw": 0,
+     "balanced": 0.0,
+     "expected_in_window": 0.00011430306621074918,
+     "oe": 0.0,
+     "n_diag_pixels": 572
+    },
+    {
+     "res": 5000,
+     "bin_i": 27216,
+     "bin_j": 27462,
+     "sep_bins": 246,
+     "raw": 24,
+     "balanced": 0.0013411747222936436,
+     "expected_in_window": 0.0005938275822899205,
+     "oe": 2.2585254748891925,
+     "n_diag_pixels": 130
+    },
+    {
+     "res": 10000,
+     "bin_i": 13608,
+     "bin_j": 13731,
+     "sep_bins": 123,
+     "raw": 92,
+     "balanced": 0.002491543183344403,
+     "expected_in_window": 0.0012449336425591204,
+     "oe": 2.0013461747428702,
+     "n_diag_pixels": 66
+    },
+    {
+     "res": 25000,
+     "bin_i": 5443,
+     "bin_j": 5492,
+     "sep_bins": 49,
+     "raw": 422,
+     "balanced": 0.005924044658045234,
+     "expected_in_window": 0.0032923996182270187,
+     "oe": 1.799309119479055,
+     "n_diag_pixels": 27
+    }
+   ]
+  },
+  "ncx_CN": {
+   "resolutions": [
+    1000,
+    5000,
+    10000,
+    25000,
+    50000,
+    100000
+   ],
+   "sum_contacts_1kb_cooler": 149027070,
+   "valid_pairs_in_file": 149027070,
+   "cis_chr7": 149027070,
+   "trans": 0,
+   "cis_lt_1kb": 1133378,
+   "cis_1_20kb": 19698489,
+   "cis_ge_20kb": 128195203,
+   "window_1kb_bins_filtered_frac": 0.07105263157894737,
+   "window_raw_contacts_10kb": 1676558,
+   "ep_pixel": [
+    {
+     "res": 1000,
+     "bin_i": 136083,
+     "bin_j": 137314,
+     "sep_bins": 1231,
+     "raw": 1,
+     "balanced": 0.0006272871664883473,
+     "expected_in_window": 0.00015949835692801362,
+     "oe": 3.9328754137038593,
+     "n_diag_pixels": 570
+    },
+    {
+     "res": 5000,
+     "bin_i": 27216,
+     "bin_j": 27462,
+     "sep_bins": 246,
+     "raw": 38,
+     "balanced": 0.0021784781005857092,
+     "expected_in_window": 0.0008047294223191775,
+     "oe": 2.7070938879151183,
+     "n_diag_pixels": 130
+    },
+    {
+     "res": 10000,
+     "bin_i": 13608,
+     "bin_j": 13731,
+     "sep_bins": 123,
+     "raw": 134,
+     "balanced": 0.0037484957971228995,
+     "expected_in_window": 0.0016747751817601123,
+     "oe": 2.238208350558074,
+     "n_diag_pixels": 66
+    },
+    {
+     "res": 25000,
+     "bin_i": 5443,
+     "bin_j": 5492,
+     "sep_bins": 49,
+     "raw": 575,
+     "balanced": 0.008501816526738898,
+     "expected_in_window": 0.004359993638660056,
+     "oe": 1.949960764014265,
+     "n_diag_pixels": 27
+    }
+   ]
+  }
+ },
+ "endpoint_resolution_bp": 10000,
+ "edge_check": {
+  "ES": {
+   "narrow_left": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "narrow_right": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "wide_left": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "wide_right": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "strength_p75": 0.285
+  },
+  "ncx_NPC": {
+   "narrow_left": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "narrow_right": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "wide_left": {
+    "strong_boundary_within_tol": true,
+    "boundaries": [
+     {
+      "start": 135480000,
+      "strength": 0.386
+     }
+    ]
+   },
+   "wide_right": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "strength_p75": 0.212
+  },
+  "ncx_CN": {
+   "narrow_left": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "narrow_right": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "wide_left": {
+    "strong_boundary_within_tol": true,
+    "boundaries": [
+     {
+      "start": 135470000,
+      "strength": 0.904
+     }
+    ]
+   },
+   "wide_right": {
+    "strong_boundary_within_tol": false,
+    "boundaries": []
+   },
+   "strength_p75": 0.248
+  }
+ },
+ "widen_window": false
+}

@@ -37,20 +37,24 @@ def _in(extent, x, y):
 
 
 def annotate_ep(ax, x_bp, y_bp, label, extent, bin_bp, oe=None, size_bins=2.5,
-                color=None, lw=1.2, fontsize=6.5):
-    """Ring the (y_bp, x_bp) pixel in the upper triangle (x > y is enforced)."""
+                color=None, lw=1.2, fontsize=6.5, text_offset=(-28, -26)):
+    """Ring the (y_bp, x_bp) pixel in the upper triangle (x > y is enforced).
+    A white halo under the ring keeps it visible on dark and light pixels.
+    text_offset (points) places the label; the default puts it below-left of the
+    ring, inside the upper triangle and away from the edge markers."""
     x, y = max(x_bp, y_bp), min(x_bp, y_bp)
     if not _in(extent, x, y):
         return None
     color = color or style.EP_RING
     d = size_bins * bin_bp
-    ring = Ellipse((x, y), d, d, fill=False, ec=color, lw=lw, zorder=10)
+    ax.add_patch(Ellipse((x, y), d, d, fill=False, ec="white", lw=lw + 1.6, zorder=10))
+    ring = Ellipse((x, y), d, d, fill=False, ec=color, lw=lw, zorder=10.5)
     ax.add_patch(ring)
     sep = abs(x - y) / 1e6
     txt = f"{label}\n{sep:.2f} Mb" + (f" · O/E {oe:.2f}" if oe is not None and np.isfinite(oe) else "")
-    ax.annotate(txt, xy=(x - d / 2 * 0.71, y + d / 2 * 0.71), xytext=(-6, 10), textcoords="offset points",
-                ha="right", va="bottom", fontsize=fontsize, color=style.TEXT, zorder=11,
-                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.8),
+    ax.annotate(txt, xy=(x - d / 2 * 0.71, y + d / 2 * 0.71), xytext=text_offset, textcoords="offset points",
+                ha="right", va="top", fontsize=fontsize, color=style.TEXT, zorder=11,
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="none", alpha=0.85),
                 arrowprops=dict(arrowstyle="-", color=color, lw=0.6))
     return ring
 
