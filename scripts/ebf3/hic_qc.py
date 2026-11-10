@@ -44,6 +44,7 @@ RES_EP = [1000, 5000, 10000, 25000]
 MIN_RAW = 30
 EDGE_TOL = 20_000
 INS_RES, INS_WINDOWS = 10_000, [100_000, 200_000, 500_000]
+IGNORE_DIAGS = 2             # cooler balance default; zoomify --balance does not store it in the weights
 CAPTION_NOTE = ("ncx_NPC / ncx_CN = GSE161259 reanalysis of neocortex-sorted NPC/CN (GSM2533835-42); "
                 "NOT the in vitro NPC/CN that the GSE96107 ChIP and RNA come from.")
 
@@ -97,12 +98,12 @@ def main():
         c5 = clr(s, 5000)
         view = pd.DataFrame({"chrom": [CHROM], "start": [0], "end": [c5.chromsizes[CHROM]], "name": [CHROM]})
         cvd = cooltools.expected_cis(c5, view_df=view, smooth=True, aggregate_smoothed=True,
-                                     clr_weight_name="weight", nproc=4)
+                                     clr_weight_name="weight", ignore_diags=IGNORE_DIAGS, nproc=4)
         cvd["s_bp"] = cvd["dist"] * 5000
         ps[s] = cvd[cvd["dist"] > 0]
         # insulation at 10 kb across chr7
         ins[s] = cooltools.insulation(c10, INS_WINDOWS, view_df=view.assign(end=c10.chromsizes[CHROM]),
-                                      clr_weight_name="weight", nproc=4)
+                                      clr_weight_name="weight", ignore_diags=IGNORE_DIAGS, nproc=4)
         out["states"][s] = info
 
     # ---- endpoint resolution (pre-registered rule) ----
