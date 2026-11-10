@@ -289,8 +289,10 @@ for _r in _rows:
 ## Run name: metadata values shared by every sample, joined with '_'
 ## (the bagPipes `namer` pattern). Used to name run-level summary files.
 _meta_cols = [c for c in (_rows[0] if _rows else {}) if c not in ("CTCF_Peaks", "Hi-C")]
+## File paths shared by every row (e.g. one promoter file for all samples) are
+## not run-name metadata, and their '/' would break the output file name.
 _shared    = [next(iter(vals)) for vals in ({r[c] for r in _rows} for c in _meta_cols)
-              if len(vals) == 1]
+              if len(vals) == 1 and "/" not in next(iter(vals))]
 RUN_NAME   = "_".join(v for v in _shared if v) or "ChromSimPipe"
 
 
