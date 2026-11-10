@@ -1,0 +1,4 @@
+Project	Cell_Type	Condition	CTCF_Peaks	Hi-C	Enhancer_Peaks	Promoter_Peaks
+Bdnf	mESC	ES	data/peaks/ES_CTCF_chr2.narrowPeak	data/mcool/ES_chr2.mcool	data/peaks/bdnf/ES_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak
+Bdnf	NPC	NPC	data/peaks/NPC_CTCF_chr2.narrowPeak	data/mcool/ncx_NPC_chr2.mcool	data/peaks/bdnf/NPC_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak
+Bdnf	CN	CN	data/peaks/CN_CTCF_chr2.narrowPeak	data/mcool/ncx_CN_chr2.mcool	data/peaks/bdnf/CN_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak

@@ -1,0 +1,36 @@
+{
+ "window": "chr2:108800000-110300000",
+ "bdnf_tss": [
+  109674700,
+  109675897,
+  109677032,
+  109692436,
+  109693027,
+  109693563,
+  109694409,
+  109694469,
+  109709383
+ ],
+ "promoter_monomers": [
+  874,
+  875,
+  877,
+  892,
+  893,
+  894,
+  909
+ ],
+ "candidates": 54,
+ "excluded_at_protein_coding_TSS": 28,
+ "enhancers": 26,
+ "enhancer_monomers": 16,
+ "by_source": {
+  "CN_H3K27ac": 3,
+  "ATAC_forebrainE14.5": 23
+ },
+ "shared_E_P_monomers": [],
+ "E_within_5kb_of_a_promoter": [
+  109678118,
+  109678648
+ ]
+}
