@@ -871,12 +871,6 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="
 window; coordinate → monomer-index mapping is monotone; prints counts
 per condition and sites gained / lost / shared. Exits non-zero on
 failure, including when a BED is missing.</p>
-<h3
-id="scriptsexport_conserved_ctcf_bed.py"><code>scripts/export_conserved_ctcf_bed.py</code></h3>
-<p><strong>Purpose.</strong> Intersect two oriented CTCF BEDs, keep only
-sites shared in both (same position and orientation), and write a
-conserved-sites BED. Useful for testing “CTCF binding didn’t change,
-only cohesin did” scenarios.</p>
 <h2 id="the-simulation-model-polysim">4. The simulation model:
 polysim</h2>
 <p>ChromSimPipe simulates with the Hansen lab’s polysim package
@@ -1052,6 +1046,60 @@ orchestrator: <code>scripts/run_analysis_all.py</code></h3>
 <code>merged_&lt;condition&gt;_rep&lt;N&gt;</code> directory, runs the
 full analysis suite, and writes per-condition outputs. Called by the
 <code>analyzeCondition</code> Snakemake rule.</p>
+<p>It works in two phases. Phase 1 analyses each replicate on its own
+(<code>run_analysis_one</code>). Phase 2, <code>pool_replicates</code>,
+pools each condition’s replicates and runs one named step after another,
+each a short documented function:</p>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 41%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>Function</th>
+<th>Writes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><code>_pooled_contact_map</code></td>
+<td><code>&lt;prefix&gt;_contact_map.npy</code> (reused in resume
+mode)</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><code>_pooled_ps_and_insulation</code></td>
+<td>P(s) curve and metrics, insulation</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><code>_pooled_ctcf_and_apa</code></td>
+<td>CTCF overlay figure and relative BED, APA, loop strengths</td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td><code>_pooled_hic_comparison</code></td>
+<td><code>&lt;prefix&gt;_metrics.json</code>, sim-vs-Hi-C figure</td>
+</tr>
+<tr class="odd">
+<td>5</td>
+<td><code>_pooled_msd_and_calibration</code></td>
+<td>MSD, polymer dynamics,
+<code>&lt;prefix&gt;_calibration.json</code></td>
+</tr>
+</tbody>
+</table>
+<p>Then, across conditions, <code>_ps_overlay_and_derivatives</code>
+(P(s) overlay and local slopes, with the Hi-C curves;
+<code>_write_curve_tables</code> also writes every curve and its slope
+to <code>ps_curves.tsv</code> and <code>ps_derivative_curves.tsv</code>;
+see <code>docs/ps.qmd</code>) and <code>_able_on_conserved_pairs</code>
+(loop strength at the MSD probe pairs). <code>&lt;prefix&gt;</code> is
+<code>&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_&lt;N&gt;blk_pooled</code>.</p>
 <p><strong>How to run directly</strong> (e.g. for one condition):</p>
 <div class="sourceCode" id="cb8"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/run_analysis_all.py <span class="dt">\</span></span>
@@ -1223,11 +1271,6 @@ fit</td>
 <td><code>calibration.py</code></td>
 <td>Map simulation units → physical units (nm/monomer, sec/frame)</td>
 </tr>
-<tr class="odd">
-<td><code>batch_analysis.py</code></td>
-<td>Older single-pass analysis over all result dirs (simpler than the
-orchestrator)</td>
-</tr>
 </tbody>
 </table>
 <h3 id="c.-scriptssummarize_analysis.py">6c.
@@ -1238,11 +1281,16 @@ table:</p>
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/summarize_analysis.py <span class="dt">\</span></span>
 <span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--analysis-dir</span> output/loci/chr1_fig1/analysis <span class="dt">\</span></span>
 <span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--reference-condition</span> cond1_baseline</span></code></pre></div>
-<h3 id="d.-scriptscheck_results.py">6d.
-<code>scripts/check_results.py</code></h3>
-<p>Lists every directory under a locus’ <code>sims/</code> folder, its
-frame count, and whether analysis outputs are present. Quick inventory
-after a SLURM batch.</p>
+<h3 id="scripts-moved-to-legacy">Scripts moved to
+<code>legacy/</code></h3>
+<p><code>run_analysis_all_fastdyn.py</code>,
+<code>migrate_legacy_analysis.py</code>,
+<code>plot_contact_map_panels.py</code>, <code>check_results.py</code>
+and <code>export_conserved_ctcf_bed.py</code> (from
+<code>scripts/</code>), and <code>batch_analysis.py</code> and
+<code>polymer_dynamics_parallel.py</code> (from <code>analysis/</code>),
+are in <code>legacy/</code>: the workflow never calls them.
+<code>legacy/README.md</code> says what each did.</p>
 <h2 id="legacy-cluster-scripts-legacycluster">Legacy cluster scripts
 (<code>legacy/cluster/</code>)</h2>
 <p>The pre-Snakemake SLURM scripts were written for the lab’s original

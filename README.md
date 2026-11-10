@@ -357,7 +357,9 @@ output/
 ```
 
 `{runName}` joins the metadata values shared by every sample (here
-`STRS_HEK293T`).
+`STRS_HEK293T`). `docs/analysis.qmd` lists the analysis files; `docs/ps.qmd`
+explains P(s), its local slope, and how to plot them from `ps_curves.tsv` and
+`ps_derivative_curves.tsv`.
 
 ---
 

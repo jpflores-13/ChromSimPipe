@@ -1,0 +1,254 @@
+# P(s): Contact Probability vs. Distance
+
+This page explains P(s): what it measures, how ChromSimPipe calculates it for
+simulations and for Hi-C, how to read it, and how to plot it yourself. It is
+one of the most informative summaries of a contact map, and the easiest way to
+check whether a simulation behaves like the real chromatin.
+
+## What P(s) is
+
+Take a contact map and pick a genomic separation *s*, say 50 kb. Every pair of
+loci 50 kb apart sits on one diagonal of the map, 50 bins from the main
+diagonal (at 1 kb bins). **P(s) is the average contact frequency along that
+diagonal:** how often two loci *s* apart touch, on average, across the region.
+Doing this for every diagonal gives a curve, contact frequency against
+distance.
+
+```
+contact map                      P(s)
+ ╲ . . . .                        │╲
+ . ╲ . . .       average each     │ ╲___
+ . . ╲ . .   ──  diagonal   ──►   │     ╲___
+ . . . ╲ .                        │         ╲____
+ . . . . ╲                        └──────────────── s
+   ↑ diagonal d = loci d bins apart
+```
+
+Contacts become rarer the further apart two loci are, so P(s) falls with *s*.
+Plotted on log–log axes it is close to a straight line, because it falls off
+roughly as a power law, **P(s) ∝ s^−α**: the slope of the log–log curve is −α.
+How fast it falls, and where it bends, says something about how the chromatin
+is folded:
+
+| Shape on log–log axes | What it suggests |
+|-----------------------|------------------|
+| Slope around −1.5 | an unconstrained polymer (an ideal chain) |
+| Slope around −1 | compact, crumpled chromatin (the "fractal globule" of Lieberman-Aiden et al. 2009) |
+| A shoulder or bump at a few hundred kb | loop extrusion: cohesin brings loci within a loop together, so contacts up to the typical loop size are enriched |
+| The bump disappears | loss of cohesin (the curve looks more like a plain polymer's) |
+
+The bump is easiest to see in the **local slope** of P(s), the derivative
+d log P / d log s (below). In loop-extruding chromatin, the slope rises to a
+local maximum (it becomes less negative) near the average loop size, then falls
+again; Gassler et al. 2017 used the position of that maximum to estimate loop
+size, and the depth of the dip after it as a measure of how much cohesin is
+loaded.
+
+## How ChromSimPipe calculates it
+
+### For a simulation
+
+1. **Contact map.** For every saved conformation, two monomers count as in
+   contact when they are closer than `sim_run.contact_radius` (3 monomer
+   units by default). Each copy of the tiled locus gives one map; maps are
+   averaged over all copies, frames and replicates. Each value is therefore a
+   **contact probability**: the fraction of snapshots in which that pair
+   touched.
+2. **P(s).** For each diagonal *d* of the pooled map (`analysis/ps_curve.py`,
+   `compute_ps_curve`):
+
+   $$P(s) = \frac{1}{N - d} \sum_{i=1}^{N-d} C_{i,\,i+d}, \qquad s = d \times \text{resolution}$$
+
+   where *C* is the contact map and *N* the number of bins in the locus.
+3. **Power-law exponent.** A straight line is fitted to log10 P against log10 s
+   between 2 and 30 kb (`fit_ps_powerlaw`); α is minus its slope, reported as
+   `ps_exponent_2_30kb`.
+4. **Local slope.** log10 P is interpolated onto 80 evenly spaced points of
+   log10 s between 5 kb and 2 Mb, smoothed with a Gaussian (σ = 0.8 points,
+   following Gassler et al. 2017), and differentiated
+   (`compute_ps_derivative`).
+
+### For Hi-C
+
+The same diagonal average, on the balanced Hi-C matrix of the same locus
+window at the same resolution (`compute_ps_from_cooler`). Bins with no
+balanced value (filtered by the balancing) count as zero, and the first two
+diagonals are dropped, because Hi-C is unreliable right next to the diagonal.
+
+### What can and can't be compared
+
+- **Shapes and slopes compare directly; heights don't.** Simulated P(s) is a
+  probability set by `contact_radius`; Hi-C P(s) is in balanced read units. To
+  overlay them, divide each curve by its own value at one reference distance
+  (e.g. 10 kb), or compare the local slopes.
+- **Only distances inside the window.** Both curves are computed within the
+  locus window, so *s* stops at the window size. The longest distances rest
+  on few pairs (only *N − d* per diagonal) and are noisy; trust them up to
+  about half the window.
+- **Simulated contacts fall off faster with distance than Hi-C's** with the
+  default polymer settings: expect a steeper simulated curve at long range.
+  The polymer settings, not CTCF or cohesin, set this.
+
+## What the pipeline writes
+
+In `output/loci/<locus>/analysis/<condition>/`:
+
+| File | Contents |
+|------|----------|
+| `<prefix>_ps_curve.npz` | the simulated curve: arrays `distances` (bp) and `ps` |
+| `<prefix>_ps_metrics.json` | P(s) at 10, 50, 100, 200, 500 kb and 1 Mb; `ps_exponent_2_30kb`; local slopes at 5–500 kb; the fit |
+| `ps_overlay_all_conditions.png` | the simulated curves analysed in this folder (in a pipeline run, the one condition), log–log |
+| `ps_derivative_all_conditions.png` | local slopes: this condition and every Hi-C sample |
+| `ps_derivative_table.csv` / `.json` | per curve: slope at 10 kb–1 Mb, the minimum and maximum slope and where they occur, the inferred mean loop size, mean slope over 5–30 kb and 100 kb–1 Mb |
+| `ps_curves.tsv` | the curves in the derivative figure (this condition and every Hi-C sample) as `curve`, `s_bp`, `ps` |
+| `ps_derivative_curves.tsv` | their local slopes as `curve`, `s_bp`, `slope` |
+
+`<prefix>` is `<params_name>_ctcf-<ctcf_type>_<N>blk_pooled` (or `..._rep<r>`
+for one replicate). In the TSVs, simulated curves are named after their
+condition's folders (e.g. `baseline_ctcf-condition1`) and Hi-C curves after
+the sample, with `_experimental (exp)` added (e.g.
+`condition1_experimental (exp)`).
+
+## Plotting it yourself in R
+
+The chunks below need a finished run's output folder, so they are not run when
+this page is built. Run them from the repo root. The first one resolves paths
+from the config, as in the [vignette](vignette.qmd#load-a-simulated-map-and-its-hi-c-in-r):
+
+```{r}
+#| eval: false
+#| label: ps-setup
+library(yaml)
+library(ggplot2)
+
+cfg <- read_yaml("config/ChromSimConfig.yaml")
+out_root <- Sys.getenv("CHROMSIM_OUTPUT_ROOT", unset = getwd())
+out_dir  <- if (startsWith(cfg$outputDir, "/")) cfg$outputDir else file.path(out_root, cfg$outputDir)
+
+locus <- cfg$loci[[1]]
+cond  <- cfg$conditions[[1]]
+analysis_dir <- file.path(out_dir, "loci", locus$name, "analysis", cond$name)
+```
+
+### The curves the pipeline computed
+
+```{r}
+#| eval: false
+#| label: ps-plot
+ps <- read.delim(file.path(analysis_dir, "ps_curves.tsv"), check.names = FALSE) |>
+  subset(s_bp > 0 & ps > 0)
+
+ref_s <- 10000
+ps_norm <- split(ps, ps$curve) |>
+  lapply(\(d) transform(d, ps_rel = ps / d$ps[which.min(abs(d$s_bp - ref_s))])) |>
+  do.call(what = rbind)
+
+ggplot(ps_norm, aes(s_bp, ps_rel, colour = curve)) +
+  geom_line() +
+  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
+  scale_y_log10() +
+  labs(x = "genomic separation s", y = paste0("P(s) / P(", ref_s / 1000, " kb)"),
+       colour = NULL, title = paste(locus$name, "P(s)")) +
+  theme_minimal()
+```
+
+- `read.delim()` reads the tab-separated table; `check.names = FALSE` keeps
+  the curve names as written. `subset()` drops s = 0 and empty diagonals,
+  which have no logarithm.
+- Simulated and Hi-C curves are in different units, so each is divided by its
+  own value at `ref_s` (10 kb): every curve passes through 1 there, and the
+  comparison is about shape. `split()` makes one table per curve, `lapply()`
+  normalises each, and `do.call(rbind)` puts them back together.
+- `scale_x_log10()` and `scale_y_log10()` give the log–log axes on which a
+  power law is a straight line; the `label_number()` call prints distances as
+  10 kb, 100 kb, 1 Mb.
+
+### The local slope
+
+```{r}
+#| eval: false
+#| label: ps-slope
+slope <- read.delim(file.path(analysis_dir, "ps_derivative_curves.tsv"), check.names = FALSE)
+
+ggplot(slope, aes(s_bp, slope, colour = curve)) +
+  geom_hline(yintercept = c(-1, -1.5), linetype = "dashed", colour = "grey60") +
+  geom_line() +
+  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
+  labs(x = "genomic separation s", y = "local slope  d log P / d log s",
+       colour = NULL) +
+  theme_minimal()
+```
+
+- Each value is the slope of the log–log P(s) at that distance, smoothed as
+  described above. The dashed lines mark −1 and −1.5 for reference.
+- Look for the local maximum (the least negative point) between ~20 kb and
+  1 Mb: in loop-extruding chromatin it sits near the mean loop size. The
+  pipeline reports it per curve as `inferred_mean_loop_size_bp` in
+  `ps_derivative_table.csv`.
+
+### Calculating P(s) from a map yourself
+
+To see the calculation, or to compute P(s) for a map the pipeline didn't make
+(another window, a cropped region), average the diagonals of the pooled
+contact map directly:
+
+```{r}
+#| eval: false
+#| label: ps-by-hand
+np  <- reticulate::import("numpy")
+sim <- np$load(list.files(analysis_dir, pattern = "_pooled_contact_map\\.npy$",
+                          full.names = TRUE))
+
+n <- nrow(sim)
+ps_by_hand <- data.frame(
+  s_bp = (0:(n - 1)) * cfg$resolution,
+  ps   = vapply(0:(n - 1), \(d) mean(sim[cbind(seq_len(n - d), seq_len(n - d) + d)]), numeric(1))
+)
+head(ps_by_hand)
+```
+
+- `np$load()` reads the NumPy file through reticulate; if `nrow(sim)` is
+  `NULL`, see the note on NumPy versions in the
+  [vignette](vignette.qmd#load-a-simulated-map-and-its-hi-c-in-r).
+- `sim[cbind(rows, cols)]` picks the matrix cells at those (row, column)
+  pairs: for offset `d`, rows `1 … n − d` and columns `d + 1 … n`, i.e. the
+  `d`-th diagonal. Its mean is P(s) for s = `d × resolution`, exactly the
+  formula above.
+- This reproduces the simulated rows of `ps_curves.tsv` for this condition.
+- To compare several conditions on one plot, read each condition folder's
+  `ps_curves.tsv` and `rbind()` them; the Hi-C curves repeat in every folder,
+  so keep one copy (`unique()`).
+  The same lines work on any square matrix, including a Hi-C matrix exported
+  from a `.cool` file.
+
+## Calculating it in Python
+
+The functions the pipeline uses can be called directly, from the repo root,
+with the simulation environment's Python:
+
+```python
+import glob
+import numpy as np
+import sys
+sys.path.insert(0, "analysis")
+import ps_curve
+
+sim = np.load(glob.glob("output/loci/chr1_fig1/analysis/cond1_baseline/*_pooled_contact_map.npy")[0])
+d, p = ps_curve.compute_ps_curve(sim, resolution=1000)
+fit = ps_curve.fit_ps_powerlaw(d, p)
+slope = ps_curve.compute_ps_derivative(d, p)
+print(fit["exponent"], slope["s"][:3], slope["dlogP_dlogs"][:3])
+```
+
+`compute_ps_from_cooler(path, region="chr1:64210000-66170000", balance="KR")`
+does the same for a Hi-C `.cool` file (the region written the way the pipeline
+passes it, `chrom:region_start-region_end` from the config).
+
+## References
+
+- Lieberman-Aiden E et al. 2009, *Science* 326:289. Hi-C, and P(s) ∝ s^−1 as
+  the signature of compact, crumpled chromatin.
+- Gassler J et al. 2017, *EMBO J* 36:3600. The local slope of P(s), and
+  reading loop size and cohesin density from it.
+- Fudenberg G et al. 2016, *Cell Reports* 15:2038. Loop extrusion and its
+  effect on P(s).

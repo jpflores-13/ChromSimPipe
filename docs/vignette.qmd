@@ -391,6 +391,36 @@ make the run name, used for run-level files. Here `Project` (STRS) and
 (the parsed sheet, with a `sampleName` column) and
 `output/STRS_HEK293T_benchmarking.tsv` after a run.
 
+### What to write for the data you have
+
+Not every sample has every kind of data. One row per biological sample;
+what goes in its file columns, and what that lets the config do:
+
+| You have | `CTCF_Peaks` | `Hi-C` | Extra columns | In the config |
+|----------|--------------|--------|---------------|---------------|
+| CTCF peaks and Hi-C | peak file | `.hic`, `.mcool` or `.cool` | none | a condition with `ctcf_type` and `compare_hic` both naming this sample |
+| CTCF peaks, no Hi-C | peak file | `NA` | none | a condition with `ctcf_type` and no `compare_hic`: a prediction, without the comparison |
+| Hi-C, no CTCF peaks | `NA` | Hi-C file | none | the sample can only be another condition's `compare_hic` |
+| Another factor's peaks (YY1, LDB1, YAP, NIPBL, Pol II, ...) | as above | as above | one column per factor, e.g. `YY1_Peaks`, with a file or `NA` | a `sticky`, `loading` or `pausing` option names the column with `peaks:` |
+| Only some samples have a factor | as above | as above | the factor's column holds `NA` where there is no data | only conditions whose sample has a file can use that factor; an `NA` there stops the run at start-up |
+| Metadata (project, cell type, treatment, replicate, ...) | | | any columns you like | `fileNamesFrom` picks which ones make each sample's name |
+
+An example with two samples: the control has Hi-C and YY1 peaks, the treated
+sample only CTCF peaks:
+
+```
+Project  Cell_Type  Condition  CTCF_Peaks                             Hi-C                             YY1_Peaks
+MyProj   K562       control    /proj/yourlab/ctcf/control.narrowPeak  /proj/yourlab/hic/control.mcool  /proj/yourlab/yy1/control.narrowPeak
+MyProj   K562       treated    /proj/yourlab/ctcf/treated.narrowPeak  NA                               NA
+```
+
+With `fileNamesFrom: ['Condition']` the samples are `control` and `treated`.
+A condition with `ctcf_type: treated` can run (as a prediction, without
+`compare_hic`), and only conditions using `control` can add YY1 as a sticky
+factor. Paths can be absolute, as here, or `data/<file>` links. After filling
+in the sheet, `bash check_inputs.sh` checks every file in it: names,
+assemblies, the Hi-C resolution, and peaks in each window.
+
 ::: {.callout-warning}
 ### Tabs, not spaces
 
@@ -768,7 +798,8 @@ samplesheet and config, so they will differ in your project.
 
 `analyzeCondition` analyses each replicate, then pools all replicates of the
 condition. Pooled files are the ones to use; they start with
-`<condition>_<N>blk_pooled_`, where `<N>` is the total number of saved frames
+`<params_name>_ctcf-<ctcf_type>_<N>blk_pooled_` (e.g.
+`baseline_ctcf-condition1_30000blk_pooled_`), where `<N>` is the total number of saved frames
 pooled (30,000 for 3 replicates × 10,000 frames with the shipped config). The
 main ones:
 
@@ -781,7 +812,11 @@ main ones:
 | `*_pooled_apa_convergent.png` | Aggregate peak analysis: the average dot over all convergent CTCF pairs |
 | `*_pooled_metrics.json` | Agreement with the `compare_hic` map: `overall_pearson`, `stratum_adjusted_corr` (SCC), `mean_diag_pearson` |
 | `*_pooled_ctcf_sites_relative.bed` | CTCF sites used, in locus coordinates |
-| `ps_overlay_all_conditions.png` | P(s) of every pooled condition on one plot |
+| `ps_overlay_all_conditions.png` | P(s) of the pooled condition |
+| `ps_curves.tsv`, `ps_derivative_curves.tsv` | P(s) and its local slope for this condition and every Hi-C sample, as tables for plotting |
+
+[P(s)](ps.qmd) explains what P(s) and its local slope show, how they are
+calculated, and how to plot them in R.
 
 Per-replicate versions of the same files have `_rep<r>_` instead of
 `_pooled_`. Comparing replicates is a quick check that the pooled map is not
@@ -847,6 +882,27 @@ dim(sim)
   run, so `list.files()` finds it by pattern instead of typing it.
 - The two last lines are a sanity check: the matrix should be square, with
   one row per monomer, i.e. the window length divided by `resolution`.
+
+::: {.callout-note}
+### If `dim(sim)` prints `NULL`
+reticulate needs a Python with NumPy. Older reticulate releases (1.35 was
+tested) cannot convert NumPy 2 arrays: `np$load()` then returns an
+unconverted Python object and `dim()` is `NULL`. Either update reticulate,
+or use the pipeline's simulation environment, which has NumPy < 2. Run this
+before anything else that uses reticulate (it has to choose Python before
+loading it), from the repo folder of the run:
+
+```{r}
+#| eval: false
+#| label: r-python
+env_files <- list.files(".snakemake/conda", pattern = "\\.yaml$", full.names = TRUE)
+sim_env   <- sub("\\.yaml$", "", Filter(\(f) any(grepl("hic2cool", readLines(f))), env_files)[1])
+Sys.setenv(RETICULATE_PYTHON = file.path(sim_env, "bin", "python"))
+```
+
+Snakemake keeps a copy of each environment file next to the environment it
+built; the one listing `hic2cool` is the simulation environment.
+:::
 
 Plot it with ggplot2. The chunk is folded because it is mostly plotting
 details:

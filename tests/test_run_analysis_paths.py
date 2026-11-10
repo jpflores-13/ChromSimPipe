@@ -1,6 +1,5 @@
 """Unit tests for the flat-folder output layout in scripts/run_analysis_all.py."""
 import os
-import pytest
 
 
 def test_build_prefix_per_replicate(tmp_path, monkeypatch):
@@ -109,77 +108,3 @@ def test_build_prefix_for_merged_dir(tmp_path, monkeypatch):
     sim_dir = str(tmp_path / "merged_mESC_baseline_rep0")
     os.makedirs(sim_dir, exist_ok=True)
     assert r._build_prefix(sim_dir) == "mESC_baseline_2400blk_rep0"
-
-
-def test_migrate_one_renames_legacy_files(tmp_path, monkeypatch):
-    """migrate_legacy_analysis moves legacy <sim_dir>/analysis/ files
-    into the flat folder with the same renaming the live pipeline applies.
-    """
-    import migrate_legacy_analysis as m
-    import run_analysis_all as r
-
-    monkeypatch.setattr(r, "count_conformations", lambda sim_dir: 2400)
-
-    sim_dir = tmp_path / "polychrom_3d" / "mESC_baseline_rep0"
-    legacy = sim_dir / "analysis"
-    legacy.mkdir(parents=True)
-    (legacy / "sim_contact_map.npy").write_bytes(b"x")
-    (legacy / "msd_overlay.png").write_bytes(b"y")
-    (legacy / "comparison_metrics.json").write_text("{}")
-    (legacy / "msd_probeA.json").write_text("{}")  # per-pair MSD artefact
-
-    out = tmp_path / "results" / "analysis"
-
-    n = m.migrate_one(str(sim_dir), str(out),
-                      copy=False, dry_run=False, delete_empty=True)
-    assert n == 4
-    assert (out / "mESC_baseline_2400blk_rep0_contact_map.npy").exists()
-    assert (out / "mESC_baseline_2400blk_rep0_msd_overlay.png").exists()
-    assert (out / "mESC_baseline_2400blk_rep0_metrics.json").exists()
-    assert (out / "mESC_baseline_2400blk_rep0_msd_probeA.json").exists()
-    # Legacy folder removed because it was emptied.
-    assert not legacy.exists()
-
-
-def test_migrate_one_dry_run_does_not_touch_disk(tmp_path, monkeypatch):
-    """Dry-run logs intent but leaves the source intact and never creates dst."""
-    import migrate_legacy_analysis as m
-    import run_analysis_all as r
-
-    monkeypatch.setattr(r, "count_conformations", lambda sim_dir: 100)
-
-    sim_dir = tmp_path / "polychrom_3d" / "CN_baseline_rep1"
-    legacy = sim_dir / "analysis"
-    legacy.mkdir(parents=True)
-    (legacy / "sim_contact_map.npy").write_bytes(b"x")
-    out = tmp_path / "results" / "analysis"
-
-    n = m.migrate_one(str(sim_dir), str(out),
-                      copy=False, dry_run=True, delete_empty=True)
-    assert n == 1
-    assert (legacy / "sim_contact_map.npy").exists()
-    assert not out.exists()
-
-
-def test_plot_panels_discover_maps(tmp_path):
-    """plot_contact_map_panels.discover_maps groups per-rep and pooled files."""
-    import plot_contact_map_panels as p
-
-    d = tmp_path / "analysis"
-    d.mkdir()
-    # Per-replicate files for two conditions.
-    (d / "mESC_baseline_2400blk_rep0_contact_map.npy").write_bytes(b"")
-    (d / "mESC_baseline_2400blk_rep1_contact_map.npy").write_bytes(b"")
-    (d / "CN_short_residency_3000blk_rep0_contact_map.npy").write_bytes(b"")
-    # Pooled file for one condition.
-    (d / "mESC_baseline_4800blk_pooled_contact_map.npy").write_bytes(b"")
-    # Decoy files that must NOT be classified as contact maps.
-    (d / "mESC_baseline_2400blk_rep0_msd_overlay.png").write_bytes(b"")
-    (d / "ps_overlay_all_conditions.png").write_bytes(b"")
-
-    per_rep, pooled = p.discover_maps(str(d))
-    assert set(per_rep) == {"mESC_baseline", "CN_short_residency"}
-    assert [r for r, _ in per_rep["mESC_baseline"]] == [0, 1]
-    assert [r for r, _ in per_rep["CN_short_residency"]] == [0]
-    assert set(pooled) == {"mESC_baseline"}
-    assert pooled["mESC_baseline"][0] == 4800

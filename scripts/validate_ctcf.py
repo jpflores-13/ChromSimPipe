@@ -38,6 +38,8 @@ n_warn = 0
 
 
 def check(condition, msg, warn_only=False):
+    """Print PASS for a true `condition`, else FAIL (or WARN with warn_only), and count it.
+    Returns the condition."""
     global n_pass, n_fail, n_warn
     if condition:
         print(f"  [{PASS}] {msg}")
@@ -54,10 +56,12 @@ def check(condition, msg, warn_only=False):
 
 
 def info(msg):
+    """Print an informational line (not counted as a check)."""
     print(f"  [{INFO}] {msg}")
 
 
 def header(title):
+    """Print a section heading."""
     print()
     print(f"{'-' * 70}")
     print(f"  {title}")
@@ -68,6 +72,10 @@ def header(title):
 # 1. Validate a single BED file (raw parsing)
 # ---------------------------------------------------------------------------
 def validate_bed_file(bed_path, label):
+    """Parse one oriented CTCF BED and check it: the file exists, every data line
+    has 6 columns with integer coordinates and a +/- strand, sites lie on the
+    locus' chromosome and inside its window, start < end, and peak widths are
+    plausible. Returns the sites inside the window (dicts), or None if unreadable."""
     header(f"BED FILE: {label} - {os.path.basename(bed_path)}")
 
     if not check(os.path.isfile(bed_path), f"File exists: {bed_path}"):
@@ -160,6 +168,10 @@ def validate_bed_file(bed_path, label):
 # 2. Validate conversion to monomer coordinates
 # ---------------------------------------------------------------------------
 def validate_conversion(sites_data, label):
+    """Convert the parsed sites to (monomer, orientation) by hand, as the loader
+    should, and check the result: indices inside the chain, in increasing order,
+    with orientations +1/-1; several sites on one monomer give a warning.
+    Returns that list, for comparison with the loader."""
     header(f"COORDINATE CONVERSION: {label}")
 
     if sites_data is None:
@@ -189,7 +201,8 @@ def validate_conversion(sites_data, label):
         dups = len(positions) - len(unique_pos)
         check(False, f"No duplicate monomer positions: {dups} duplicates found",
               warn_only=True)
-        info("(Multiple peaks mapping to the same monomer - only last one used)")
+        info("(Sites sharing a monomer: the simulation keeps one stall site per "
+             "orientation there, with the highest stall probability)")
 
     check(all(o in (+1, -1) for o in orientations),
           f"All orientations are +1 or -1")
@@ -216,6 +229,8 @@ def validate_conversion(sites_data, label):
 # 3. Validate load_ctcf_from_bed() function
 # ---------------------------------------------------------------------------
 def validate_loader(bed_path, condition, expected_manual):
+    """Run configs.parameters.load_ctcf_from_bed() on the BED and check it
+    returns the same sites as the hand conversion in validate_conversion()."""
     header(f"LOADER FUNCTION: load_ctcf_from_bed(condition='{condition}')")
 
     try:
@@ -253,6 +268,9 @@ def validate_loader(bed_path, condition, expected_manual):
 # 4. Validate get_ctcf_arrays() output
 # ---------------------------------------------------------------------------
 def validate_arrays(condition, expected_sites):
+    """Check get_ctcf_arrays() for a ctcf_type: integer numpy arrays of equal
+    length, positions inside the chain, orientations +1/-1, matching the sites
+    loaded earlier. These arrays are what the simulation receives."""
     header(f"POLYCHROM FORMAT: get_ctcf_arrays(condition='{condition}')")
 
     try:
@@ -311,6 +329,8 @@ def validate_arrays(condition, expected_sites):
 # 5. Compare two conditions
 # ---------------------------------------------------------------------------
 def compare_conditions(cond_a, cond_b):
+    """Summarise how two ctcf_types differ: sites shared (same orientation within
+    2 monomers), only in the first, and only in the second."""
     header(f"COMPARISON: {cond_a} vs {cond_b} CTCF landscapes")
 
     pos_a, ori_a = get_ctcf_arrays(condition=cond_a)
@@ -352,6 +372,8 @@ def compare_conditions(cond_a, cond_b):
 # Main
 # ---------------------------------------------------------------------------
 def main():
+    """Validate every ctcf_type's oriented BED for the active locus, then compare
+    each pair of types. Exits 1 if any check failed."""
     print("=" * 70)
     print("  CTCF VALIDATION - Pre-simulation checks")
     print("=" * 70)

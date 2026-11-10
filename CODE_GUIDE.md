@@ -477,12 +477,6 @@ coordinate → monomer-index mapping is monotone; prints counts per condition an
 sites gained / lost / shared. Exits non-zero on failure, including when a BED
 is missing.
 
-### `scripts/export_conserved_ctcf_bed.py`
-
-**Purpose.** Intersect two oriented CTCF BEDs, keep only sites shared in both
-(same position and orientation), and write a conserved-sites BED. Useful for
-testing "CTCF binding didn't change, only cohesin did" scenarios.
-
 ## 4. The simulation model: polysim
 
 ChromSimPipe simulates with the Hansen lab's polysim package
@@ -583,6 +577,26 @@ One command that walks every `merged_<condition>_rep<N>` directory, runs
 the full analysis suite, and writes per-condition outputs. Called by the
 `analyzeCondition` Snakemake rule.
 
+It works in two phases. Phase 1 analyses each replicate on its own
+(`run_analysis_one`). Phase 2, `pool_replicates`, pools each condition's
+replicates and runs one named step after another, each a short documented
+function:
+
+| Step | Function | Writes |
+|------|----------|--------|
+| 1 | `_pooled_contact_map` | `<prefix>_contact_map.npy` (reused in resume mode) |
+| 2 | `_pooled_ps_and_insulation` | P(s) curve and metrics, insulation |
+| 3 | `_pooled_ctcf_and_apa` | CTCF overlay figure and relative BED, APA, loop strengths |
+| 4 | `_pooled_hic_comparison` | `<prefix>_metrics.json`, sim-vs-Hi-C figure |
+| 5 | `_pooled_msd_and_calibration` | MSD, polymer dynamics, `<prefix>_calibration.json` |
+
+Then, across conditions, `_ps_overlay_and_derivatives` (P(s) overlay and
+local slopes, with the Hi-C curves; `_write_curve_tables` also writes every
+curve and its slope to `ps_curves.tsv` and `ps_derivative_curves.tsv`; see
+`docs/ps.qmd`) and `_able_on_conserved_pairs` (loop
+strength at the MSD probe pairs). `<prefix>` is
+`<params_name>_ctcf-<ctcf_type>_<N>blk_pooled`.
+
 **How to run directly** (e.g. for one condition):
 
 ```bash
@@ -642,7 +656,6 @@ for the reference's.
 | `msd_two_point.py` | Mean-squared displacement of monomer pairs; sub-diffusive exponent fit |
 | `polymer_dynamics.py` | Radius of gyration, loop fractions, dwell-time distributions |
 | `calibration.py` | Map simulation units → physical units (nm/monomer, sec/frame) |
-| `batch_analysis.py` | Older single-pass analysis over all result dirs (simpler than the orchestrator) |
 
 ### 6c. `scripts/summarize_analysis.py`
 
@@ -654,10 +667,13 @@ python scripts/summarize_analysis.py \
     --reference-condition cond1_baseline
 ```
 
-### 6d. `scripts/check_results.py`
+### Scripts moved to `legacy/`
 
-Lists every directory under a locus' `sims/` folder, its frame count, and
-whether analysis outputs are present. Quick inventory after a SLURM batch.
+`run_analysis_all_fastdyn.py`, `migrate_legacy_analysis.py`,
+`plot_contact_map_panels.py`, `check_results.py` and
+`export_conserved_ctcf_bed.py` (from `scripts/`), and `batch_analysis.py` and
+`polymer_dynamics_parallel.py` (from `analysis/`), are in `legacy/`: the
+workflow never calls them. `legacy/README.md` says what each did.
 
 ## Legacy cluster scripts (`legacy/cluster/`)
 

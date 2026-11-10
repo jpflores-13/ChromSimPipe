@@ -16,6 +16,16 @@ for that project and the lab's original cluster.
 | `scripts/download_hic.py`, `download_bonev_hic.sh`, `sbatch_bonev_hic.sbatch`, `envs/hic_bonev.yml` | Bonev 2017 (GSE96107) Hi-C download/processing |
 | `scripts/run_batch.py` | mESC/neuron batch runner |
 | `scripts/build_comparable_merge.py` | Depth-matched merges for the mESC/neuron sweep |
+| `scripts/run_analysis_all_fastdyn.py`, `analysis/polymer_dynamics_parallel.py` | An earlier, parallel variant of the polymer-dynamics analysis; `scripts/run_analysis_all.py` replaced it |
+| `scripts/migrate_legacy_analysis.py` | Moved analysis files from the pre-2026 per-simulation layout into the flat one |
+| `scripts/plot_contact_map_panels.py` | Multi-panel contact-map figures from an older output layout |
+| `scripts/check_results.py` | Listed which simulation folders had finished (the workflow's `done/` markers replace it) |
+| `scripts/export_conserved_ctcf_bed.py` | Exported CTCF sites shared by every ctcf_type, for the MSD probe selection |
+| `analysis/batch_analysis.py` | Single-pass analysis over all result folders, before `scripts/run_analysis_all.py` |
+
+The last six rows are ChromSimPipe's own scripts, moved here in November 2026
+because the workflow never calls them; they may not match the current output
+layout.
 
 The current pipeline is `ChromSimPipe.sh` → `workflows/ChromSimPipe.snakefile`,
 which simulates with the Hansen lab's polysim package. ChromSimPipe's earlier

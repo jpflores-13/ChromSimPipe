@@ -182,7 +182,7 @@ def lookup_condition(base_name: str) -> dict | None:
     return None
 
 
-def infer_cell_type(base_name: str) -> str | None:
+def infer_ctcf_type(base_name: str) -> str | None:
     """Return the ctcf_type a directory was simulated with, or None."""
     cond = lookup_condition(base_name)
     if cond:
@@ -200,9 +200,9 @@ def find_hic_path(base_name: str, hic_dir: str | None) -> str | None:
     return candidate if os.path.exists(candidate) else None
 
 
-def default_ctcf_bed(cell_type: str | None, repo_root: str) -> str | None:
+def default_ctcf_bed(ctcf_type: str | None, repo_root: str) -> str | None:
     """Return the oriented CTCF BED for a ctcf_type if it exists on disk."""
-    rel = CTCF_BEDS.get(cell_type) if cell_type else None
+    rel = CTCF_BEDS.get(ctcf_type) if ctcf_type else None
     if not rel:
         return None
     path = rel if os.path.isabs(rel) else os.path.join(repo_root, rel)
@@ -215,7 +215,7 @@ def resolve_ctcf_bed(
     repo_root: str,
 ) -> tuple[str | None, str | None]:
     """(ctcf_type, bed_path); bed_path is None if no file was found."""
-    ct = infer_cell_type(base_name)
+    ct = infer_ctcf_type(base_name)
     if ct in overrides:
         return ct, overrides[ct]
     return ct, default_ctcf_bed(ct, repo_root)
@@ -255,7 +255,7 @@ def resolve_elements_bed(base_name: str, overrides: dict[str, str]) -> str | Non
     Return the "sticky-element" BED (enhancers / promoters / other) for the
     condition's ctcf_type, or None if the user didn't supply one.
     """
-    return overrides.get(infer_cell_type(base_name))
+    return overrides.get(infer_ctcf_type(base_name))
 
 
 # ---------------------------------------------------------------------------
@@ -371,7 +371,7 @@ SHARD_RE = re.compile(r"_shard\d+$")
 
 def _run_msd_and_dynamics(
     conformations,
-    cell_type: str,
+    ctcf_type: str,
     common_dir: str,
     file_prefix: str,
     display_name: str = "",
@@ -408,7 +408,7 @@ def _run_msd_and_dynamics(
     conformations : list of (N_beads, 3) arrays OR None
         Short-circuits (returns empty dict) if None; LEF-only data cannot
         produce MSD curves.
-    cell_type : str
+    ctcf_type : str
         Used to pick MSD pairs and the matching experimental reference.
     common_dir : str
         Flat output folder (<outputDir>/analysis/) where every artefact lands.
@@ -432,10 +432,10 @@ def _run_msd_and_dynamics(
     """
     import numpy as np
     if conformations is None:
-        _label = display_name or cell_type
+        _label = display_name or ctcf_type
         logger.info(f"    [MSD skipped: no 3D conformations for {_label}]")
         return {"msd_curves": {}, "calibration": None,
-                "pairs": [], "cell_type": cell_type}
+                "pairs": [], "ctcf_type": ctcf_type}
 
     import msd_two_point as msd_mod
     import polymer_dynamics as pd_mod
@@ -454,12 +454,12 @@ def _run_msd_and_dynamics(
     out: dict = {
         "msd_curves": {},
         "pairs": [],
-        "cell_type": cell_type,
+        "ctcf_type": ctcf_type,
         "calibration": None,
     }
 
-    pairs, labels = get_msd_pairs(cell_type)
-    logger.info(f"    [MSD] {cell_type}: {len(pairs)} pair(s) "
+    pairs, labels = get_msd_pairs(ctcf_type)
+    logger.info(f"    [MSD] {ctcf_type}: {len(pairs)} pair(s) "
                 f"{list(zip(labels, pairs))}")
 
     # Two-point MSD per pair
@@ -488,7 +488,7 @@ def _run_msd_and_dynamics(
                 msd_mod.plot_msd_curves(
                     out["msd_curves"],
                     os.path.join(common_dir, f"{file_prefix}_msd_overlay.png"),
-                    title=f"Two-point MSD: {display_name or cell_type}",
+                    title=f"Two-point MSD: {display_name or ctcf_type}",
                 )
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"    [MSD] overlay failed: {e}")
@@ -501,9 +501,9 @@ def _run_msd_and_dynamics(
                 tile_size=tile_size, pad=pad, n_tiles=n_tiles,
             )
             pd_mod.plot_rg_timecourse(
-                {display_name or cell_type: rg},
+                {display_name or ctcf_type: rg},
                 os.path.join(common_dir, f"{file_prefix}_rg_timecourse.png"),
-                title=f"Radius of gyration: {display_name or cell_type}",
+                title=f"Radius of gyration: {display_name or ctcf_type}",
             )
             np.savez_compressed(
                 os.path.join(common_dir, f"{file_prefix}_rg_timecourse.npz"),
@@ -550,7 +550,7 @@ def _run_msd_and_dynamics(
                 pd_mod.plot_dwell_time_hist(
                     dwell_by_label,
                     os.path.join(common_dir, f"{file_prefix}_dwell_times.png"),
-                    title=f"Contact dwell times: {display_name or cell_type}",
+                    title=f"Contact dwell times: {display_name or ctcf_type}",
                 )
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"    [dwell] plot failed: {e}")
@@ -559,7 +559,7 @@ def _run_msd_and_dynamics(
                 pd_mod.plot_pair_distance_hist(
                     pair_dist_by_label,
                     os.path.join(common_dir, f"{file_prefix}_pair_distance.png"),
-                    title=f"Pair separation density: {display_name or cell_type}",
+                    title=f"Pair separation density: {display_name or ctcf_type}",
                 )
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"    [pair-dist] plot failed: {e}")
@@ -656,7 +656,7 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                      n_jobs: int, skip_existing: bool,
                      common_dir: str | None = None,
                      ctcf_bed_path: str | None = None,
-                     cell_type: str | None = None,
+                     ctcf_type: str | None = None,
                      mcool_path: str | None = None,
                      do_apa: bool = True,
                      do_ctcf_overlay: bool = True,
@@ -717,7 +717,7 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
         logger.info(f"  [skip] {base_name}: {file_prefix}_contact_map.npy already exists")
         return True
 
-    logger.info(f"  Analysing: {base_name}  (cell_type={cell_type})")
+    logger.info(f"  Analysing: {base_name}  (ctcf_type={ctcf_type})")
     if reuse_heavy:
         logger.info(f"    [resume mode] cached heavy outputs will be reused "
                     f"if present; downstream steps always re-run.")
@@ -796,7 +796,7 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                     region_start_bp=REGION_START,
                     region_end_bp=REGION_END,
                     resolution_bp=RESOLUTION,
-                    title=f"{base_name}: {cell_type or ''} contact map + CTCF",
+                    title=f"{base_name}: {ctcf_type or ''} contact map + CTCF",
                     elements_bed=elements_bed_path,
                     elements_label=elements_label,
                 )
@@ -892,7 +892,7 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                             logger.info(f"    [calib hic] could not compute expt P(s): {e}")
 
                     _run_msd_and_dynamics(
-                        conformations, cell_type=cell_type or CTCF_TYPES[0],
+                        conformations, ctcf_type=ctcf_type or CTCF_TYPES[0],
                         common_dir=common_dir, file_prefix=file_prefix,
                         display_name=base_name,
                         do_msd=do_msd,
@@ -924,6 +924,304 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
 # Pooled replicate analysis (Hansen lab style)
 # ---------------------------------------------------------------------------
 
+def _pooled_contact_map(condition, reps, common_dir, n_jobs, reuse_heavy):
+    """Pooled contact map of one condition across its replicates.
+
+    Returns (sim_map, prefix, conformations), or None when there is nothing to
+    pool. With `reuse_heavy`, a pooled map already in `common_dir` is loaded
+    instead of recomputed. `conformations` is a re-iterable stream over every
+    replicate's frames (None for LEF-only results or a cached map). The map is
+    saved as `<prefix>_contact_map.npy`, prefix = `<condition>_<N>blk_pooled`.
+    """
+    import numpy as np
+    from contact_maps import (
+        load_conformations_h5, load_lef_contact_map, extract_tiles_and_average,
+    )
+
+    if reuse_heavy:
+        cached = sorted(glob.glob(os.path.join(
+            common_dir, f"{condition}_*blk_pooled_contact_map.npy")))
+        if cached:
+            sim_map = np.load(cached[-1])
+            prefix = os.path.basename(cached[-1]).rsplit("_contact_map.npy", 1)[0]
+            logger.info(f"    {condition}: [resume] loaded cached pooled contact map ({prefix})")
+            return sim_map, prefix, None
+
+    # ConformationStream objects hold no frame data in memory; each pass
+    # re-reads from disk, so pooling large replicates does not run out of memory.
+    rep_streams, total_blocks, has_lef_only = [], 0, False
+    for rep_num, rep_dir in reps:
+        try:
+            confs = load_conformations_h5(rep_dir)
+        except FileNotFoundError:
+            logger.warning(f"    rep{rep_num}: no data found, skipping")
+            continue
+        if confs is not None:
+            n = len(confs) if hasattr(confs, '__len__') else 0
+            total_blocks += n
+            rep_streams.append(confs)
+            logger.info(f"    rep{rep_num}: {n} conformations (streaming)")
+        else:
+            has_lef_only = True
+            logger.info(f"    rep{rep_num}: LEF contact map")
+
+    if not rep_streams and not has_lef_only:
+        logger.warning(f"  {condition}: no conformations found, skipping pooling")
+        return None
+
+    conformations = None
+    if rep_streams:
+        from analysis.contact_maps import ConformationStream
+        conformations = (rep_streams[0] if len(rep_streams) == 1
+                         else ConformationStream.chain(*rep_streams))
+        from configs.parameters import SIM_RUN
+        logger.info(f"    {condition}: {total_blocks} total conformations "
+                    f"pooled (streaming from {len(rep_streams)} reps), {n_jobs} workers")
+        sim_map = extract_tiles_and_average(conformations, SIM_RUN["contact_radius"], n_jobs)
+    else:
+        # LEF-only results: average the per-replicate contact maps
+        lef_maps = [m for m in (load_lef_contact_map(d) for _, d in reps) if m is not None]
+        if not lef_maps:
+            logger.warning(f"  {condition}: no LEF maps found, skipping")
+            return None
+        total_blocks += len(lef_maps)
+        sim_map = np.mean(lef_maps, axis=0)
+
+    prefix = f"{condition}_{total_blocks}blk_pooled"
+    np.save(os.path.join(common_dir, f"{prefix}_contact_map.npy"), sim_map)
+    return sim_map, prefix, conformations
+
+
+def _pooled_ps_and_insulation(condition, sim_map, prefix, common_dir):
+    """P(s) curve, its metrics and the insulation score of a pooled map.
+    Cheap, so always recomputed. Returns (distances, ps)."""
+    import numpy as np
+    import ps_curve as ps_mod
+    from contact_maps import compute_insulation_score
+    from configs.parameters import RESOLUTION
+
+    distances, ps = ps_mod.compute_ps_curve(sim_map, RESOLUTION)
+    np.savez(os.path.join(common_dir, f"{prefix}_ps_curve.npz"), distances=distances, ps=ps)
+    np.save(os.path.join(common_dir, f"{prefix}_insulation.npy"),
+            compute_insulation_score(sim_map))
+    payload = ps_mod.save_ps_json(os.path.join(common_dir, f"{prefix}_ps_metrics.json"),
+                                  distances, ps, RESOLUTION)
+    alpha = payload["metrics"].get("ps_exponent_2_30kb")
+    if alpha is not None:
+        logger.info(f"    {condition} pooled: P(s) exponent α = {alpha:.3f}")
+    return distances, ps
+
+
+def _pooled_ctcf_and_apa(condition, sim_map, prefix, common_dir, repo_root,
+                         ctcf_bed_overrides, elements_bed_overrides, elements_label,
+                         do_ctcf_overlay, do_apa):
+    """The pooled map with its CTCF sites drawn on (plus a relative-coordinate
+    BED), then APA and absolute loop strengths at convergent CTCF pairs.
+    Returns the condition's ctcf_type."""
+    import ctcf_plotting as ctcf_mod
+    import absolute_quant as abs_mod
+    from configs.parameters import RESOLUTION, CHROM, REGION_START, REGION_END
+
+    ctcf_type, bed_path = resolve_ctcf_bed(condition, ctcf_bed_overrides or {}, repo_root)
+    elements_path = resolve_elements_bed(condition, elements_bed_overrides or {})
+    positions, orientations = [], []
+    if do_ctcf_overlay and bed_path and os.path.exists(bed_path):
+        try:
+            _, positions, orientations = ctcf_mod.emit_ctcf_bed_and_figure(
+                sim_map,
+                bed_path=bed_path,
+                out_bed=os.path.join(common_dir, f"{prefix}_ctcf_sites_relative.bed"),
+                out_fig=os.path.join(common_dir, f"{prefix}_contact_map_with_ctcf.png"),
+                chrom=CHROM, region_start_bp=REGION_START, region_end_bp=REGION_END,
+                resolution_bp=RESOLUTION,
+                title=f"{condition} pooled: {ctcf_type}",
+                elements_bed=elements_path, elements_label=elements_label,
+            )
+        except Exception as e:
+            logger.warning(f"    pooled CTCF overlay failed: {e}")
+
+    if do_apa and positions:
+        try:
+            loops = abs_mod.enumerate_convergent_ctcf_loops(
+                positions, orientations,
+                min_size_bins=_APA["min_size_bins"],
+                max_size_bins=min(sim_map.shape[0], _APA["max_size_bins"]),
+            )
+            if loops:
+                pileup, n_used = abs_mod.apa_pileup(sim_map, loops, pad=_APA["pad"],
+                                                    normalise="obs_over_exp_diag")
+                abs_mod.plot_apa(pileup, os.path.join(common_dir, f"{prefix}_apa_convergent.png"),
+                                 title=f"{condition} pooled: APA (n={n_used})", n_loops=n_used)
+                quants = abs_mod.batch_absolute_quant(sim_map, loops)
+                with open(os.path.join(common_dir, f"{prefix}_apa_loops_quant.json"), "w") as f:
+                    json.dump({"loops": quants, "n_pairs": n_used}, f, indent=2)
+        except Exception as e:
+            logger.warning(f"    pooled APA/AbLE failed: {e}")
+    return ctcf_type
+
+
+def _pooled_hic_comparison(condition, sim_map, prefix, common_dir, hic_dir, mcool_overrides):
+    """Compare the pooled map with the condition's Hi-C (a legacy .npy if
+    present, else the .cool): metrics JSON and a side-by-side figure.
+    Returns the .cool path used (or None)."""
+    import numpy as np
+    import experimental_compare as exp_mod
+    from contact_maps import compare_contact_maps
+    from configs.parameters import RESOLUTION, CHROM, REGION_START, REGION_END
+
+    hic_path = find_hic_path(condition, hic_dir)
+    mcool_path = resolve_mcool(condition, hic_dir, mcool_overrides or {})
+    if hic_path and os.path.exists(hic_path):
+        metrics = compare_contact_maps(sim_map, np.load(hic_path))
+        with open(os.path.join(common_dir, f"{prefix}_metrics.json"), "w") as f:
+            json.dump(metrics, f, indent=2)
+        logger.info(f"    {condition} pooled: SCC={metrics['stratum_adjusted_corr']:.4f}  "
+                    f"Pearson={metrics['overall_pearson']:.4f}")
+    elif mcool_path:
+        exp_map = exp_mod.load_region_matrix(mcool_path, CHROM, REGION_START, REGION_END,
+                                             RESOLUTION, balance=_HIC_BALANCE)
+        if exp_map is not None:
+            m = exp_mod.compute_sim_exp_metrics(sim_map, exp_map)
+            exp_mod.save_metrics_json(m, os.path.join(common_dir, f"{prefix}_metrics.json"))
+            exp_mod.plot_sim_vs_exp_map(
+                sim_map, exp_map, os.path.join(common_dir, f"{prefix}_sim_vs_exp_map.png"),
+                sim_label=f"{condition} pooled", exp_label=os.path.basename(mcool_path))
+            logger.info(f"    {condition} pooled: (mcool) SCC={m['stratum_adjusted_corr']:.4f}")
+    else:
+        logger.info(f"    {condition} pooled: no experimental reference")
+    return mcool_path
+
+
+def _pooled_msd_and_calibration(condition, conformations, prefix, common_dir, ctcf_type,
+                                mcool_path, ps_curve, do_msd, do_polymer_dynamics,
+                                calibrate_with, expt_msd_overrides, reuse_heavy):
+    """Two-point MSD, polymer dynamics and physical-units calibration on the
+    pooled conformations (skipped when cached in resume mode, or when there are
+    no conformations)."""
+    import ps_curve as ps_mod
+    from configs.parameters import RESOLUTION, CHROM, REGION_START, REGION_END
+
+    cached = (os.path.exists(os.path.join(common_dir, f"{prefix}_msd_overlay.png"))
+              and os.path.exists(os.path.join(common_dir, f"{prefix}_rg_timecourse.npz")))
+    if reuse_heavy and cached and (do_msd or do_polymer_dynamics):
+        logger.info(f"    {condition} pooled: [resume] reusing cached MSD / polymer-dynamics outputs")
+        return
+    if not ((do_msd or do_polymer_dynamics) and conformations):
+        return
+    try:
+        expt_ps_curve = None
+        if calibrate_with == "hic" and mcool_path and os.path.exists(mcool_path):
+            try:
+                expt_ps_curve = ps_mod.compute_ps_from_cooler(
+                    mcool_path, region=f"{CHROM}:{REGION_START}-{REGION_END}",
+                    resolution=RESOLUTION, balance=_HIC_BALANCE)
+            except Exception as e:
+                logger.info(f"    [calib hic] expt P(s) unavailable: {e}")
+        cfg_cond = lookup_condition(condition)
+        cond_name = cfg_cond["name"] if cfg_cond else condition
+        _run_msd_and_dynamics(
+            conformations, ctcf_type=ctcf_type,
+            common_dir=common_dir, file_prefix=prefix,
+            display_name=f"{condition} pooled",
+            do_msd=do_msd, do_polymer_dynamics=do_polymer_dynamics,
+            calibrate_with=calibrate_with,
+            expt_msd_csv=expt_msd_for(expt_msd_overrides, cond_name, ctcf_type),
+            expt_ps_curve=expt_ps_curve, sim_ps_curve=ps_curve,
+            reference_calibration=reference_calibration_for(cond_name, calibrate_with, common_dir),
+        )
+    except Exception as e:
+        logger.warning(f"    pooled MSD / dynamics failed: {e}")
+
+
+def _write_curve_tables(curves, common_dir):
+    """Every P(s) curve (simulated and Hi-C) and its local slope as two long
+    TSVs, for plotting elsewhere (e.g. R): ps_curves.tsv (curve, s_bp, ps) and
+    ps_derivative_curves.tsv (curve, s_bp, slope). The slope is the same
+    d log10 P / d log10 s the derivative figure and table use."""
+    import ps_curve as ps_mod
+    with open(os.path.join(common_dir, "ps_curves.tsv"), "w") as f:
+        f.write("curve\ts_bp\tps\n")
+        for label, (d, p) in curves.items():
+            for s, v in zip(d, p):
+                f.write(f"{label}\t{int(s)}\t{v:.6g}\n")
+    with open(os.path.join(common_dir, "ps_derivative_curves.tsv"), "w") as f:
+        f.write("curve\ts_bp\tslope\n")
+        for label, (d, p) in curves.items():
+            deriv = ps_mod.compute_ps_derivative(d, p)
+            for s, v in zip(deriv["s"], deriv["dlogP_dlogs"]):
+                f.write(f"{label}\t{s:.6g}\t{v:.6g}\n")
+
+
+def _ps_overlay_and_derivatives(pooled_curves, common_dir, hic_dir, mcool_overrides):
+    """One P(s) plot of every pooled condition, then the local slope
+    d log P / d log s of each, with the Hi-C maps' curves for comparison."""
+    import ps_curve as ps_mod
+    from configs.parameters import RESOLUTION, CHROM, REGION_START, REGION_END
+
+    try:
+        ps_mod.plot_ps_overlay(pooled_curves,
+                               os.path.join(common_dir, "ps_overlay_all_conditions.png"),
+                               title="P(s): all pooled conditions")
+    except Exception as e:
+        logger.warning(f"  P(s) overlay failed: {e}")
+
+    # The local slope is often a cleaner between-condition discriminator than
+    # the full curve. Each Hi-C map's P(s) is read once.
+    try:
+        exp_curves = {}
+        for hic_sample in MCOOL_FILES:
+            mc_path = find_mcool(hic_sample, hic_dir, mcool_overrides or {})
+            if not mc_path:
+                continue
+            try:
+                exp_curves[f"{hic_sample}_experimental (exp)"] = ps_mod.compute_ps_from_cooler(
+                    mc_path, region=f"{CHROM}:{REGION_START}-{REGION_END}",
+                    resolution=RESOLUTION, balance=_HIC_BALANCE)
+                logger.info(f"    derivative: loaded experimental P(s) "
+                            f"for {hic_sample} from {os.path.basename(mc_path)}")
+            except Exception as e:
+                logger.info(f"    derivative: could not load experimental "
+                            f"P(s) for {hic_sample} ({e}); skipping exp row.")
+        combined = {**pooled_curves, **exp_curves}
+        _write_curve_tables(combined, common_dir)
+        ps_mod.plot_ps_derivative_overlay(
+            combined, os.path.join(common_dir, "ps_derivative_all_conditions.png"),
+            title="Local slope of P(s): sim + experimental")
+        ps_mod.save_ps_derivative_table(
+            ps_mod.summarize_ps_derivatives(combined),
+            csv_path=os.path.join(common_dir, "ps_derivative_table.csv"),
+            json_path=os.path.join(common_dir, "ps_derivative_table.json"))
+    except Exception as e:
+        logger.warning(f"  P(s) derivative analysis failed: {e}")
+
+
+def _able_on_conserved_pairs(pooled_maps, common_dir):
+    """Loop strength (AbLE) at the MSD probe pairs, across all pooled
+    conditions, so MSD and loop-strength changes are reported on the same
+    anchors (configs/parameters.get_msd_pairs)."""
+    import absolute_quant as abs_mod
+    try:
+        from configs.parameters import get_msd_pairs
+        # With require_conserved=True the pairs are the same for every ctcf_type.
+        msd_pairs, _ = get_msd_pairs(CTCF_TYPES[0])
+    except Exception as e:
+        logger.warning(f"  AbLE: could not resolve MSD pairs ({e}); "
+                       f"skipping AbLE-on-conserved-pairs table.")
+        return
+    if not msd_pairs:
+        return
+    try:
+        res = abs_mod.able_pairs_across_conditions(pooled_maps, msd_pairs)
+        abs_mod.save_able_table(
+            res, csv_path=os.path.join(common_dir, "able_conserved_pairs_table.csv"),
+            json_path=os.path.join(common_dir, "able_conserved_pairs_table.json"))
+        abs_mod.plot_able_heatmap(
+            res, out_path=os.path.join(common_dir, "able_conserved_pairs_heatmap.png"),
+            title="AbLE strength on conserved MSD pairs (observed minus local P(s))")
+    except Exception as e:
+        logger.warning(f"  AbLE-on-conserved-pairs analysis failed: {e}")
+
+
 def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                     n_jobs: int,
                     ctcf_bed_overrides: dict[str, str] | None = None,
@@ -940,402 +1238,63 @@ def pool_replicates(results_dir: str, common_dir: str, hic_dir: str | None,
                     reuse_heavy: bool = False,
                     merged_dirs: list[str] | None = None):
     """
-    Pool conformations across all replicates for each condition, then compute
-    a single contact map from the combined ensemble and run the full modular
-    analysis on that pooled map (P(s), insulation, CTCF overlay, APA, exp
-    comparison).
+    Pool every condition's replicates and analyse the pooled ensemble.
 
-    Also writes ``ps_overlay_all_conditions.png`` summarising every pooled
-    condition on one log-log axis.
+    For each condition, in order:
+      1. _pooled_contact_map          one contact map from all replicates' frames
+      2. _pooled_ps_and_insulation    P(s), its metrics, insulation
+      3. _pooled_ctcf_and_apa         CTCF overlay figure, APA, loop strengths
+      4. _pooled_hic_comparison       metrics and figure against the Hi-C
+      5. _pooled_msd_and_calibration  MSD, polymer dynamics, calibration
+    Then across conditions: _ps_overlay_and_derivatives and
+    _able_on_conserved_pairs. A failure in one condition is logged and the
+    others continue.
 
     ``merged_dirs`` limits pooling to those merged directories (used by
     ``--condition``); by default every merged dir in ``results_dir`` is pooled.
     """
-    import numpy as np
-    from contact_maps import (
-        load_conformations_h5, load_lef_contact_map,
-        extract_tiles_and_average,
-        compute_insulation_score,
-        compare_contact_maps,
-    )
-    import ps_curve as ps_mod
-    import absolute_quant as abs_mod
-    import ctcf_plotting as ctcf_mod
-    import experimental_compare as exp_mod
-
-    from configs.parameters import RESOLUTION, CHROM, REGION_START, REGION_END
     repo_root = repo_root or _REPO_ROOT
-
-    pooled_curves: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-    pooled_maps: dict[str, np.ndarray] = {}
+    pooled_curves, pooled_maps = {}, {}
 
     # Group directories by condition (strip _rep<N>)
     all_dirs = merged_dirs if merged_dirs is not None else discover_merged_dirs(results_dir)
     condition_groups = defaultdict(list)
     for d in all_dirs:
-        base = os.path.basename(d)
-        condition, rep = parse_condition_rep(base)
+        condition, rep = parse_condition_rep(os.path.basename(d))
         if rep >= 0:
             condition_groups[condition].append((rep, d))
-
     if not condition_groups:
         logger.info("No replicate groups found to pool.")
         return
 
     for condition in sorted(condition_groups):
         reps = sorted(condition_groups[condition])
-        rep_dirs = [d for _, d in reps]
-        rep_nums = [r for r, _ in reps]
         logger.info(f"  Pooling {condition}: {len(reps)} replicates "
-                    f"(reps {rep_nums})")
-
+                    f"(reps {[r for r, _ in reps]})")
         try:
-            rep_streams: list = []
-            all_conformations = None   # assigned from rep_streams after the load loop
-            total_blocks = 0
-            has_lef_only = False
-            sim_map = None
-            prefix = None
-
-            # --- Resume-mode fast path ---
-            # If a pooled contact map with the same {condition}_*blk_pooled stem
-            # already exists in common_dir, reuse it instead of re-extracting
-            # contacts from the full conformation ensemble.
-            if reuse_heavy:
-                cached = sorted(glob.glob(os.path.join(
-                    common_dir, f"{condition}_*blk_pooled_contact_map.npy")))
-                if cached:
-                    cached_map_path = cached[-1]
-                    sim_map = np.load(cached_map_path)
-                    prefix = os.path.basename(cached_map_path).rsplit(
-                        "_contact_map.npy", 1)[0]
-                    # Parse total_blocks out of the cached filename so we keep
-                    # consistent stems for downstream outputs.
-                    m = re.search(r"_(\d+)blk_pooled$", prefix)
-                    total_blocks = int(m.group(1)) if m else 0
-                    logger.info(f"    {condition}: [resume] loaded cached "
-                                f"pooled contact map ({prefix})")
-
-            if sim_map is None:
-                # --- Open conformations from ALL replicates as streams ---
-                # ConformationStream objects hold no frame data in memory;
-                # each pass re-reads from disk. This replaces the old
-                # `all_conformations.extend(confs)` pattern which materialised
-                # every replicate's trajectory into one list (~500 GB for 3
-                # reps of 100k-frame 70k-monomer sims → OOM in Phase 2).
-                for rep_num, rep_dir in reps:
-                    try:
-                        confs = load_conformations_h5(rep_dir)
-                        if confs is not None:
-                            n = len(confs) if hasattr(confs, '__len__') else 0
-                            total_blocks += n
-                            rep_streams.append(confs)
-                            logger.info(f"    rep{rep_num}: {n} conformations (streaming)")
-                        else:
-                            # LEF-only: load contact map directly
-                            has_lef_only = True
-                            logger.info(f"    rep{rep_num}: LEF contact map")
-                    except FileNotFoundError:
-                        logger.warning(f"    rep{rep_num}: no data found, skipping")
-                        continue
-
-                if not rep_streams and not has_lef_only:
-                    logger.warning(f"  {condition}: no conformations found, skipping pooling")
-                    continue
-
-                # Chain the per-replicate streams into one re-iterable pool.
-                if rep_streams:
-                    from analysis.contact_maps import ConformationStream
-                    all_conformations = (rep_streams[0] if len(rep_streams) == 1
-                                         else ConformationStream.chain(*rep_streams))
-
-                # --- Compute pooled contact map ---
-                if all_conformations is not None:
-                    from configs.parameters import SIM_RUN
-                    contact_radius = SIM_RUN["contact_radius"]
-                    logger.info(f"    {condition}: {total_blocks} total conformations "
-                                f"pooled (streaming from {len(rep_streams)} reps), {n_jobs} workers")
-                    sim_map = extract_tiles_and_average(
-                        all_conformations, contact_radius, n_jobs
-                    )
-                else:
-                    # LEF-only: average the per-rep contact maps
-                    lef_maps = []
-                    for _, rep_dir in reps:
-                        lef_map = load_lef_contact_map(rep_dir)
-                        if lef_map is not None:
-                            lef_maps.append(lef_map)
-                            total_blocks += 1
-                    if not lef_maps:
-                        logger.warning(f"  {condition}: no LEF maps found, skipping")
-                        continue
-                    sim_map = np.mean(lef_maps, axis=0)
-
-                # --- Save pooled outputs ---
-                prefix = f"{condition}_{total_blocks}blk_pooled"
-
-                np.save(os.path.join(common_dir, f"{prefix}_contact_map.npy"), sim_map)
-
-            # At this point sim_map and prefix are guaranteed set (either from
-            # the cache fast-path or the compute path above). P(s) and
-            # insulation are cheap - always recompute so they stay in sync
-            # with the contact map that will be used by the downstream steps.
-            distances, ps = ps_mod.compute_ps_curve(sim_map, RESOLUTION)
-            np.savez(os.path.join(common_dir, f"{prefix}_ps_curve.npz"),
-                     distances=distances, ps=ps)
-            pooled_curves[condition] = (distances, ps)
+            pooled = _pooled_contact_map(condition, reps, common_dir, n_jobs, reuse_heavy)
+            if pooled is None:
+                continue
+            sim_map, prefix, conformations = pooled
+            curve = _pooled_ps_and_insulation(condition, sim_map, prefix, common_dir)
+            pooled_curves[condition] = curve
             pooled_maps[condition] = sim_map
-
-            insulation = compute_insulation_score(sim_map)
-            np.save(os.path.join(common_dir, f"{prefix}_insulation.npy"), insulation)
-
-            # --- P(s) metrics ---
-            ps_payload = ps_mod.save_ps_json(
-                os.path.join(common_dir, f"{prefix}_ps_metrics.json"),
-                distances, ps, RESOLUTION,
-            )
-            exp_alpha = ps_payload["metrics"].get("ps_exponent_2_30kb")
-            if exp_alpha is not None:
-                logger.info(f"    {condition} pooled: P(s) exponent α = {exp_alpha:.3f}")
-
-            # --- CTCF relative BED + overlay on the pooled map ---
-            cell_type, bed_path = resolve_ctcf_bed(
-                condition, ctcf_bed_overrides or {}, repo_root,
-            )
-            elements_path = resolve_elements_bed(
-                condition, elements_bed_overrides or {},
-            )
-            positions: list[int] = []
-            orientations: list[int] = []
-            if do_ctcf_overlay and bed_path and os.path.exists(bed_path):
-                try:
-                    _, positions, orientations = ctcf_mod.emit_ctcf_bed_and_figure(
-                        sim_map,
-                        bed_path=bed_path,
-                        out_bed=os.path.join(common_dir,
-                                             f"{prefix}_ctcf_sites_relative.bed"),
-                        out_fig=os.path.join(common_dir,
-                                             f"{prefix}_contact_map_with_ctcf.png"),
-                        chrom=CHROM,
-                        region_start_bp=REGION_START,
-                        region_end_bp=REGION_END,
-                        resolution_bp=RESOLUTION,
-                        title=f"{condition} pooled: {cell_type}",
-                        elements_bed=elements_path,
-                        elements_label=elements_label,
-                    )
-                except Exception as e:
-                    logger.warning(f"    pooled CTCF overlay failed: {e}")
-
-            # --- Pooled APA + AbLE ---
-            if do_apa and positions:
-                try:
-                    loops = abs_mod.enumerate_convergent_ctcf_loops(
-                        positions, orientations,
-                        min_size_bins=_APA["min_size_bins"],
-                        max_size_bins=min(sim_map.shape[0], _APA["max_size_bins"]),
-                    )
-                    if loops:
-                        pileup, n_used = abs_mod.apa_pileup(
-                            sim_map, loops, pad=_APA["pad"],
-                            normalise="obs_over_exp_diag",
-                        )
-                        abs_mod.plot_apa(
-                            pileup,
-                            os.path.join(common_dir,
-                                         f"{prefix}_apa_convergent.png"),
-                            title=f"{condition} pooled: APA (n={n_used})",
-                            n_loops=n_used,
-                        )
-                        quants = abs_mod.batch_absolute_quant(sim_map, loops)
-                        with open(os.path.join(common_dir,
-                                               f"{prefix}_apa_loops_quant.json"),
-                                  "w") as f:
-                            json.dump({"loops": quants, "n_pairs": n_used},
-                                      f, indent=2)
-                except Exception as e:
-                    logger.warning(f"    pooled APA/AbLE failed: {e}")
-
-            # --- Experimental comparison: .npy first, then mcool ---
-            hic_path = find_hic_path(condition, hic_dir)
-            mcool_path = resolve_mcool(condition, hic_dir, mcool_overrides or {})
-
-            if hic_path and os.path.exists(hic_path):
-                exp_map = np.load(hic_path)
-                metrics = compare_contact_maps(sim_map, exp_map)
-                with open(os.path.join(common_dir, f"{prefix}_metrics.json"), "w") as f:
-                    json.dump(metrics, f, indent=2)
-                logger.info(f"    {condition} pooled: SCC={metrics['stratum_adjusted_corr']:.4f}  "
-                            f"Pearson={metrics['overall_pearson']:.4f}")
-            elif mcool_path:
-                exp_map = exp_mod.load_region_matrix(
-                    mcool_path, CHROM, REGION_START, REGION_END, RESOLUTION, balance=_HIC_BALANCE,
-                )
-                if exp_map is not None:
-                    m = exp_mod.compute_sim_exp_metrics(sim_map, exp_map)
-                    exp_mod.save_metrics_json(
-                        m, os.path.join(common_dir, f"{prefix}_metrics.json"),
-                    )
-                    exp_mod.plot_sim_vs_exp_map(
-                        sim_map, exp_map,
-                        os.path.join(common_dir, f"{prefix}_sim_vs_exp_map.png"),
-                        sim_label=f"{condition} pooled",
-                        exp_label=os.path.basename(mcool_path),
-                    )
-                    logger.info(f"    {condition} pooled: (mcool) "
-                                f"SCC={m['stratum_adjusted_corr']:.4f}")
-            else:
-                logger.info(f"    {condition} pooled: no experimental reference")
-
-            # --- Pooled MSD + polymer dynamics + calibration ---
-            # Resume mode: skip if the canonical cached outputs are already
-            # present in common_dir under the {prefix}_ stem.
-            pooled_msd_cached = (
-                os.path.exists(os.path.join(common_dir, f"{prefix}_msd_overlay.png"))
-                and os.path.exists(os.path.join(common_dir, f"{prefix}_rg_timecourse.npz"))
-            )
-            if reuse_heavy and pooled_msd_cached and (do_msd or do_polymer_dynamics):
-                logger.info(f"    {condition} pooled: [resume] reusing cached "
-                            f"MSD / polymer-dynamics outputs")
-            elif (do_msd or do_polymer_dynamics) and all_conformations:
-                try:
-                    expt_ps_curve = None
-                    if calibrate_with == "hic" and mcool_path and os.path.exists(mcool_path):
-                        try:
-                            e_d, e_p = ps_mod.compute_ps_from_cooler(
-                                mcool_path,
-                                region=f"{CHROM}:{REGION_START}-{REGION_END}",
-                                resolution=RESOLUTION, balance=_HIC_BALANCE,
-                            )
-                            expt_ps_curve = (e_d, e_p)
-                        except Exception as e:
-                            logger.info(f"    [calib hic] expt P(s) unavailable: {e}")
-
-                    cfg_cond = lookup_condition(condition)
-                    cond_name = cfg_cond["name"] if cfg_cond else condition
-                    expt_msd_csv = expt_msd_for(expt_msd_overrides, cond_name, cell_type)
-                    reference_calibration = reference_calibration_for(
-                        cond_name, calibrate_with, common_dir)
-
-                    _run_msd_and_dynamics(
-                        all_conformations, cell_type=cell_type,
-                        common_dir=common_dir, file_prefix=prefix,
-                        display_name=f"{condition} pooled",
-                        do_msd=do_msd,
-                        do_polymer_dynamics=do_polymer_dynamics,
-                        calibrate_with=calibrate_with,
-                        expt_msd_csv=expt_msd_csv,
-                        expt_ps_curve=expt_ps_curve,
-                        sim_ps_curve=(distances, ps),
-                        reference_calibration=reference_calibration,
-                    )
-                except Exception as e:
-                    logger.warning(f"    pooled MSD / dynamics failed: {e}")
-
+            ctcf_type = _pooled_ctcf_and_apa(
+                condition, sim_map, prefix, common_dir, repo_root, ctcf_bed_overrides,
+                elements_bed_overrides, elements_label, do_ctcf_overlay, do_apa)
+            mcool_path = _pooled_hic_comparison(
+                condition, sim_map, prefix, common_dir, hic_dir, mcool_overrides)
+            _pooled_msd_and_calibration(
+                condition, conformations, prefix, common_dir, ctcf_type, mcool_path, curve,
+                do_msd, do_polymer_dynamics, calibrate_with, expt_msd_overrides, reuse_heavy)
             logger.info(f"  Done pooling: {condition} → {prefix}_*")
-
         except Exception:
             logger.error(f"  FAILED pooling: {condition}\n{traceback.format_exc()}")
 
-    # --- Overlay plot of all pooled P(s) curves ---
     if pooled_curves:
-        overlay_path = os.path.join(common_dir, "ps_overlay_all_conditions.png")
-        try:
-            ps_mod.plot_ps_overlay(
-                pooled_curves, overlay_path,
-                title="P(s): all pooled conditions",
-            )
-        except Exception as e:
-            logger.warning(f"  P(s) overlay failed: {e}")
-
-        # --- Comparative first-derivative analysis of pooled P(s) ---
-        # d log P / d log s is the local contact-scaling exponent and is
-        # often a cleaner between-condition discriminator than the full
-        # P(s) curve. Experimental P(s) curves are also pulled from the
-        # provided mcool files (once per cell type) so the derivative
-        # plot and table directly compare sim vs. in-vivo. See README
-        # section 6.
-        try:
-            deriv_png = os.path.join(
-                common_dir, "ps_derivative_all_conditions.png")
-            deriv_csv = os.path.join(
-                common_dir, "ps_derivative_table.csv")
-            deriv_json = os.path.join(
-                common_dir, "ps_derivative_table.json")
-
-            # Pull experimental P(s) from each Hi-C map once.
-            exp_curves: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-            for ct_key in MCOOL_FILES:
-                mc_path = find_mcool(ct_key, hic_dir, mcool_overrides or {})
-                if mc_path:
-                    try:
-                        e_d, e_p = ps_mod.compute_ps_from_cooler(
-                            mc_path,
-                            region=f"{CHROM}:{REGION_START}-{REGION_END}",
-                            resolution=RESOLUTION, balance=_HIC_BALANCE,
-                        )
-                        exp_label = f"{ct_key}_experimental (exp)"
-                        exp_curves[exp_label] = (e_d, e_p)
-                        logger.info(
-                            f"    derivative: loaded experimental P(s) "
-                            f"for {ct_key} from {os.path.basename(mc_path)}"
-                        )
-                    except Exception as e:
-                        logger.info(
-                            f"    derivative: could not load experimental "
-                            f"P(s) for {ct_key} ({e}); skipping exp row."
-                        )
-
-            combined_curves = {**pooled_curves, **exp_curves}
-
-            ps_mod.plot_ps_derivative_overlay(
-                combined_curves, deriv_png,
-                title="Local slope of P(s): sim + experimental",
-            )
-            table = ps_mod.summarize_ps_derivatives(combined_curves)
-            ps_mod.save_ps_derivative_table(
-                table, csv_path=deriv_csv, json_path=deriv_json,
-            )
-        except Exception as e:
-            logger.warning(f"  P(s) derivative analysis failed: {e}")
-
-    # --- AbLE on the conserved MSD CTCF pairs, across all pooled conditions ---
-    # See README section 7. This uses the same pair list picked by
-    # configs/parameters.get_msd_pairs() so MSD changes and loop-strength
-    # changes are always reported on identical anchors.
+        _ps_overlay_and_derivatives(pooled_curves, common_dir, hic_dir, mcool_overrides)
     if pooled_maps:
-        try:
-            from configs.parameters import get_msd_pairs
-            # With require_conserved=True the pairs are identical across
-            # ctcf_types, so using the first type is enough.
-            msd_pairs, _ = get_msd_pairs(CTCF_TYPES[0])
-        except Exception as e:
-            logger.warning(f"  AbLE: could not resolve MSD pairs ({e}); "
-                           f"skipping AbLE-on-conserved-pairs table.")
-            msd_pairs = []
-
-        if msd_pairs:
-            try:
-                able_res = abs_mod.able_pairs_across_conditions(
-                    pooled_maps, msd_pairs,
-                )
-                abs_mod.save_able_table(
-                    able_res,
-                    csv_path=os.path.join(
-                        common_dir, "able_conserved_pairs_table.csv"),
-                    json_path=os.path.join(
-                        common_dir, "able_conserved_pairs_table.json"),
-                )
-                abs_mod.plot_able_heatmap(
-                    able_res,
-                    out_path=os.path.join(
-                        common_dir, "able_conserved_pairs_heatmap.png"),
-                    title=("AbLE strength on conserved MSD pairs "
-                           "(observed minus local P(s))"),
-                )
-            except Exception as e:
-                logger.warning(
-                    f"  AbLE-on-conserved-pairs analysis failed: {e}")
+        _able_on_conserved_pairs(pooled_maps, common_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -1519,14 +1478,14 @@ def main():
     for sim_dir in dirs_to_analyse:
         base_name = os.path.basename(sim_dir)
         hic_path  = find_hic_path(base_name, args.hic_dir)
-        cell_type, ctcf_bed = resolve_ctcf_bed(
+        ctcf_type, ctcf_bed = resolve_ctcf_bed(
             base_name, ctcf_bed_overrides, _REPO_ROOT,
         )
         mcool_path = resolve_mcool(base_name, args.hic_dir, mcool_overrides)
         elements_bed = resolve_elements_bed(base_name, elements_overrides)
         cfg_cond = lookup_condition(base_name)
         expt_msd_csv = expt_msd_for(expt_msd_overrides,
-                                    cfg_cond["name"] if cfg_cond else base_name, cell_type)
+                                    cfg_cond["name"] if cfg_cond else base_name, ctcf_type)
         work_items.append(dict(
             sim_dir=sim_dir,
             hic_path=hic_path,
@@ -1534,7 +1493,7 @@ def main():
             skip_existing=args.skip_existing,
             common_dir=common_dir,
             ctcf_bed_path=ctcf_bed,
-            cell_type=cell_type,
+            ctcf_type=ctcf_type,
             mcool_path=mcool_path,
             do_apa=not args.no_apa,
             do_ctcf_overlay=not args.no_ctcf_overlay,

@@ -20,7 +20,10 @@ Snakemake passes the locus and condition as wildcards. Output goes to:
 output/loci/{locus}/analysis/{condition}/
 ├── *_contact_map.npy          # simulated contact probability matrix
 ├── *_ps_curve.npz             # P(s): contact probability vs. genomic distance
-├── *_apa.npz                  # aggregate peak analysis (APA)
+├── *_ps_metrics.json          # P(s) values, exponent, local slopes
+├── ps_curves.tsv, ps_derivative_curves.tsv   # P(s) and local slopes, sim + Hi-C
+├── *_apa_convergent.png       # aggregate peak analysis (APA)
+├── *_apa_loops_quant.json     # loop strengths at convergent CTCF pairs
 ├── *_sim_vs_exp_map.png       # simulated vs. experimental Hi-C comparison
 └── ...
 ```
@@ -38,9 +41,10 @@ contact probabilities at the `resolution` (default 1 kb) set in
 ### P(s) curves
 
 P(s) is the contact probability as a function of genomic separation *s*. It is
-the single most diagnostic output: a well-tuned simulation matches the slope and
-magnitude of the experimental P(s) from Hi-C. A mismatch indicates cohesin
-parameters need adjustment.
+one of the most diagnostic outputs: a well-tuned simulation matches the
+*shape* and local slope of the experimental P(s) from Hi-C (their heights are
+in different units). See [P(s)](ps.qmd) for how it is calculated, how to read
+it, and how to plot it.
 
 ### APA (Aggregate Peak Analysis)
 
@@ -50,7 +54,7 @@ successful loop extrusion between convergent CTCF sites.
 
 ### Experimental comparison
 
-The experimental `.cool` file (at 10 kb resolution) is loaded with `cooler` and
+The experimental `.cool` file (at the config's `resolution`) is loaded with `cooler` and
 plotted alongside the simulated contact map at the same scale. Visual alignment
 at TAD boundaries and loop anchors validates the model.
 
