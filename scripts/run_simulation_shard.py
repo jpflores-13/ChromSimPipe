@@ -32,6 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from configs.parameters import (
     SIM_RUN, POLYSIM, TILING, ACTIVE_LOCUS, LOCI, RESOLUTION, get_condition,
     get_tiled_ctcf_arrays, get_ctcf_signals, condition_peak_files,
+    get_ctcf_site_capture, get_ctcf_site_names,
 )
 import sim_features as feat
 
@@ -54,10 +55,19 @@ def seed_all(seed):
 def ctcf_stall_sites(params, ctcf_type, ctcf_pos, ctcf_ori):
     """polysim's ctcf_left / ctcf_right dicts {monomer: stall probability}.
 
-    ctcf_capture is one probability for every site, or {min, max}: each site's
-    probability then follows its CTCF peak signal (sim_features.capture_by_signal).
+    ctcf_capture is one probability for every site, {min, max} (spread by CTCF peak
+    signal rank, sim_features.capture_by_signal), or {by: occupancy | table} (per-site
+    values from the ctcfOccupancy table or a user table; sites on one monomer combine
+    as 1 - prod(1 - p)).
     """
     cap = params["ctcf_capture"]
+    if isinstance(cap, dict) and cap.get("by") in ("occupancy", "table"):
+        n = TILING["n_tiles"]
+        probs = np.tile(get_ctcf_site_capture(ctcf_type, cap), n)
+        # peak name + copy index: one peak's motifs count once, copies stay separate
+        names = get_ctcf_site_names(ctcf_type)
+        groups = [(k, nm) for k in range(n) for nm in names]
+        return feat.stall_dicts(ctcf_pos, ctcf_ori, probs, groups=groups, combine="independent")
     if isinstance(cap, dict):
         probs = feat.capture_by_signal(get_ctcf_signals(ctcf_type), cap["min"], cap["max"])
         probs = np.tile(probs, TILING["n_tiles"])

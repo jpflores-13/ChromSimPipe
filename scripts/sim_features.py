@@ -88,13 +88,30 @@ def capture_by_signal(signals, lo, hi):
     return lo + (hi - lo) * ranks / (signals.size - 1)
 
 
-def stall_dicts(positions, orientations, probs):
-    """polysim's ctcf_left / ctcf_right {monomer: probability}; a monomer holding
-    several sites of one orientation keeps the highest probability."""
+def stall_dicts(positions, orientations, probs, groups=None, combine="max"):
+    """polysim's ctcf_left / ctcf_right {monomer: probability} for sites of one orientation
+    sharing a monomer:
+      combine="max"          keep the highest probability
+      combine="independent"  1 - prod(1 - p) over distinct `groups` (peak names): the chance
+                             at least one bound CTCF stalls the leg (Harvey's supplement,
+                             8.3); sites of the same group (motifs of one peak) count once,
+                             at their highest probability."""
+    if combine not in ("max", "independent"):
+        raise ValueError(f"combine must be 'max' or 'independent', not {combine!r}")
+    positions = np.asarray(positions, int)
+    if groups is None:
+        groups = range(len(positions))
+    best = {}                                   # (side, monomer, group) -> probability
+    for m, o, p, g in zip(positions, orientations, probs, groups):
+        k = (+1 if o == +1 else -1, int(m), g)
+        best[k] = max(best.get(k, 0.0), float(p))
     left, right = {}, {}
-    for m, o, p in zip(np.asarray(positions, int), orientations, probs):
+    for (o, m, _), p in best.items():
         side = left if o == +1 else right
-        side[int(m)] = max(side.get(int(m), 0.0), float(p))
+        if combine == "max":
+            side[m] = max(side.get(m, 0.0), p)
+        else:
+            side[m] = 1.0 - (1.0 - side.get(m, 0.0)) * (1.0 - p)
     return left, right
 
 
