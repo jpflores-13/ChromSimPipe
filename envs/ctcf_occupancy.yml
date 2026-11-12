@@ -1,0 +1,8 @@
+name: ctcf_occupancy
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.10
+  - numpy>=1.24
+  - pybigwig>=0.3.22        # read CTCF ChIP / input bigWigs (ctcfOccupancy rule)

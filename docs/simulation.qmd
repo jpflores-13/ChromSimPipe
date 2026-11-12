@@ -45,7 +45,7 @@ correct side.
 | Number of cohesins | chain length / `separation` | one per 240 kb |
 | Leg step | probability `vlef` per LEF timestep | 0.0025 (one step per 400 timesteps) |
 | Unbinding | probability 1 / `lifetime` per timestep | 75,000 timesteps, so ~190 kb extruded per leg |
-| Stall at CTCF | probability `ctcf_capture` per encounter | 0.5 |
+| Stall at CTCF | probability `ctcf_capture` per encounter (one value, or per site) | 0.5 |
 | Stalled lifetime | × `life_boost_stalled` when both legs are stalled | × 4 |
 
 Orientation comes from the FIMO motif strand in the `orientCTCF` output
@@ -88,7 +88,9 @@ Each condition can switch on more of polysim's model (full list in
 | Option | Layer | What changes | Implemented through |
 |--------|-------|--------------|---------------------|
 | `separation: none` | cohesin | no cohesin at all | polysim `sep=None` |
-| `ctcf_capture: {min, max}` | cohesin | each CTCF site's stall probability follows its peak signal | polysim per-site stall probabilities |
+| `ctcf_capture: {min, max}` | cohesin | each CTCF site's stall probability follows its peak-signal rank | polysim per-site stall probabilities |
+| `ctcf_capture: {by: occupancy}` | cohesin | each site's stall probability = its CTCF occupancy (ChIP − input, top chromosome peak = 1) | `ctcfOccupancy` rule + per-site stall probabilities; sites on one monomer combine as 1 − ∏(1 − p) |
+| `ctcf_capture: {by: table, file}` | cohesin | each site's stall probability from your own table (e.g. tiers from Hi-C dot strength) | per-site stall probabilities; same combination |
 | `loading` | cohesin | cohesin loads preferentially at peaks | polysim's per-bead loading array |
 | `pausing` | cohesin | cohesin steps more slowly at peaks | polysim's per-bead pause array |
 | `sticky`, `sticky_cross` | polymer | beads under a factor's peaks attract each other | polysim `monomer_types` + `interaction_matrix` |

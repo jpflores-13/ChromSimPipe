@@ -234,6 +234,64 @@ simulation stops drawing a strong dot at every convergent pair.
 peak each site came from. Ranks are used, not raw values, so the peak
 caller's scale doesn't matter, but the result does depend on `min` and `max`.
 
+## CTCF strength from ChIP occupancy
+
+**Models:** stall probability as CTCF occupancy, read from the ChIP and input
+signal (Hansen lab synEP supplement, sections 8.1 and 8.3). For every CTCF
+peak on the locus chromosome the `ctcfOccupancy` rule takes enrichment = ChIP
+(summit ± 100 bp) − input (summit ± 1 kb), and scales it so the strongest peak
+on the chromosome is 1 and a site at input level is 0. Each site's stall
+probability is then `min + (max − min) × occupancy`.
+
+Add the two bigWig columns to the samplesheet:
+
+```
+... CTCF_Peaks                  Hi-C            CTCF_BigWig              CTCF_Input_BigWig
+... data/peaks/CN_CTCF.narrowPeak  data/mcool/CN.mcool  data/bw/CN_CTCF.bw  data/bw/CN_Input.bw
+```
+
+```yaml
+  - name:         ctcf-occupancy
+    params_name:  extrusion_occ
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: {by: occupancy}          # min 0, max 1, ref: max
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Expect:** most sites become leaky. With the top peak as the reference, the
+median site often lands near 0.05–0.2, so check
+`output/logs/<locus>/ctcfOccupancy_*.out` (median and max per CTCF sample).
+`ref: p99` (the 99th percentile as 1) or a `min`/`max` mapping (e.g. `{by:
+occupancy, min: 0.2, max: 0.6}`) give stronger barriers.
+
+**Watch out:** several CTCF sites (from different peaks) on one 1 kb monomer
+combine as 1 − ∏(1 − p), the chance at least one is bound; motifs from one
+peak count once. Conditions sharing a `ctcf_type` must use the same `ref` /
+`window` settings.
+
+## Per-site stall probabilities from a table
+
+**Models:** stall probabilities you set yourself, e.g. 0.5 for sites with a
+clear Hi-C dot, 0.35 for weaker ones and 0.6 for exceptional ones. The table
+is tab-separated with a header containing `name` (the CTCF peak name, column 4
+of the oriented BED) and a value column.
+
+```yaml
+  - name:         ctcf-tiers
+    params_name:  extrusion_tier
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: {by: table, file: 'results/{locus}/ctcf_site_tiers_{ctcf_type}.tsv',
+                   column: tier_s, default: 0.35}
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+**Watch out:** sites missing from the table take `default` (or stop the run
+if no default is set). Sites on one monomer combine as above.
+
 ## Other factors: sticky sites
 
 **Models:** factors that hold distant DNA together without extrusion:

@@ -90,3 +90,31 @@ def test_reference_condition_must_exist(tmp_path):
                              calibration={"reference_condition": "nope"})
     res = _probe(cfg, "")
     assert res.returncode != 0 and "reference_condition" in res.stderr
+
+
+def test_capture_occupancy_and_table_parse(tmp_path):
+    import json
+    cfg = _conditions_config(tmp_path, [
+        dict(name="table", lifetime=75000, separation=240,
+             ctcf_capture={"by": "table", "file": "results/{locus}/tiers_{ctcf_type}.tsv", "default": 0.35},
+             **BASE),
+    ])
+    res = _probe(cfg, "print(json.dumps(p.SIMULATION_CONDITIONS[0]['params']['ctcf_capture']))")
+    assert res.returncode == 0, res.stderr
+    assert json.loads(res.stdout) == {"by": "table", "file": "results/{locus}/tiers_{ctcf_type}.tsv",
+                                      "column": "tier_s", "default": 0.35}
+
+
+def test_capture_occupancy_needs_bigwig_columns(tmp_path):
+    cfg = _conditions_config(tmp_path, [
+        dict(name="occ", lifetime=75000, separation=240, ctcf_capture={"by": "occupancy"}, **BASE)])
+    res = _probe(cfg, "")
+    assert res.returncode != 0 and "CTCF_BigWig" in res.stderr
+
+
+def test_capture_occupancy_rejects_bad_range(tmp_path):
+    cfg = _conditions_config(tmp_path, [
+        dict(name="occ", lifetime=75000, separation=240,
+             ctcf_capture={"by": "occupancy", "min": 0.8, "max": 0.2}, **BASE)])
+    res = _probe(cfg, "")
+    assert res.returncode != 0 and "0 <= min <= max <= 1" in res.stderr

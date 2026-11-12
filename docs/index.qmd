@@ -28,7 +28,7 @@ runs the same way.
                                   ▼
      convertHic ── getMotif ── preparePolysim      (shared by all loci)
                                   │
-              orientCTCF ── validateCTCF                 (per locus)
+     orientCTCF ── validateCTCF ── ctcfOccupancy*        (per locus)
                                   │
      simulateShard (locus × condition × replicate × shard, GPU, polysim)
                                   │

@@ -17,6 +17,7 @@
 #     preparePolysim    once (builds polysim's Cython LEF model)
 #     orientCTCF        per locus x CTCF sample
 #     validateCTCF      per locus
+#     ctcfOccupancy     per locus x CTCF sample, only for ctcf_capture {by: occupancy}
 #     simulateShard     per locus x condition x replicate x shard (GPU)
 #     mergeShards       per locus x condition x replicate
 #     analyzeCondition  per locus x condition (needs convertHic output)
@@ -41,6 +42,7 @@ from configs.parameters import (
     SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, HIC_FILES, MCOOL_FILES,
     SAMPLES, RUN_NAME, N_REPLICATES, N_SHARDS, ANALYSIS, CALIBRATION, GENOME_ASSEMBLY, GENOME,
     OUTPUT_DIR, LOCI, LOCUS_NAMES, locus_paths, ctcf_bed_path, condition_peak_files,
+    OCCUPANCY_SETTINGS, capture_input_file,
 )
 
 
@@ -52,9 +54,9 @@ def rel(path):
     return path if r.startswith("..") else r
 
 
-def conda_env(key):
+def conda_env(key, default=None):
     """Resolve a condaEnvs entry: an env file, an existing env name, or an env path."""
-    env = os.path.expanduser(str(config["condaEnvs"][key]))
+    env = os.path.expanduser(str(config["condaEnvs"].get(key) or default))
     if env.endswith((".yml", ".yaml")) and not os.path.isabs(env):
         return os.path.abspath(env)   # Snakemake resolves env files from workflows/ otherwise
     return env
@@ -82,6 +84,7 @@ def LP(wildcards, key):
 
 ENV_SIM  = conda_env("sim")
 ENV_CTCF = conda_env("ctcf")
+ENV_OCC  = conda_env("occupancy", "envs/ctcf_occupancy.yml")
 
 MOTIF = config["ctcf_motif"]
 MOTIF_MEME = (os.path.expanduser(MOTIF["meme"]) if MOTIF.get("meme")
@@ -277,6 +280,35 @@ rule validateCTCF:
         """
 
 
+rule ctcfOccupancy:
+    input:
+        peaks = lambda wildcards: CTCF_PEAKS[wildcards.ctcfType],
+        sites = f"{L('ctcf')}/ctcf_oriented_{GENOME_ASSEMBLY}_{{ctcfType}}.bed",
+        chip  = lambda wildcards: SAMPLES[wildcards.ctcfType]["ctcf_bigwig"],
+        inp   = lambda wildcards: SAMPLES[wildcards.ctcfType]["ctcf_input_bigwig"]
+    output:
+        tsv = f"{L('ctcf')}/ctcf_occupancy_{GENOME_ASSEMBLY}_{{ctcfType}}.tsv"
+    log:
+        err = f"{LOG_DIR}/{{locus}}/ctcfOccupancy_{{ctcfType}}.err",
+        out = f"{LOG_DIR}/{{locus}}/ctcfOccupancy_{{ctcfType}}.out"
+    benchmark:
+        f"{BENCH_DIR}/ctcfOccupancy_{{locus}}_{{ctcfType}}.tsv"
+    params:
+        chrom        = lambda wildcards: LOCI[wildcards.locus]["chrom"],
+        ref          = lambda wildcards: OCCUPANCY_SETTINGS[wildcards.ctcfType]["ref"],
+        window       = lambda wildcards: OCCUPANCY_SETTINGS[wildcards.ctcfType]["window"],
+        input_window = lambda wildcards: OCCUPANCY_SETTINGS[wildcards.ctcfType]["input_window"]
+    conda: ENV_OCC
+    shell:
+        """
+        "$CONDA_PREFIX/bin/python" scripts/ctcf_occupancy.py \
+            --peaks {input.peaks} --sites {input.sites} \
+            --chip {input.chip} --input {input.inp} --chrom {params.chrom} \
+            --window {params.window} --input-window {params.input_window} --ref {params.ref} \
+            --output {output.tsv} 1> {log.out} 2> {log.err}
+        """
+
+
 rule simulateShard:
     input:
         validated = f"{L('done')}/validateCTCF.done",
@@ -285,7 +317,11 @@ rule simulateShard:
             wildcards.locus, COND_LOOKUP[wildcards.condition]["ctcf_type"])),
         ## peak files for the condition's sticky / loading / pausing options (none by default)
         features  = lambda wildcards: [rel(f) for f in
-                                       condition_peak_files(COND_LOOKUP[wildcards.condition]).values()]
+                                       condition_peak_files(COND_LOOKUP[wildcards.condition]).values()],
+        ## per-site stall table for ctcf_capture {by: occupancy | table} (none otherwise)
+        capture   = lambda wildcards: [rel(f) for f in [capture_input_file(
+            COND_LOOKUP[wildcards.condition]["params"]["ctcf_capture"], wildcards.locus,
+            COND_LOOKUP[wildcards.condition]["ctcf_type"])] if f]
     output:
         done = f"{L('done')}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.done"
     log:

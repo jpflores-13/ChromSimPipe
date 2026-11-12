@@ -47,9 +47,12 @@ and cohesin dynamics parameters, the simulation tests user-defined hypotheses.
 ### Data flow
 
 ```
-ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C)
+ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C,
+                          optional CTCF_BigWig / CTCF_Input_BigWig)
     ↓  orientCTCF rule → scripts/extract_ctcf_sites.py  (strand via FIMO)
 Oriented CTCF BED files (output/loci/<locus>/ctcf/)
+    ↓  ctcfOccupancy rule → scripts/ctcf_occupancy.py  (only for ctcf_capture {by: occupancy})
+Per-site CTCF occupancy tables (output/loci/<locus>/ctcf/ctcf_occupancy_*.tsv)
     ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim
 Simulated conformations (output/loci/<locus>/sims/)
     ↓  analyzeCondition rule → scripts/run_analysis_all.py
@@ -65,7 +68,8 @@ building conda environments are all workflow steps.
 
 1. **`ChromSimSamplesheet.txt`**: one tab-separated row per sample. The
    required columns are `CTCF_Peaks` and `Hi-C` (`NA` when a sample has
-   no file of that kind); all other columns are metadata. Paths are
+   no file of that kind). `CTCF_BigWig` and `CTCF_Input_BigWig` are optional,
+   read only by `ctcf_capture: {by: occupancy}`; all other columns are metadata. Paths are
    `data/<file>`: each cluster links its own copies into `data/`, so one
    samplesheet serves every cluster.
 2. **`config/ChromSimConfig.yaml`**: `fileNamesFrom` names the
@@ -116,7 +120,8 @@ asks for those sites. There are no placeholder sites.
 **Cohesin parameters.** Each condition has a parameter set, a dict with
 `lifetime` (mean LEF timesteps before cohesin falls off), `separation`
 (spacing between cohesins) and `ctcf_capture` (probability of stalling per
-CTCF encounter), optionally overriding `vlef` and `life_boost_stalled` from
+CTCF encounter: one value, `{min, max}` by peak-signal rank, `{by: occupancy}`
+from ChIP / input bigWigs, or `{by: table, file}` per site), optionally overriding `vlef` and `life_boost_stalled` from
 the `polysim:` block. Defaults are the polysim bootcamp tutorial values.
 
 **Tiling.** Rather than simulating one copy of the locus, the simulation
@@ -253,6 +258,7 @@ dies without cleanup, the lock persists and the next run refuses to start.
 | `getMotif` | once | `wget` the JASPAR motif (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | per CTCF sample used by a condition | `extract_ctcf_sites.py` |
 | `validateCTCF` | once | `validate_ctcf.py`: sanity-checks all BED files |
+| `ctcfOccupancy` | per CTCF sample used by a `ctcf_capture: {by: occupancy}` condition | `ctcf_occupancy.py`: per-site occupancy from ChIP − input bigWigs (env `envs/ctcf_occupancy.yml`, config key `condaEnvs: occupancy`, optional) |
 | `simulateShard` | condition × replicate × shard (GPU) | `run_simulation_shard.py`: 18 jobs with the example config |
 | `mergeShards` | condition × replicate | `merge_shards.py`: concatenates shard HDF5 streams |
 | `analyzeCondition` | per condition | `run_analysis_all.py`: contact maps, P(s), APA, figures |
@@ -301,6 +307,8 @@ STRS     HEK293T    condition1  data/control.narrowPeak   data/control.hic
 STRS     HEK293T    condition2  data/sorbitol.narrowPeak  data/sorbitol.hic
 ```
 
+Optional `CTCF_BigWig` and `CTCF_Input_BigWig` columns (CTCF ChIP and input
+signal) are needed only by conditions with `ctcf_capture: {by: occupancy}`.
 Relative paths resolve against the repo root, so `data/...` works on any
 cluster that has linked its files into `data/` (see `data/README.md`).
 
@@ -477,6 +485,21 @@ coordinate → monomer-index mapping is monotone; prints counts per condition an
 sites gained / lost / shared. Exits non-zero on failure, including when a BED
 is missing.
 
+### `scripts/ctcf_occupancy.py`
+
+**Purpose.** CTCF occupancy per oriented site, for `ctcf_capture: {by:
+occupancy}`. Called by the `ctcfOccupancy` rule in its own small env
+(`envs/ctcf_occupancy.yml`: numpy + pyBigWig). For every CTCF peak on the
+locus chromosome: ChIP signal S = mean over the summit ± `window`/2, input I =
+mean over the summit ± `input_window`/2, enrichment E = max(S − I, 0), and
+occupancy = E / ref clipped to [0, 1], where ref is the chromosome's maximum E
+(or a percentile, `ref: p99`). So the strongest peak on the chromosome is 1
+and a site at input level is 0. Each oriented site takes its peak's value
+(sites without a matching peak are measured directly). Output:
+`output/loci/<locus>/ctcf/ctcf_occupancy_<assembly>_<ctcf_type>.tsv`
+(name, coordinates, chip, input, enrichment, occupancy), with the reference in
+the header comments.
+
 ## 4. The simulation model: polysim
 
 ChromSimPipe simulates with the Hansen lab's polysim package
@@ -489,7 +512,7 @@ polychrom loop-extrusion example and Goel et al. 2025.
 |---|---|---|
 | `life`, `sep` | condition `lifetime`, `separation` | 75,000 timesteps, 240 monomers |
 | `vlef`, `lifebooststalled` | `polysim:` block, or per-condition overrides | 0.0025, 4 |
-| `ctcf_left`, `ctcf_right` | oriented CTCF sites (+ / −), each at the condition's `ctcf_capture` | 0.5 |
+| `ctcf_left`, `ctcf_right` | oriented CTCF sites (+ / −), each at the condition's `ctcf_capture` (one value, by rank, by occupancy, or from a table) | 0.5 |
 | polymer, integration, saving | `polysim:` block | bootcamp values |
 | `npoly` | the locus' tiled chain (`TILING["chrom_size"]`) | ~70,000 |
 | `numsave` | `sim_run.frames_per_replicate / n_shards` | 5,000 |
@@ -533,7 +556,12 @@ Shard output goes to `<output>/<params_name>_ctcf-<ctcf_type>_rep<r>_shard<i>/`.
    stop leftward-moving legs, − sites rightward-moving ones. The probability
    is `ctcf_capture`, or, for `ctcf_capture: {min, max}`, each site's rank by
    peak signal (`get_ctcf_signals`, the narrowPeak signalValue of the peak the
-   site came from) mapped onto [min, max].
+   site came from) mapped onto [min, max]. For `{by: occupancy}` and
+   `{by: table}`, `get_ctcf_site_capture` reads each site's value (the
+   `ctcfOccupancy` table, mapped onto [min, max], or the user's table by peak
+   name), and `sim_features.stall_dicts(..., combine="independent")` combines
+   sites of different peaks on one monomer as 1 − ∏(1 − p) (motifs of one peak
+   count once).
 4. `condition_features()` reads the peak files of the condition's `sticky`,
    `loading` and `pausing` options (`condition_peak_files`, from samplesheet
    columns), maps them onto the locus' beads and tiles them
