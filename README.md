@@ -115,8 +115,9 @@ and a config, then `sbatch` one launcher.
 2. Edit the tab-separated `ChromSimSamplesheet.txt`. Each row is one
    experimental sample. `CTCF_Peaks` (narrowPeak/BED) and `Hi-C` (`.hic`,
    `.mcool` or `.cool`) are required columns (write `NA` if a sample has no file of that kind).
-   `CTCF_BigWig` and `CTCF_Input_BigWig` (CTCF ChIP and input signal) are optional, needed only by
-   `ctcf_capture: {by: occupancy}`. Every other column is metadata:
+   `CTCF_BigWig` (CTCF ChIP signal) is optional, needed only by `ctcf_capture: {by: occupancy}`;
+   `CTCF_Input_BigWig` (its input) is optional on top of that and, when given, is subtracted as
+   background. Every other column is metadata:
 
     | Project | Cell_Type | Condition  | CTCF_Peaks                | Hi-C                 |
     |---------|-----------|------------|---------------------------|----------------------|
@@ -279,7 +280,7 @@ sbatch ChromSimPipe.sh       # --rerun-incomplete is on by default
 | `preparePolysim` | 1 | Builds polysim's Cython cohesin model once |
 | `orientCTCF` | loci × CTCF samples used (2) | FIMO motif strand → oriented CTCF BED for the locus |
 | `validateCTCF` | 1 per locus (1) | Checks every BED parses and maps onto the polymer |
-| `ctcfOccupancy` | loci × CTCF samples with `ctcf_capture: {by: occupancy}` (0) | CTCF occupancy per oriented site from ChIP − input bigWigs (`scripts/ctcf_occupancy.py`) |
+| `ctcfOccupancy` | loci × CTCF samples with `ctcf_capture: {by: occupancy}` (0) | CTCF occupancy per oriented site from the ChIP bigWig, minus input when given (`scripts/ctcf_occupancy.py`) |
 | `simulateShard` | loci × conditions × reps × shards (18, GPU) | polysim 3D loop-extrusion simulation |
 | `mergeShards` | loci × conditions × reps (9) | Concatenates shard trajectories |
 | `analyzeCondition` | loci × conditions (3) | Contact maps, P(s), insulation, APA, Hi-C comparison |
@@ -404,7 +405,7 @@ biological context, and the shared settings in its `polysim:` block.
 
 Each condition can also use more of polysim's model: no cohesin
 (`separation: none`), per-site CTCF strength (`ctcf_capture: {min, max}` by
-peak-signal rank, `{by: occupancy}` from the CTCF ChIP and input bigWigs, or
+peak-signal rank, `{by: occupancy}` from the CTCF ChIP bigWig, or
 `{by: table, file}` from your own per-site values), other factors as sticky sites (`sticky:`, e.g. YY1, LDB1, condensates),
 chromatin compaction (`attraction_energy`), and targeted cohesin loading or
 pausing (`loading:`, `pausing:`). `docs/configuration.qmd` lists every option
