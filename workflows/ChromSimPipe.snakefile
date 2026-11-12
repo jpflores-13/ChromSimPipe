@@ -18,6 +18,7 @@
 #     orientCTCF        per locus x CTCF sample
 #     validateCTCF      per locus
 #     ctcfOccupancy     per locus x CTCF sample, only for ctcf_capture {by: occupancy}
+#                       (CTCF_BigWig required, CTCF_Input_BigWig optional)
 #     simulateShard     per locus x condition x replicate x shard (GPU)
 #     mergeShards       per locus x condition x replicate
 #     analyzeCondition  per locus x condition (needs convertHic output)
@@ -285,7 +286,9 @@ rule ctcfOccupancy:
         peaks = lambda wildcards: CTCF_PEAKS[wildcards.ctcfType],
         sites = f"{L('ctcf')}/ctcf_oriented_{GENOME_ASSEMBLY}_{{ctcfType}}.bed",
         chip  = lambda wildcards: SAMPLES[wildcards.ctcfType]["ctcf_bigwig"],
-        inp   = lambda wildcards: SAMPLES[wildcards.ctcfType]["ctcf_input_bigwig"]
+        ## optional: without an input bigWig, `--input` is passed empty and occupancy is ChIP alone
+        inp   = lambda wildcards: [SAMPLES[wildcards.ctcfType]["ctcf_input_bigwig"]]
+                                  if SAMPLES[wildcards.ctcfType]["ctcf_input_bigwig"] else []
     output:
         tsv = f"{L('ctcf')}/ctcf_occupancy_{GENOME_ASSEMBLY}_{{ctcfType}}.tsv"
     log:

@@ -11,8 +11,9 @@
 ##   Hi-C       - Hi-C map to compare simulations against: .hic, .mcool (must
 ##                contain the `resolution` below) or .cool; 'NA' if none
 ## Optional columns:
-##   CTCF_BigWig, CTCF_Input_BigWig - CTCF ChIP and input signal (bigWig); read
-##                only by conditions with ctcf_capture {by: occupancy}
+##   CTCF_BigWig       - CTCF ChIP signal (bigWig); read only by conditions with
+##                       ctcf_capture {by: occupancy}
+##   CTCF_Input_BigWig - its input (bigWig); subtracted as background when given
 ## Every other column is free-form metadata (Project, Cell_Type, Condition, ...).
 ## Paths may be absolute, or relative to the repo root. The shipped samplesheet
 ## uses data/<file> with each cluster's files linked into data/ (see
@@ -124,7 +125,7 @@ loci:
 ##   separation   - inter-cohesin spacing in monomers
 ##   ctcf_capture - stalling probability per CTCF encounter: one value (0-1) for
 ##                  every site; {min, max} spread by peak-signal rank;
-##                  {by: occupancy} from the CTCF ChIP / input bigWigs (strongest
+##                  {by: occupancy} from the CTCF ChIP bigWig, minus input if given (strongest
 ##                  peak on the chromosome = 1, input level = 0; options min, max,
 ##                  ref: max | pNN, window, input_window); or {by: table, file,
 ##                  column, default} per site from a TSV matched by peak name.

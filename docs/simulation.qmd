@@ -89,7 +89,7 @@ Each condition can switch on more of polysim's model (full list in
 |--------|-------|--------------|---------------------|
 | `separation: none` | cohesin | no cohesin at all | polysim `sep=None` |
 | `ctcf_capture: {min, max}` | cohesin | each CTCF site's stall probability follows its peak-signal rank | polysim per-site stall probabilities |
-| `ctcf_capture: {by: occupancy}` | cohesin | each site's stall probability = its CTCF occupancy (ChIP − input, top chromosome peak = 1) | `ctcfOccupancy` rule + per-site stall probabilities; sites on one monomer combine as 1 − ∏(1 − p) |
+| `ctcf_capture: {by: occupancy}` | cohesin | each site's stall probability = its CTCF occupancy (ChIP, minus input if given; top chromosome peak = 1) | `ctcfOccupancy` rule + per-site stall probabilities; sites on one monomer combine as 1 − ∏(1 − p) |
 | `ctcf_capture: {by: table, file}` | cohesin | each site's stall probability from your own table (e.g. tiers from Hi-C dot strength) | per-site stall probabilities; same combination |
 | `loading` | cohesin | cohesin loads preferentially at peaks | polysim's per-bead loading array |
 | `pausing` | cohesin | cohesin steps more slowly at peaks | polysim's per-bead pause array |

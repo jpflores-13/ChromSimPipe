@@ -284,7 +284,8 @@ for _r in _rows:
         metadata   = _r,
         ctcf_peaks = _value_or_none(_r["CTCF_Peaks"]),
         hic        = _value_or_none(_r["Hi-C"]),
-        ## optional: CTCF ChIP / input bigWigs, for ctcf_capture {by: occupancy}
+        ## optional: CTCF ChIP bigWig (needed for ctcf_capture {by: occupancy}) and its
+        ## input bigWig (optional; subtracted as background when given)
         ctcf_bigwig       = _value_or_none(_r.get("CTCF_BigWig") or "NA"),
         ctcf_input_bigwig = _value_or_none(_r.get("CTCF_Input_BigWig") or "NA"),
     )
@@ -352,7 +353,8 @@ def _parse_capture(name, v):
     """ctcf_capture, the probability that a CTCF site stalls a convergent cohesin leg:
       0.5                         one probability for every site
       {min, max}                  spread by peak-signal rank (sim_features.capture_by_signal)
-      {by: occupancy, ...}        from ChIP and input bigWigs (ctcfOccupancy rule): occupancy
+      {by: occupancy, ...}        from the CTCF ChIP bigWig, minus the input bigWig when the
+                                  samplesheet gives one (ctcfOccupancy rule): occupancy
                                   = (ChIP - input) / chromosome reference, clipped to [0, 1];
                                   p = min + (max - min) * occupancy. Options: min (0), max (1),
                                   ref ('max' or 'p99' etc.), window (200), input_window (2000).
@@ -506,9 +508,9 @@ for _cond in SIMULATION_CONDITIONS:
         continue
     _t = _cond["ctcf_type"]
     _row = SAMPLES.get(_t, {})
-    if not (_row.get("ctcf_bigwig") and _row.get("ctcf_input_bigwig")):
-        raise ValueError(f"Condition {_cond['name']}: ctcf_capture {{by: occupancy}} needs the "
-                         f"CTCF_BigWig and CTCF_Input_BigWig columns for sample '{_t}' in {SAMPLESHEET_PATH}")
+    if not _row.get("ctcf_bigwig"):   # CTCF_Input_BigWig is optional (subtracted when given)
+        raise ValueError(f"Condition {_cond['name']}: ctcf_capture {{by: occupancy}} needs a "
+                         f"CTCF_BigWig column for sample '{_t}' in {SAMPLESHEET_PATH}")
     _s = {k: _cap[k] for k in ("ref", "window", "input_window")}
     if OCCUPANCY_SETTINGS.setdefault(_t, _s) != _s:
         raise ValueError(f"Conditions using ctcf_type {_t} disagree on occupancy ref / window settings")

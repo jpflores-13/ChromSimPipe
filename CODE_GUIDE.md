@@ -68,8 +68,9 @@ building conda environments are all workflow steps.
 
 1. **`ChromSimSamplesheet.txt`**: one tab-separated row per sample. The
    required columns are `CTCF_Peaks` and `Hi-C` (`NA` when a sample has
-   no file of that kind). `CTCF_BigWig` and `CTCF_Input_BigWig` are optional,
-   read only by `ctcf_capture: {by: occupancy}`; all other columns are metadata. Paths are
+   no file of that kind). `CTCF_BigWig` is optional, read only by
+   `ctcf_capture: {by: occupancy}`; `CTCF_Input_BigWig` is optional on top of
+   that (subtracted as background when given). All other columns are metadata. Paths are
    `data/<file>`: each cluster links its own copies into `data/`, so one
    samplesheet serves every cluster.
 2. **`config/ChromSimConfig.yaml`**: `fileNamesFrom` names the
@@ -121,7 +122,7 @@ asks for those sites. There are no placeholder sites.
 `lifetime` (mean LEF timesteps before cohesin falls off), `separation`
 (spacing between cohesins) and `ctcf_capture` (probability of stalling per
 CTCF encounter: one value, `{min, max}` by peak-signal rank, `{by: occupancy}`
-from ChIP / input bigWigs, or `{by: table, file}` per site), optionally overriding `vlef` and `life_boost_stalled` from
+from the ChIP bigWig (minus input if given), or `{by: table, file}` per site), optionally overriding `vlef` and `life_boost_stalled` from
 the `polysim:` block. Defaults are the polysim bootcamp tutorial values.
 
 **Tiling.** Rather than simulating one copy of the locus, the simulation
@@ -258,7 +259,7 @@ dies without cleanup, the lock persists and the next run refuses to start.
 | `getMotif` | once | `wget` the JASPAR motif (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | per CTCF sample used by a condition | `extract_ctcf_sites.py` |
 | `validateCTCF` | once | `validate_ctcf.py`: sanity-checks all BED files |
-| `ctcfOccupancy` | per CTCF sample used by a `ctcf_capture: {by: occupancy}` condition | `ctcf_occupancy.py`: per-site occupancy from ChIP − input bigWigs (env `envs/ctcf_occupancy.yml`, config key `condaEnvs: occupancy`, optional) |
+| `ctcfOccupancy` | per CTCF sample used by a `ctcf_capture: {by: occupancy}` condition | `ctcf_occupancy.py`: per-site occupancy from the ChIP bigWig, minus input when given (env `envs/ctcf_occupancy.yml`, config key `condaEnvs: occupancy`, optional) |
 | `simulateShard` | condition × replicate × shard (GPU) | `run_simulation_shard.py`: 18 jobs with the example config |
 | `mergeShards` | condition × replicate | `merge_shards.py`: concatenates shard HDF5 streams |
 | `analyzeCondition` | per condition | `run_analysis_all.py`: contact maps, P(s), APA, figures |
@@ -307,8 +308,9 @@ STRS     HEK293T    condition1  data/control.narrowPeak   data/control.hic
 STRS     HEK293T    condition2  data/sorbitol.narrowPeak  data/sorbitol.hic
 ```
 
-Optional `CTCF_BigWig` and `CTCF_Input_BigWig` columns (CTCF ChIP and input
-signal) are needed only by conditions with `ctcf_capture: {by: occupancy}`.
+An optional `CTCF_BigWig` column (CTCF ChIP signal) is needed only by
+conditions with `ctcf_capture: {by: occupancy}`; an optional
+`CTCF_Input_BigWig` (its input) is subtracted as background when present.
 Relative paths resolve against the repo root, so `data/...` works on any
 cluster that has linked its files into `data/` (see `data/README.md`).
 
@@ -491,7 +493,8 @@ is missing.
 occupancy}`. Called by the `ctcfOccupancy` rule in its own small env
 (`envs/ctcf_occupancy.yml`: numpy + pyBigWig). For every CTCF peak on the
 locus chromosome: ChIP signal S = mean over the summit ± `window`/2, input I =
-mean over the summit ± `input_window`/2, enrichment E = max(S − I, 0), and
+mean over the summit ± `input_window`/2 (I = 0 when the sample has no
+`CTCF_Input_BigWig`), enrichment E = max(S − I, 0), and
 occupancy = E / ref clipped to [0, 1], where ref is the chromosome's maximum E
 (or a percentile, `ref: p99`). So the strongest peak on the chromosome is 1
 and a site at input level is 0. Each oriented site takes its peak's value
