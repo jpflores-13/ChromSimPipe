@@ -86,6 +86,10 @@ The model is **loop extrusion** (Fudenberg et al. 2016):
 - Cohesin eventually falls off (its **lifetime**) and lands somewhere else.
   How often it lands is set by the **separation** between cohesins, and how
   often a CTCF site stops a passing leg is the **capture** probability.
+- Real CTCF sites are not equally strong: a site bound in most cells stops
+  cohesin far more often than one bound in a few. ChromSimPipe can give each
+  site its own capture probability from its **CTCF occupancy**, read from the
+  CTCF ChIP-seq signal (see [Per-site CTCF strength](#per-site-ctcf-strength-from-occupancy)).
 
 Remove one site of a convergent pair and cohesin slides past it: the loop
 no longer has a fixed end, and the dot fades. Add a site that completes a
@@ -160,6 +164,8 @@ flowchart TD
   MOT --> OR["orientCTCF (per locus × sample)<br/>FIMO strand → oriented BED"]
   OR --> VAL["validateCTCF (per locus)"]
   VAL --> SIM["simulateShard (GPU)<br/>locus × condition × replicate × shard"]
+  VAL -.-> OCC["ctcfOccupancy (per locus × sample)<br/>only for ctcf_capture {by: occupancy}"]
+  OCC -.-> SIM
   PREP --> SIM
   SIM --> MER["mergeShards<br/>locus × condition × replicate"]
   MER --> ANA["analyzeCondition<br/>contact map, P(s), APA, Hi-C comparison"]
@@ -367,6 +373,14 @@ experimental sample. The shipped file is:
   file must contain 1 kb bins with the default `resolution`), and a `.cool`
   must already be at that resolution.
 
+**Optional CTCF signal columns.** `CTCF_BigWig` (the CTCF ChIP-seq signal
+track) is read only by conditions that set each site's capture from its
+occupancy (`ctcf_capture: {by: occupancy}`, see
+[below](#per-site-ctcf-strength-from-occupancy)). `CTCF_Input_BigWig` (the
+same experiment's input) is optional on top of that; when present it is
+subtracted as background. Samples that don't need them can leave both out or
+write `NA`.
+
 Write `NA` (or leave the cell empty) when a sample has no file of that kind,
 for example a CTCF-only sample with no Hi-C. Such a sample can still supply
 CTCF sites to a condition; it just cannot be named as that condition's
@@ -401,6 +415,7 @@ what goes in its file columns, and what that lets the config do:
 | CTCF peaks and Hi-C | peak file | `.hic`, `.mcool` or `.cool` | none | a condition with `ctcf_type` and `compare_hic` both naming this sample |
 | CTCF peaks, no Hi-C | peak file | `NA` | none | a condition with `ctcf_type` and no `compare_hic`: a prediction, without the comparison |
 | Hi-C, no CTCF peaks | `NA` | Hi-C file | none | the sample can only be another condition's `compare_hic` |
+| CTCF ChIP signal (bigWig), optionally its input | peak file | as above | `CTCF_BigWig`, and `CTCF_Input_BigWig` if you have it | a condition with `ctcf_capture: {by: occupancy}` gives each site its own capture from its ChIP strength |
 | Another factor's peaks (YY1, LDB1, YAP, NIPBL, Pol II, ...) | as above | as above | one column per factor, e.g. `YY1_Peaks`, with a file or `NA` | a `sticky`, `loading` or `pausing` option names the column with `peaks:` |
 | Only some samples have a factor | as above | as above | the factor's column holds `NA` where there is no data | only conditions whose sample has a file can use that factor; an `NA` there stops the run at start-up |
 | Metadata (project, cell type, treatment, replicate, ...) | | | any columns you like | `fileNamesFrom` picks which ones make each sample's name |
@@ -550,8 +565,11 @@ What each field means:
 - `separation`: average spacing between cohesins in monomers; 240 gives
   roughly 8 cohesins per 2 Mb.
 - `ctcf_capture`: probability that a CTCF site stops a passing leg. A single
-  number applies to **every** site in the condition; `{min: 0.2, max: 0.9}`
-  instead scales each site by its peak signal.
+  number applies to **every** site in the condition. Instead, each site can
+  get its own value: `{min: 0.2, max: 0.9}` spreads sites by peak-signal
+  rank, `{by: occupancy}` uses each site's CTCF occupancy from the ChIP
+  bigWig ([below](#per-site-ctcf-strength-from-occupancy)), and `{by: table,
+  file: ...}` reads values you set yourself.
 - `ctcf_type`: which sample's CTCF sites to use (a sample name from the
   samplesheet).
 - `compare_hic`: which sample's Hi-C to compare against. Omit it for no
@@ -568,6 +586,49 @@ Read the first two conditions as a pair: they have **identical cohesin
 parameters** and differ **only** in `ctcf_type`. That pair is the core test
 of the pipeline. Condition 3 asks a follow-up question: if sorbitol also made
 CTCF a weaker roadblock, would that fit better?
+
+#### Per-site CTCF strength from occupancy
+
+With one `ctcf_capture` for every site, a weakly bound site is as strong a
+barrier as the strongest one, so the simulation draws a dot at nearly every
+convergent pair. `ctcf_capture: {by: occupancy}` instead gives each site a
+stall probability equal to its **CTCF occupancy**:
+
+1. The `ctcfOccupancy` rule reads the `CTCF_BigWig` signal at every CTCF
+   peak summit on the locus' chromosome (summit ± 100 bp), and subtracts the
+   input (summit ± 1 kb) when the sample has a `CTCF_Input_BigWig`.
+2. It scales those values so the **strongest peak on the chromosome is 1**
+   and a site at input level (or with no signal) is 0. Each site's capture
+   is then `min + (max − min) × occupancy`, with `min` 0 and `max` 1 by
+   default.
+3. When several sites (from different peaks) fall on one 1 kb bead, they
+   combine as 1 − ∏(1 − p): the chance that at least one bound CTCF stops
+   the leg. This follows the Hansen lab synEP supplement (sections 8.1 and
+   8.3).
+
+```yaml
+  - name:         cond1_occupancy
+    description:  "Condition 1 CTCF sites, capture from CTCF occupancy"
+    params_name:  occupancy
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: {by: occupancy}
+    ctcf_type:    condition1
+    compare_hic:  condition1
+```
+
+After the run, check `output/logs/<locus>/ctcfOccupancy_<sample>.out`. It
+prints the median and maximum occupancy of the locus' sites. Because the
+single strongest peak on the chromosome sets the scale, the median is often
+low (0.05–0.2 in mouse ES and neural cells), which makes most barriers
+leaky. If that is too weak, `ref: p99` makes the 99th-percentile peak 1, and
+`{by: occupancy, min: 0.2, max: 0.6}` maps occupancy onto a narrower range.
+The per-site values are in `output/loci/<locus>/ctcf/ctcf_occupancy_*.tsv`.
+
+To set the values by hand instead (for example 0.5 for sites with a clear
+Hi-C dot, 0.35 for weaker ones and 0.6 for exceptional ones), use
+`ctcf_capture: {by: table, file: ..., column: ..., default: ...}`; see
+[recipes](recipes.qmd#per-site-stall-probabilities-from-a-table).
 
 #### Adding a condition to test a hypothesis
 
@@ -598,7 +659,8 @@ Three rules make a condition a clean test:
 
 [Perturbation recipes](recipes.qmd) has ready-made conditions for common
 experiments: WAPL loss, cohesin depletion or complete loss, weaker CTCF, CTCF
-strength from peak signal, a CTCF degron with data, other factors as sticky
+strength from peak signal or from ChIP occupancy, hand-set per-site CTCF
+strength, a CTCF degron with data, other factors as sticky
 sites (YY1, LDB1, condensates), chromatin compaction, targeted cohesin loading,
 cohesin pausing, calibration to live imaging, a cheap 1D screen, a
 robustness range, and simulating without Hi-C. The full list of condition
@@ -1168,8 +1230,10 @@ the model's limits directly:
 
 - In the O/E figure the simulated maps have **many more sharp dots** than
   Hi-C, at nearly every convergent pair: with the shipped `ctcf_capture: 0.5`,
-  every site in the model is an equally strong barrier (`ctcf_capture: {min,
-  max}` scales them by peak signal instead).
+  every site in the model is an equally strong barrier. Per-site capture
+  (`ctcf_capture: {by: occupancy}`, or `{min, max}` by peak-signal rank)
+  makes weak sites leaky; see
+  [Per-site CTCF strength](#per-site-ctcf-strength-from-occupancy).
 - In @fig-loop-obs the simulated signal **falls away from the diagonal
   faster** than Hi-C's.
 - The colour scales differ between Hi-C and simulation panels (Hi-C spans
@@ -1329,9 +1393,14 @@ at your own loci is more convincing.
 
 - **Every CTCF site is equally strong, by default.** Each site stops cohesin
   with the same probability (`ctcf_capture`), so simulations **over-predict
-  dots**: every convergent pair makes one. `ctcf_capture: {min, max}` scales
-  each site by its peak signal instead
-  ([recipe](recipes.qmd#ctcf-strength-from-peak-signal)).
+  dots**: every convergent pair makes one. Per-site capture fixes this in
+  part: `{by: occupancy}` from the CTCF ChIP signal
+  ([section](#per-site-ctcf-strength-from-occupancy),
+  [recipe](recipes.qmd#ctcf-strength-from-chip-occupancy)), `{min, max}` by
+  peak-signal rank ([recipe](recipes.qmd#ctcf-strength-from-peak-signal)), or
+  your own values from a table. Occupancy from ChIP is a population average
+  and an estimate of binding, not of stalling itself, so treat the scale
+  (`ref`, `min`, `max`) as a parameter to check against the Hi-C.
 - **No compartments or bridging factors, by default.** The chain is a
   homopolymer (every bead the same), so A/B compartments and loops held by
   factors like YY1 or LDB1 cannot appear. `sticky:` adds them: beads under a
