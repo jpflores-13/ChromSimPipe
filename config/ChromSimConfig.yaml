@@ -10,6 +10,9 @@
 ##   CTCF_Peaks - CTCF peak file (narrowPeak/BED); 'NA' if this sample has none
 ##   Hi-C       - Hi-C map to compare simulations against: .hic, .mcool (must
 ##                contain the `resolution` below) or .cool; 'NA' if none
+## Optional columns:
+##   CTCF_BigWig, CTCF_Input_BigWig - CTCF ChIP and input signal (bigWig); read
+##                only by conditions with ctcf_capture {by: occupancy}
 ## Every other column is free-form metadata (Project, Cell_Type, Condition, ...).
 ## Paths may be absolute, or relative to the repo root. The shipped samplesheet
 ## uses data/<file> with each cluster's files linked into data/ (see
@@ -119,7 +122,14 @@ loci:
 ##                  probability vlef per timestep, so a leg extrudes ~lifetime x vlef
 ##                  monomers (75000 x 0.0025 = ~190 kb)
 ##   separation   - inter-cohesin spacing in monomers
-##   ctcf_capture - stalling probability per CTCF encounter (0-1)
+##   ctcf_capture - stalling probability per CTCF encounter: one value (0-1) for
+##                  every site; {min, max} spread by peak-signal rank;
+##                  {by: occupancy} from the CTCF ChIP / input bigWigs (strongest
+##                  peak on the chromosome = 1, input level = 0; options min, max,
+##                  ref: max | pNN, window, input_window); or {by: table, file,
+##                  column, default} per site from a TSV matched by peak name.
+##                  With occupancy / table, sites on one monomer combine as
+##                  1 - prod(1 - p). See docs/recipes.qmd.
 ##   vlef, life_boost_stalled - optional per-condition overrides of the polysim: block
 ##   ctcf_type    - sample (name built from fileNamesFrom) whose CTCF peaks to load
 ##   compare_hic  - sample whose Hi-C map to compare against (omit for none)

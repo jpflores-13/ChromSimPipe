@@ -284,11 +284,15 @@ for _r in _rows:
         metadata   = _r,
         ctcf_peaks = _value_or_none(_r["CTCF_Peaks"]),
         hic        = _value_or_none(_r["Hi-C"]),
+        ## optional: CTCF ChIP / input bigWigs, for ctcf_capture {by: occupancy}
+        ctcf_bigwig       = _value_or_none(_r.get("CTCF_BigWig") or "NA"),
+        ctcf_input_bigwig = _value_or_none(_r.get("CTCF_Input_BigWig") or "NA"),
     )
 
 ## Run name: metadata values shared by every sample, joined with '_'
 ## (the bagPipes `namer` pattern). Used to name run-level summary files.
-_meta_cols = [c for c in (_rows[0] if _rows else {}) if c not in ("CTCF_Peaks", "Hi-C")]
+_meta_cols = [c for c in (_rows[0] if _rows else {})
+              if c not in ("CTCF_Peaks", "Hi-C", "CTCF_BigWig", "CTCF_Input_BigWig")]
 ## File paths shared by every row (e.g. one promoter file for all samples) are
 ## not run-name metadata, and their '/' would break the output file name.
 _shared    = [next(iter(vals)) for vals in ({r[c] for r in _rows} for c in _meta_cols)
@@ -345,7 +349,38 @@ def _no_value(v):
 
 
 def _parse_capture(name, v):
-    """ctcf_capture: one probability for every site, or {min, max} scaled by peak signal."""
+    """ctcf_capture, the probability that a CTCF site stalls a convergent cohesin leg:
+      0.5                         one probability for every site
+      {min, max}                  spread by peak-signal rank (sim_features.capture_by_signal)
+      {by: occupancy, ...}        from ChIP and input bigWigs (ctcfOccupancy rule): occupancy
+                                  = (ChIP - input) / chromosome reference, clipped to [0, 1];
+                                  p = min + (max - min) * occupancy. Options: min (0), max (1),
+                                  ref ('max' or 'p99' etc.), window (200), input_window (2000).
+      {by: table, file, ...}      per-site values from a TSV (columns `name` + `column`, default
+                                  tier_s), matched by peak name; `file` may use {locus} and
+                                  {ctcf_type}; `default` fills sites missing from the table.
+    With occupancy or table, several sites on one monomer (same orientation, different
+    peaks) combine as 1 - prod(1 - p); the other modes keep the highest."""
+    if isinstance(v, dict) and v.get("by") == "occupancy":
+        out = dict(by="occupancy", min=float(v.get("min", 0.0)), max=float(v.get("max", 1.0)),
+                   ref=str(v.get("ref", "max")), window=int(v.get("window", 200)),
+                   input_window=int(v.get("input_window", 2000)))
+        if not 0.0 <= out["min"] <= out["max"] <= 1.0:
+            raise ValueError(f"Condition {name}: ctcf_capture occupancy needs 0 <= min <= max <= 1")
+        if not (out["ref"] == "max" or (out["ref"].startswith("p") and
+                                        0 < float(out["ref"][1:]) <= 100)):
+            raise ValueError(f"Condition {name}: ctcf_capture ref must be 'max' or 'pNN'")
+        return out
+    if isinstance(v, dict) and v.get("by") == "table":
+        if not v.get("file"):
+            raise ValueError(f"Condition {name}: ctcf_capture {{by: table}} needs `file:`")
+        d = v.get("default")
+        if d is not None and not 0.0 <= float(d) <= 1.0:
+            raise ValueError(f"Condition {name}: ctcf_capture default must be between 0 and 1")
+        return dict(by="table", file=str(v["file"]), column=str(v.get("column", "tier_s")),
+                    default=None if d is None else float(d))
+    if isinstance(v, dict) and v.get("by") not in (None, "signal"):
+        raise ValueError(f"Condition {name}: ctcf_capture by must be signal, occupancy or table")
     if isinstance(v, dict):
         lo, hi = float(v.get("min", 0.1)), float(v.get("max", 0.9))
         if not 0.0 <= lo <= hi <= 1.0:
@@ -462,6 +497,22 @@ def condition_peak_files(cond):
 for _cond in SIMULATION_CONDITIONS:
     condition_peak_files(_cond)   # fail at start-up on a missing column or NA
 
+## CTCF types whose sites need an occupancy table (ctcf_capture {by: occupancy}), with the
+## window / reference settings of the first such condition (they must agree per type).
+OCCUPANCY_SETTINGS = {}
+for _cond in SIMULATION_CONDITIONS:
+    _cap = _cond["params"]["ctcf_capture"]
+    if not (isinstance(_cap, dict) and _cap.get("by") == "occupancy"):
+        continue
+    _t = _cond["ctcf_type"]
+    _row = SAMPLES.get(_t, {})
+    if not (_row.get("ctcf_bigwig") and _row.get("ctcf_input_bigwig")):
+        raise ValueError(f"Condition {_cond['name']}: ctcf_capture {{by: occupancy}} needs the "
+                         f"CTCF_BigWig and CTCF_Input_BigWig columns for sample '{_t}' in {SAMPLESHEET_PATH}")
+    _s = {k: _cap[k] for k in ("ref", "window", "input_window")}
+    if OCCUPANCY_SETTINGS.setdefault(_t, _s) != _s:
+        raise ValueError(f"Conditions using ctcf_type {_t} disagree on occupancy ref / window settings")
+
 
 def get_condition(name):
     """Look up a simulation condition by name."""
@@ -565,6 +616,71 @@ def get_ctcf_signals(ctcf_type):
         return np.ones(len(names))
     values[np.isnan(values)] = np.nanmedian(values)
     return values
+
+
+def ctcf_occupancy_path(locus, ctcf_type):
+    """<outputDir>/loci/<locus>/ctcf/ctcf_occupancy_{assembly}_{ctcf_type}.tsv (ctcfOccupancy)."""
+    return _os.path.join(locus_paths(locus)["ctcf"], f"ctcf_occupancy_{_ASSEMBLY}_{ctcf_type}.tsv")
+
+
+def capture_table_path(cap, locus, ctcf_type):
+    """The per-site table of a ctcf_capture {by: table} condition, for one locus / CTCF type."""
+    return _repo_path(cap["file"].format(locus=locus, ctcf_type=ctcf_type))
+
+
+def capture_input_file(cap, locus, ctcf_type):
+    """The file a condition's ctcf_capture reads at run time (None for fixed / rank modes)."""
+    if isinstance(cap, dict) and cap.get("by") == "occupancy":
+        return ctcf_occupancy_path(locus, ctcf_type)
+    if isinstance(cap, dict) and cap.get("by") == "table":
+        return capture_table_path(cap, locus, ctcf_type)
+    return None
+
+
+def _read_site_table(path, column):
+    out = {}
+    with open(path) as fh:
+        rows = [l.rstrip("\n").split("\t") for l in fh if l.strip() and not l.startswith("#")]
+    if not rows or "name" not in rows[0] or column not in rows[0]:
+        raise ValueError(f"{path} needs a header with 'name' and '{column}' columns")
+    i, j = rows[0].index("name"), rows[0].index(column)
+    for r in rows[1:]:
+        out[r[i]] = float(r[j])
+    return out
+
+
+def get_ctcf_site_capture(ctcf_type, cap, locus=None):
+    """Stall probability of each site from get_ctcf_arrays(ctcf_type), in the same order,
+    for ctcf_capture {by: occupancy} or {by: table}."""
+    locus = locus or ACTIVE_LOCUS
+    names = CTCF_SITE_NAMES_BY_TYPE.get(ctcf_type)
+    if names is None:
+        get_ctcf_arrays(ctcf_type)
+        names = CTCF_SITE_NAMES_BY_TYPE[ctcf_type]
+    if cap["by"] == "occupancy":
+        path = ctcf_occupancy_path(locus, ctcf_type)
+        occ = _read_site_table(path, "occupancy")
+        missing = [n for n in names if n not in occ]
+        if missing:
+            raise ValueError(f"{len(missing)} CTCF sites missing from {path}, e.g. {missing[:3]}")
+        return np.array([cap["min"] + (cap["max"] - cap["min"]) * occ[n] for n in names])
+    path = capture_table_path(cap, locus, ctcf_type)
+    table = _read_site_table(path, cap["column"])
+    missing = [n for n in names if n not in table]
+    if missing and cap["default"] is None:
+        raise ValueError(f"{len(missing)} CTCF sites missing from {path} (set ctcf_capture "
+                         f"`default:` to fill them), e.g. {missing[:3]}")
+    p = np.array([table.get(n, cap["default"]) for n in names], dtype=float)
+    if ((p < 0) | (p > 1)).any():
+        raise ValueError(f"{path}: {cap['column']} values must be between 0 and 1")
+    return p
+
+
+def get_ctcf_site_names(ctcf_type):
+    """Peak name of each site from get_ctcf_arrays(ctcf_type), in the same order."""
+    if ctcf_type not in CTCF_SITE_NAMES_BY_TYPE:
+        get_ctcf_arrays(ctcf_type)
+    return list(CTCF_SITE_NAMES_BY_TYPE[ctcf_type])
 
 
 def get_tiled_ctcf_arrays(condition):

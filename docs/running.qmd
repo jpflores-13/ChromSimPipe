@@ -16,7 +16,7 @@ instead of `sbatch`. Each rule becomes its own SLURM job.
 
 ```
 convertHic (per Hi-C sample)
-getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF
+getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF ─► ctcfOccupancy (only for {by: occupancy})
     ─► simulateShard (condition × rep × shard, GPU)
         ─► mergeShards (condition × rep)
             ─► analyzeCondition (per condition) ─► benchmarkSummary
@@ -28,6 +28,7 @@ getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF
 | `getMotif` | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | FIMO motif strand → oriented CTCF BED for the locus |
 | `validateCTCF` | Checks every BED parses and maps onto the polymer |
+| `ctcfOccupancy` | Per-site CTCF occupancy from ChIP − input bigWigs, for `ctcf_capture: {by: occupancy}` |
 | `preparePolysim` | Builds polysim's Cython cohesin model once |
 | `simulateShard` | 3D loop-extrusion simulation on a GPU (polysim by default) |
 | `mergeShards` | Concatenates shard trajectories per replicate |

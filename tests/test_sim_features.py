@@ -63,3 +63,27 @@ def test_sweep_scores_a_cohesin_holding_both_anchors():
     a_all, b_all = np.array([[2, 12]]), np.array([[6, 16]])   # one loop, two copies
     looped, size, cover = sweep_1d.score_frame([2, 13], [6, 15], a_all, b_all, 0, 20)
     assert looped.tolist() == [0.5] and size == 3.0 and np.isclose(cover, 6 / 20)
+
+
+def test_stall_dicts_default_keeps_highest_per_monomer():
+    left, right = feat.stall_dicts([5, 5, 9], [+1, +1, -1], [0.3, 0.6, 0.4])
+    assert left == {5: 0.6} and right == {9: 0.4}
+
+
+def test_stall_dicts_independent_combines_distinct_peaks():
+    # two peaks on one monomer: 1 - (1 - 0.5)(1 - 0.5) = 0.75 (Harvey's 8.3 with n = 2)
+    left, _ = feat.stall_dicts([5, 5], [+1, +1], [0.5, 0.5], groups=["pA", "pB"], combine="independent")
+    assert left[5] == pytest.approx(0.75)
+    # three sites at 0.5 reproduce the paper's 3xCBS value
+    left, _ = feat.stall_dicts([1, 1, 1], [+1] * 3, [0.5] * 3, groups="abc", combine="independent")
+    assert left[1] == pytest.approx(0.875)
+
+
+def test_stall_dicts_independent_counts_one_peak_once():
+    left, _ = feat.stall_dicts([5, 5], [+1, +1], [0.4, 0.5], groups=["pA", "pA"], combine="independent")
+    assert left[5] == pytest.approx(0.5)
+
+
+def test_stall_dicts_keeps_orientations_apart():
+    left, right = feat.stall_dicts([5, 5], [+1, -1], [0.5, 0.5], groups=["a", "b"], combine="independent")
+    assert left == {5: 0.5} and right == {5: 0.5}

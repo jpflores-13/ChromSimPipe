@@ -22,6 +22,7 @@ Two columns are required; the rest are free-form metadata:
 |--------|----------|
 | `CTCF_Peaks` | CTCF peak file (narrowPeak/BED), or `NA` |
 | `Hi-C` | Hi-C map to compare simulations against (`.hic`, `.mcool` or `.cool`), or `NA` |
+| `CTCF_BigWig`, `CTCF_Input_BigWig` | optional: CTCF ChIP and input signal (bigWig), used only by [`ctcf_capture: {by: occupancy}`](recipes.qmd#ctcf-strength-from-chip-occupancy) |
 | anything else | metadata (`Project`, `Cell_Type`, `Condition`, ...), or a peak-file column a condition names with `peaks:` (e.g. `YY1_Peaks` for [sticky sites](recipes.qmd#other-factors-sticky-sites)) |
 
 ```
