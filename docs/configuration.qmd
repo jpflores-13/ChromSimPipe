@@ -6,7 +6,7 @@ ChromSimPipe is driven by two files, as in bagPipes and dietJuicer:
 
 | File | Purpose |
 |------|---------|
-| `ChromSimSamplesheet.txt` | One row per sample: metadata, `CTCF_Peaks`, `Hi-C`, optional `CTCF_BigWig` / `CTCF_Input_BigWig` |
+| `ChromSimSamplesheet.txt` | One row per sample: metadata, `CTCF_Peaks`, `Hi-C`, optional `CTCF_BigWig` (+ optional `CTCF_Input_BigWig`) |
 | `config/ChromSimConfig.yaml` | Everything else: locus, conditions, physics, paths, software |
 
 `configs/parameters.py` parses both and exports named constants and helper
@@ -298,7 +298,7 @@ depletion, CTCF degrons, ...) are in [Perturbation recipes](recipes.qmd).
 | `compare_hic` | samplesheet sample | none | whose Hi-C the result is compared with |
 | `lifetime` | LEF timesteps | required (unless no cohesin) | cohesin residence; processivity per leg ≈ `lifetime × vlef` monomers |
 | `separation` | monomers, or `none` | required | one cohesin per `separation` monomers; `none` = no cohesin, a plain polymer |
-| `ctcf_capture` | 0–1, `{min, max}`, `{by: occupancy, ...}` or `{by: table, file, ...}` | 0.5 | stall probability per encounter: one value for every site; `{min, max}` spread by peak-signal rank; `{by: occupancy}` from the CTCF ChIP / input bigWigs (needs the `CTCF_BigWig` / `CTCF_Input_BigWig` columns; options `min` 0, `max` 1, `ref` `max` or `pNN`, `window` 200, `input_window` 2000); or `{by: table, file, column, default}` from a per-site TSV matched by peak name (`file` may use `{locus}` / `{ctcf_type}`). With occupancy or table, sites of different peaks on one monomer combine as 1 − ∏(1 − p) |
+| `ctcf_capture` | 0–1, `{min, max}`, `{by: occupancy, ...}` or `{by: table, file, ...}` | 0.5 | stall probability per encounter: one value for every site; `{min, max}` spread by peak-signal rank; `{by: occupancy}` from the CTCF ChIP bigWig (needs the `CTCF_BigWig` column; `CTCF_Input_BigWig`, if given, is subtracted; options `min` 0, `max` 1, `ref` `max` or `pNN`, `window` 200, `input_window` 2000); or `{by: table, file, column, default}` from a per-site TSV matched by peak name (`file` may use `{locus}` / `{ctcf_type}`). With occupancy or table, sites of different peaks on one monomer combine as 1 − ∏(1 − p) |
 | `vlef` | 0–1 | `polysim: vlef` | per-leg step probability per timestep |
 | `life_boost_stalled` | > 0 | `polysim: life_boost_stalled` | lifetime multiplier while both legs are stalled |
 | `attraction_energy` | kT | off | weak attraction between all beads (compaction); setting it, even to 0, switches to polysim's attraction-capable polymer force |

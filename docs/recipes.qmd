@@ -238,12 +238,16 @@ caller's scale doesn't matter, but the result does depend on `min` and `max`.
 
 **Models:** stall probability as CTCF occupancy, read from the ChIP and input
 signal (Hansen lab synEP supplement, sections 8.1 and 8.3). For every CTCF
-peak on the locus chromosome the `ctcfOccupancy` rule takes enrichment = ChIP
-(summit ± 100 bp) − input (summit ± 1 kb), and scales it so the strongest peak
-on the chromosome is 1 and a site at input level is 0. Each site's stall
+peak on the locus chromosome the `ctcfOccupancy` rule takes the ChIP signal
+(summit ± 100 bp), subtracts the input (summit ± 1 kb) if the sample has one,
+and scales the result so the strongest peak on the chromosome is 1 and a site
+at input level (or no signal) is 0. Each site's stall
 probability is then `min + (max − min) × occupancy`.
 
-Add the two bigWig columns to the samplesheet:
+Add a `CTCF_BigWig` column to the samplesheet, and `CTCF_Input_BigWig` if you
+have the input. Over called peaks the input changes little (ChIP is usually
+many times the input there); it matters most where background is uneven
+(amplified regions, very different sequencing depths):
 
 ```
 ... CTCF_Peaks                  Hi-C            CTCF_BigWig              CTCF_Input_BigWig
