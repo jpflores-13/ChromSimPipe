@@ -168,6 +168,9 @@ and a config, then `sbatch` one launcher.
    in the config; on any other cluster set `CHROMSIM_PROFILE` once in
    `~/.bashrc` (see
    [Running on a different cluster](#running-on-a-different-cluster)).
+   SLURM profiles ship with `slurm_account: <account>`: put your account
+   there (`sacctmgr show assoc user=$USER`) or delete the line if your site
+   has none. `ChromSimPipe.sh` stops early while a `<placeholder>` is left.
 
 5. Submit the workflow:
 
@@ -476,7 +479,7 @@ count are worked out per locus from `tiling.padding` and `tiling.chain_size`.
 | `CUDA_ERROR_UNSUPPORTED_PTX_VERSION` | The env's CUDA is newer than the GPU node's driver supports | Check `nvidia-smi` on a GPU node ("CUDA Version"); `cuda-version` in `envs/cohesin_sim.yml` must not exceed it; rebuild the env |
 | `No module named 'h5py'` (or another package) in a rule | An environment built before the env file listed it, or a different `python` came first on `PATH` | Rules now call `"$CONDA_PREFIX/bin/python"`; rebuild the env if the package is genuinely missing |
 | `no 'KR' normalization in ...cool` | The `.cool` has a different normalization column | Set `analysis.hic_balance` to `auto` or one it lists (`weight`, `VC`, ...) or `False` for raw counts |
-| `analyzeCondition` ends in `TIMEOUT` | Full runs pool 150,000 frames per condition; on a slow node this can exceed the limit | Raise `analyzeCondition: runtime:` in the profile (default 1440 min), `bash unlock.sh`, resubmit; finished pieces are reused (`--skip-existing`) |
+| `analyzeCondition` ends in `TIMEOUT` | Full runs pool 150,000 frames per condition; on a slow node this can exceed the limit | Raise `analyzeCondition: runtime:` in the profile (default 1440 min), `bash unlock.sh`, resubmit; replicates that finished are reused (`--skip-existing`, only when their settings and merged files are unchanged) |
 | `convertHic` ends in `TIMEOUT` | Large `.hic`: a 3.7 GB map takes ~1.6 h | Raise `convertHic: runtime:` in `profiles/<site>/config.yaml` (default 480 min) |
 | `UCSC gene fetch failed ... timed out` | Compute nodes have no internet | Harmless: figures are drawn without the gene track |
 | A job failed | - | Its stdout / stderr are in `<outputDir>/logs/{locus}/{rule}_{wildcards}.out|.err` (shared steps: `<outputDir>/logs/`) |

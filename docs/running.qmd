@@ -175,4 +175,4 @@ squeue -u $USER
 | `MissingInputException` naming a `data/...` file | Link that file into `data/` on this cluster, or use its absolute path in the samplesheet; `ls -lL data/` shows broken links |
 | Output in the repo folder instead of scratch, or jobs on the wrong cluster's partitions | `CHROMSIM_OUTPUT_ROOT` / `CHROMSIM_PROFILE` not set in the shell that ran `sbatch`; `source ~/.bashrc` and resubmit |
 | A job failed | Read `<outputDir>/logs/{locus}/{rule}_{wildcards}.err` |
-| Parameter changed but nothing reruns | Snakemake tracks the files in `<outputDir>/loci/{locus}/done/`; delete the markers for the steps to redo |
+| Parameter changed but nothing reruns | Each simulation, merge and analysis job records its resolved settings (`params:`), so a changed condition, `polysim:`, `sim_run:`, `n_shards`, `analysis:` (or `--config`) value reruns the affected jobs. `bash ChromSimPipe.sh -n --list-changes params` lists them. Changes only the scripts read outside those blocks are not tracked: rerun with `-R <rule>` |

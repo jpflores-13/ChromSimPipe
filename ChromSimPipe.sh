@@ -51,7 +51,16 @@ OUTDIR="${OUTDIR:-output}"
 OUTDIR="${OUTDIR/#\~/$HOME}"
 [[ "${OUTDIR}" = /* ]] || OUTDIR="${CHROMSIM_OUTPUT_ROOT:-$PWD}/${OUTDIR}"
 
+## Stop early if the profile still contains an unedited <placeholder> (e.g. slurm_account: <account>)
+if grep -qE '^[^#]*<[A-Za-z ]+>' "${PROFILE}/config.yaml" 2>/dev/null; then
+    echo "${PROFILE}/config.yaml still has <placeholder> values: edit them for your cluster first:" >&2
+    grep -nE '^[^#]*<[A-Za-z ]+>' "${PROFILE}/config.yaml" >&2
+    echo "(see docs/cluster.qmd; profiles/slurm-template is the starting point for a new site)" >&2
+    exit 1
+fi
+
 ## Load this site's software (python3, conda)
+[[ -f "${PROFILE}/env.sh" ]] || { echo "No ${PROFILE}/env.sh: set --profile, \$CHROMSIM_PROFILE or hpcProfile in ${CONFIG}" >&2; exit 1; }
 source "${PROFILE}/env.sh"
 
 ## Create and activate virtual environment with requirements

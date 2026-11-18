@@ -58,7 +58,11 @@ Options
 --output-dir DIR     Common output folder (default: <results_dir>/../analysis)
 --n-jobs N           Parallel workers for contact detection inside each map
 --no-parallel        Analyse directories sequentially (debugging)
---skip-existing      Skip dirs that already have analysis/sim_contact_map.npy
+--skip-existing      Skip dirs that already have their <prefix>_contact_map.npy
+                     (with --params-hash: only when <prefix>_inputs.json shows the
+                     same hash and unchanged merged files)
+--params-hash HASH   Settings fingerprint (the workflow passes
+                     configs.parameters.job_params_hash) checked by --skip-existing
 --no-pool            Skip the pooled-replicate step
 --no-apa             Skip absolute-loop-quant APA pileups
 --no-ctcf-overlay    Skip the CTCF-aligned figure and relative BED
@@ -652,6 +656,28 @@ def discover_merged_dirs(results_dir: str) -> list[str]:
 # Per-replicate analysis runner
 # ---------------------------------------------------------------------------
 
+def inputs_stamp(sim_dir: str, params_hash: str) -> dict:
+    """What one replicate's analysis was computed from: the settings hash and
+    every file of the merged directory (path, size, mtime). Rerunning
+    mergeShards rewrites the files, so their sizes / mtimes change."""
+    files = []
+    for root, dirs, names in os.walk(sim_dir):
+        dirs[:] = sorted(d for d in dirs if d != "analysis")   # legacy cache, not an input
+        for n in sorted(names):
+            path = os.path.join(root, n)
+            st = os.stat(path)
+            files.append([os.path.relpath(path, sim_dir), st.st_size, st.st_mtime_ns])
+    return dict(params_hash=params_hash, files=files)
+
+
+def _read_stamp(path: str) -> dict | None:
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
 def run_analysis_one(sim_dir: str, hic_path: str | None,
                      n_jobs: int, skip_existing: bool,
                      common_dir: str | None = None,
@@ -667,7 +693,8 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                      calibrate_with: str = "hic",
                      expt_msd_csv: str | None = None,
                      reuse_heavy: bool = False,
-                     cleanup_legacy_cache: bool = False) -> bool:
+                     cleanup_legacy_cache: bool = False,
+                     params_hash: str | None = None) -> bool:
     """
     Run the full modular analysis pipeline for one merged directory.
 
@@ -681,6 +708,12 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
     instead of being recomputed from conformations. The cheap, downstream
     CTCF-dependent steps (APA pileup, CTCF overlay, experimental comparison)
     are *always* re-run so they pick up any new CTCF BED or settings.
+
+    ``skip_existing`` skips a replicate whose contact map exists. With
+    ``params_hash`` it skips only when ``<prefix>_inputs.json`` records that
+    hash and the same merged files (see inputs_stamp), so a rerun after a
+    settings or simulation change always recomputes; the stamp is written
+    when the replicate finishes.
 
     Returns True on success, False on failure.
     """
@@ -713,9 +746,20 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
                        f"layout; it is no longer read or written. "
                        f"Re-run with CLEANUP_LEGACY=1 to remove it.")
 
+    stamp_path = os.path.join(common_dir, f"{file_prefix}_inputs.json")
+    stamp = inputs_stamp(sim_dir, params_hash) if params_hash else None
     if skip_existing and os.path.exists(contact_map_path):
-        logger.info(f"  [skip] {base_name}: {file_prefix}_contact_map.npy already exists")
-        return True
+        if stamp is None:
+            logger.info(f"  [skip] {base_name}: {file_prefix}_contact_map.npy already exists")
+            return True
+        if _read_stamp(stamp_path) == stamp:
+            logger.info(f"  [skip] {base_name}: already analysed with these settings "
+                        f"and merged files ({os.path.basename(stamp_path)})")
+            return True
+        logger.info(f"  {base_name}: settings or merged files changed since the last "
+                    f"analysis (or it did not finish); recomputing")
+    if stamp is not None and os.path.exists(stamp_path):
+        os.remove(stamp_path)   # stale until this analysis finishes
 
     logger.info(f"  Analysing: {base_name}  (ctcf_type={ctcf_type})")
     if reuse_heavy:
@@ -912,6 +956,9 @@ def run_analysis_one(sim_dir: str, hic_path: str | None,
             except Exception as e:  # noqa: BLE001
                 logger.warning(f"  [legacy cache] failed to remove {legacy_dir}: {e}")
 
+        if stamp is not None:
+            with open(stamp_path, "w") as fh:
+                json.dump(stamp, fh, indent=1)
         logger.info(f"  Done: {base_name} → {common_dir}/{file_prefix}_*")
         return True
 
@@ -1326,12 +1373,20 @@ def main():
                         help="Analyse directories sequentially instead of in parallel. "
                              "Useful for debugging or when RAM is tight.")
     parser.add_argument("--skip-existing", action="store_true",
-                        help="Skip directories that already have "
-                             "analysis/sim_contact_map.npy (COARSE: skips the "
+                        help="Skip directories that already have their "
+                             "<prefix>_contact_map.npy (COARSE: skips the "
                              "entire per-replicate analysis, including APA / "
-                             "CTCF overlay / MSD). For a resume pass that keeps "
+                             "CTCF overlay / MSD). With --params-hash, only "
+                             "when the settings and merged files are unchanged "
+                             "(what the workflow uses). For a resume pass that keeps "
                              "upstream cached but redoes downstream, use "
                              "--reuse-heavy instead.")
+    parser.add_argument("--params-hash", default=None,
+                        help="Fingerprint of the settings this analysis uses (the "
+                             "workflow passes configs.parameters.job_params_hash). "
+                             "With it, --skip-existing skips a replicate only when "
+                             "<prefix>_inputs.json records this hash and unchanged "
+                             "merged files.")
     parser.add_argument("--reuse-heavy", action="store_true",
                         help="Resume mode: when sim_contact_map.npy (per "
                              "replicate) or {condition}_*_pooled_contact_map.npy "
@@ -1505,6 +1560,7 @@ def main():
             expt_msd_csv=expt_msd_csv,
             reuse_heavy=args.reuse_heavy,
             cleanup_legacy_cache=args.cleanup_legacy_cache,
+            params_hash=args.params_hash,
         ))
 
     # Phase 1: per-replicate analysis

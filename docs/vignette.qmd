@@ -846,8 +846,12 @@ sbatch ChromSimPipe.sh
   missing or was interrupted (`--rerun-incomplete` is always on). A run that
   died after 17 of 18 simulations only reruns the 18th.
 
-To force one step to run again (for example after changing a setting only the
-scripts read), delete its `.done` marker and resubmit.
+Changing a setting reruns the steps it affects: every simulation, merge and
+analysis job records the resolved settings it ran with (its `params:`), so an
+edited condition, `polysim:`, `sim_run:`, `n_shards` or `analysis:` value, or a
+`--config` override, reruns exactly those jobs. Preview them with
+`bash ChromSimPipe.sh -n --list-changes params`. To force one step anyway,
+pass `-R <rule>` (e.g. `-R analyzeCondition`).
 
 ## Reading the outputs
 

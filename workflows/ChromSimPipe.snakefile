@@ -23,6 +23,7 @@
 #     benchmarkSummary  once
 # ==============================================================================
 
+import json
 import os
 import sys
 
@@ -30,17 +31,22 @@ import sys
 ## `--configfile other.yaml` replaces the default config entirely (it must be
 ## a complete config); configs/parameters.py reads the same file, here and in
 ## every job, via $CHROMSIM_CONFIG. Each per-locus job also gets $CHROMSIM_LOCUS.
+## `--config key=value` overrides reach configs/parameters.py (here and in
+## every job, which re-reads this Snakefile with the same --config) through
+## $CHROMSIM_CONFIG_OVERRIDES.
 DEFAULT_CONFIG = "config/ChromSimConfig.yaml"
 if not workflow.overwrite_configfiles:
     configfile: DEFAULT_CONFIG
 CONFIGFILE = os.path.abspath((list(workflow.overwrite_configfiles) or [DEFAULT_CONFIG])[-1])
 os.environ["CHROMSIM_CONFIG"] = CONFIGFILE
+os.environ["CHROMSIM_CONFIG_OVERRIDES"] = json.dumps(workflow.config_settings.config or {})
 
 sys.path.insert(0, os.getcwd())
 from configs.parameters import (
     SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, HIC_FILES, MCOOL_FILES,
     SAMPLES, RUN_NAME, N_REPLICATES, N_SHARDS, ANALYSIS, CALIBRATION, GENOME_ASSEMBLY, GENOME,
     OUTPUT_DIR, LOCI, LOCUS_NAMES, locus_paths, ctcf_bed_path, condition_peak_files,
+    job_params_json, job_params_hash,
 )
 
 
@@ -68,6 +74,14 @@ MCOOL_DIR  = rel(locus_paths(LOCUS_NAMES[0])["mcool"])
 MOTIF_DIR  = rel(locus_paths(LOCUS_NAMES[0])["motifs"])
 LOG_DIR    = f"{OUT}/logs"
 BENCH_DIR  = f"{OUT}/benchmarks"
+
+
+def run_params(stage):
+    """params: entry holding every resolved setting a job reads (see
+    configs/parameters.job_params). Snakemake stores it with each finished job,
+    so changing a condition, polysim:, n_shards, analysis:, ... reruns the
+    affected jobs (default --rerun-triggers include params)."""
+    return lambda wildcards: job_params_json(stage, wildcards.locus, wildcards.condition)
 
 
 def L(key):
@@ -185,7 +199,11 @@ rule convertHic:
         """
 
 
+## getMotif downloads with wget; compute nodes may have no outside network,
+## so it runs on the node running Snakemake.
 if not MOTIF.get("meme"):
+    localrules: getMotif
+
     rule getMotif:
         output:
             meme = MOTIF_MEME
@@ -296,7 +314,8 @@ rule simulateShard:
     params:
         configfile = CONFIGFILE,
         sim_dir    = lambda wildcards: LP(wildcards, "sims"),
-        n_shards   = N_SHARDS
+        n_shards   = N_SHARDS,
+        run_params = run_params("simulate")
     conda: ENV_SIM
     shell:
         """
@@ -327,7 +346,8 @@ rule mergeShards:
     params:
         configfile = CONFIGFILE,
         sim_dir    = lambda wildcards: LP(wildcards, "sims"),
-        n_shards   = N_SHARDS
+        n_shards   = N_SHARDS,
+        run_params = run_params("merge")
     conda: ENV_SIM
     shell:
         """
@@ -366,7 +386,12 @@ rule analyzeCondition:
         out_dir    = lambda wildcards: f"{LP(wildcards, 'analysis')}/{wildcards.condition}",
         mcool_dir  = MCOOL_DIR,
         n_jobs     = ANALYSIS["n_jobs"],
-        msd_flag   = "" if ANALYSIS["msd"] else "--no-msd"
+        msd_flag   = "" if ANALYSIS["msd"] else "--no-msd",
+        run_params = run_params("analyze"),
+        ## --skip-existing reuses a replicate only when its stamp holds this
+        ## hash (same settings) and the merged files it was computed from are
+        ## unchanged, i.e. after a timed-out job, never after a change.
+        run_hash   = lambda wildcards: job_params_hash("analyze", wildcards.locus, wildcards.condition)
     conda: ENV_SIM
     shell:
         """
@@ -378,7 +403,7 @@ rule analyzeCondition:
             --condition {wildcards.condition} \
             --hic-dir {params.mcool_dir} \
             --n-jobs {params.n_jobs} \
-            --skip-existing \
+            --skip-existing --params-hash {params.run_hash} \
             {params.msd_flag} 1> {log.out} 2> {log.err}
         touch {output.done}
         """

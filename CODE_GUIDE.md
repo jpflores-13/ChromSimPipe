@@ -631,7 +631,8 @@ CHROMSIM_CONFIG=config/ChromSimConfig.yaml python scripts/run_analysis_all.py \
 | `--output-dir DIR` | Where to write outputs. |
 | `--condition NAME` | Analyse one condition only. |
 | `--n-jobs N` | Parallel workers for contact detection (default `analysis.n_jobs`). |
-| `--skip-existing` | Skip dirs that already have `sim_contact_map.npy`. |
+| `--skip-existing` | Skip dirs that already have `<prefix>_contact_map.npy`. With `--params-hash`, only when `<prefix>_inputs.json` records the same hash and unchanged merged files. |
+| `--params-hash HASH` | Settings fingerprint for `--skip-existing`; the Snakemake rule passes `configs.parameters.job_params_hash("analyze", locus, condition)`, so a rerun after a change never reuses old results. |
 | `--no-msd` | Skip MSD computation (the Snakemake rule adds this unless `analysis.msd: True`). |
 | `--hic-dir DIR` | Where to find `<compare_hic>.cool` for each condition (falls back to `output/mcool/`). |
 | `--mcool TYPE=PATH` | Override the `.cool` for one Hi-C type (repeatable). |

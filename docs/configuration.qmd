@@ -330,7 +330,7 @@ no resources of their own):
 executor: slurm
 software-deployment-method: conda
 default-resources:
-  slurm_account:   rc_dphansti_pi
+  slurm_account:   <account>
   slurm_partition: general
   runtime:         4320
   cpus_per_task:   1

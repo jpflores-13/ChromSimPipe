@@ -90,7 +90,7 @@ Scratch is purged automatically, so copy `<outputDir>/analysis/` and
 
 | Setting | Value | Where |
 |---------|-------|-------|
-| Account | `pjt5_1` (its QOS `gpuext2` applies by default) | `default-resources: slurm_account` |
+| Account | yours (`sacctmgr show assoc user=$USER`; its default QOS applies); replace `<account>` | `default-resources: slurm_account` |
 | CPU partition | `batch` | `default-resources: slurm_partition` |
 | GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gpu: 1` (`--gpus=1`) | `set-resources: simulateShard` |
 | Software | your own Miniforge (Pioneer's `Miniconda3` modules ship conda 23.x) | `env.sh` |
@@ -101,7 +101,7 @@ All of these are in `profiles/longleaf/config.yaml`:
 
 | Setting | Value | Where |
 |---------|-------|-------|
-| Account | `rc_dphansti_pi` | `default-resources: slurm_account` |
+| Account | yours (`sacctmgr show assoc user=$USER`); replace `<account>` | `default-resources: slurm_account` |
 | Default partition | `general` | `default-resources: slurm_partition` |
 | GPU partitions | `l40-gpu,volta-gpu,gpu` (first with a free node) | `set-resources: simulateShard` |
 | GPU QOS | `gpu_access` | `set-resources: simulateShard` |

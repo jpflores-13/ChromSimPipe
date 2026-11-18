@@ -92,7 +92,10 @@ Pick your site's profile folder: `profiles/longleaf` (UNC, the config's
 default `hpcProfile`), `profiles/pioneer` (Case Western), `profiles/local`
 (no scheduler), or your own copy of `profiles/slurm-template`. On any
 cluster other than the default, set it once in `~/.bashrc`, together with
-where output should go:
+where output should go. SLURM profiles ship with `slurm_account: <account>`:
+replace it with your account (`sacctmgr show assoc user=$USER`), or delete
+the line if your site has none; `ChromSimPipe.sh` stops early while a
+`<placeholder>` is left.
 
 ```bash
 echo 'export CHROMSIM_PROFILE=profiles/pioneer' >> ~/.bashrc

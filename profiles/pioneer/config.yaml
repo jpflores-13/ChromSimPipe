@@ -7,7 +7,7 @@ latency-wait: 500
 software-deployment-method: conda
 
 default-resources:
-  slurm_account: pjt5_1           # your association (its QOS, gpuext2, applies by default)
+  slurm_account: <account>        # <- your SLURM account/association (`sacctmgr show assoc user=$USER`); its default QOS applies
   slurm_partition: batch          # default CPU partition
   runtime: 4320                   # minutes; Pioneer allows up to 13 days 8 h
   cpus_per_task: 1

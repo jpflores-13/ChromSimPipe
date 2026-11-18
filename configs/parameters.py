@@ -2,6 +2,8 @@
 Simulation parameters loader - reads config/ChromSimConfig.yaml and the
 samplesheet it names. Nothing here is hard-coded: every value comes from the
 config (set CHROMSIM_CONFIG=/path/to/config.yaml to use another file).
+$CHROMSIM_CONFIG_OVERRIDES (JSON; the Snakefile sets it from `--config`) is
+merged on top of that file.
 
 Relative paths in the config and samplesheet are resolved against the repo
 root, so one samplesheet pointing at data/... works on every cluster (each
@@ -26,12 +28,15 @@ Public API used by the Snakefile and scripts:
     get_ctcf_arrays(), load_ctcf_from_bed()
     get_tiled_ctcf_arrays(), get_msd_pairs()
     ANALYSIS, DATA, MSD_PROBE, MSD_FIT, CALIBRATION
+    CONFIG_OVERRIDES, job_params(), job_params_json(), job_params_hash()
 
 Sample names are built from the samplesheet columns listed in
 ``fileNamesFrom``; conditions refer to samples by that name.
 """
 
 import csv as _csv
+import hashlib as _hashlib
+import json as _json
 import numpy as np
 import os as _os
 
@@ -48,6 +53,24 @@ except ImportError:
 
 with open(CONFIG_PATH) as _f:
     _cfg = _yaml.safe_load(_f)
+
+
+def _deep_update(base, new):
+    """Merge dict `new` into `base` in place, recursing into nested dicts
+    (the same merge Snakemake applies to `--config` values)."""
+    for k, v in new.items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            _deep_update(base[k], v)
+        else:
+            base[k] = v
+    return base
+
+
+# `snakemake --config key=value` overrides: the Snakefile passes them here as
+# JSON in $CHROMSIM_CONFIG_OVERRIDES, so the workflow and every job see the
+# same values as Snakemake's own `config`.
+CONFIG_OVERRIDES = _json.loads(_os.environ.get("CHROMSIM_CONFIG_OVERRIDES") or "{}")
+_deep_update(_cfg, CONFIG_OVERRIDES)
 
 
 def _repo_path(path):
@@ -673,6 +696,67 @@ if CALIBRATION["msd"]["reference_condition"] and \
         CALIBRATION["msd"]["reference_condition"] not in [c["name"] for c in SIMULATION_CONDITIONS]:
     raise ValueError(f"analysis.calibration.msd.reference_condition "
                      f"'{CALIBRATION['msd']['reference_condition']}' is not one of the conditions")
+
+
+# =============================================================================
+# RESOLVED PARAMETERS PER JOB (Snakemake rerun triggers)
+# The Snakefile puts job_params_json() into each rule's `params:`. Snakemake
+# records params with every finished job, so editing any value below (a
+# condition's physics, polysim:, n_shards, analysis:, ...) reruns exactly the
+# jobs it affects, under the default --rerun-triggers.
+# =============================================================================
+JOB_STAGES = ("simulate", "merge", "analyze")
+
+
+def job_params(stage, locus, condition):
+    """Every resolved setting one job of `stage` reads, as a plain dict.
+
+    stage: 'simulate' (simulateShard), 'merge' (mergeShards) or 'analyze'
+    (analyzeCondition). Each stage includes the stages before it, since its
+    results depend on theirs.
+    """
+    if stage not in JOB_STAGES:
+        raise ValueError(f"stage must be one of {JOB_STAGES}, got {stage!r}")
+    ## Labels and descriptions change no result, so editing them reruns nothing.
+    ## Peak files are rule inputs already (Snakemake tracks those itself).
+    cond = _json.loads(_json.dumps(get_condition(condition)))
+    cond.pop("description", None)
+    cond["params"].pop("description", None)
+    loc = {k: v for k, v in LOCI[locus].items() if k != "label"}
+    out = dict(
+        locus      = loc,
+        tiling     = locus_tiling(locus),
+        resolution = RESOLUTION,
+        condition  = cond,
+        polysim    = POLYSIM,
+        sim_run    = SIM_RUN,
+        n_shards   = N_SHARDS,
+    )
+    if stage == "analyze":
+        probe = _json.loads(_json.dumps(MSD_PROBE))
+        probe["auto"]["anchor_bp"] = LOCI[locus]["anchor_bp"]   # MSD_PROBE is per active locus
+        cal = _json.loads(_json.dumps(CALIBRATION))
+        ## repo-relative, so moving the clone does not rerun every analysis
+        cal["msd"]["expt_msd"] = {k: _os.path.relpath(v, REPO_ROOT) if v.startswith(REPO_ROOT + _os.sep) else v
+                                  for k, v in cal["msd"]["expt_msd"].items()}
+        out.update(
+            n_replicates = N_REPLICATES,
+            analysis     = ANALYSIS,
+            msd_probe    = probe,
+            msd_fit      = MSD_FIT,
+            calibration  = cal,
+        )
+    return out
+
+
+def job_params_json(stage, locus, condition):
+    """job_params() as canonical JSON (sorted keys): equal settings, equal text."""
+    return _json.dumps(job_params(stage, locus, condition), sort_keys=True, default=str)
+
+
+def job_params_hash(stage, locus, condition):
+    """Short SHA-256 of job_params_json(), for stamping outputs."""
+    return _hashlib.sha256(job_params_json(stage, locus, condition).encode()).hexdigest()[:16]
 
 
 def get_msd_pairs(ctcf_type):
