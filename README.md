@@ -11,12 +11,27 @@ measurable by **Hi-C**.
 
 ChromSimPipe is a physics-based polymer simulation framework for testing
 mechanistic hypotheses about 3D chromatin organisation. Given CTCF binding
-data (CUT&Tag or ChIP-seq peaks) and Hi-C maps as input, it simulates
-cohesin loop extrusion at one or more loci under different parameter
-conditions and compares the resulting contact maps to your experimental
-Hi-C. The simulations use the Hansen lab's
+data (CUT&Tag or ChIP-seq peaks), optionally other factors' peaks, and Hi-C
+maps, it simulates chromatin at one or more loci under conditions you define
+and compares the resulting contact maps to your experimental Hi-C. The
+simulations use the Hansen lab's
 [polysim](https://github.com/ahansenlab/polysim_bootcamp) model (polymer +
 loop extrusion on polychrom / OpenMM, GPU).
+
+Each condition is one hypothesis, built from these mechanisms (one config
+entry each; worked examples in `docs/recipes.qmd`):
+
+| Mechanism | Config option | Use it to test |
+|-----------|---------------|----------------|
+| Cohesin loop extrusion | `lifetime`, `separation`, `vlef` | WAPL, NIPBL or RAD21 perturbations; how far cohesin extrudes |
+| CTCF barriers | `ctcf_type`; `ctcf_capture` (one value, or `{min, max}` from peak signal) | CTCF binding changes, degrons, weak vs. strong sites |
+| No cohesin | `separation: none` | cohesin loss; which contacts need extrusion at all |
+| **Sticky sites** (bridging factors, condensates) | `sticky:`, `sticky_cross:`, from a peak column in the samplesheet | YY1, LDB1, YAP; enhancer–promoter contacts; loops CTCF can't explain; compartments |
+| Chromatin compaction | `attraction_energy` | global compaction, e.g. under hyperosmotic stress |
+| Where cohesin loads or slows | `loading:`, `pausing:` | loading at NIPBL peaks or enhancers; RNA Pol II as an obstacle |
+
+Compare two conditions that differ in one mechanism, and the Hi-C tells you
+which mechanism is enough to explain a change.
 
 **Included example.** The default configuration ships with an example from
 the STRS project (Flores et al. 2026): HEK293T cells under hyperosmotic
@@ -32,7 +47,7 @@ A script-by-script description of the code is in
 ```
   ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
   (one row per sample: metadata,               (loci, conditions, polysim,
-   CTCF_Peaks, Hi-C)                            genome, motif, envs, outputDir)
+   CTCF_Peaks, Hi-C, optional factor peaks)     genome, motif, envs, outputDir)
           │                                               │
           └───────────────────────┬───────────────────────┘
                                   ▼
@@ -94,6 +109,8 @@ shared. Tiling is worked out per locus from `tiling.padding` and
   see `profiles/longleaf/env.sh`)
 - CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) for your samples, and optionally
   their Hi-C maps (`.hic`, `.mcool` or `.cool`) to compare the simulations with
+- Optionally, other factors' peaks (e.g. YY1, LDB1, NIPBL, Pol II) for the
+  sticky-site, loading or pausing options
 - A genome FASTA with the same chromosome names as the peaks
 
 ## Quickstart
@@ -161,7 +178,9 @@ and a config, then `sbatch` one launcher.
     `ChromSimPipe.sh` sources the site's `env.sh` (software setup), builds a
     venv from `config/requirements.txt`, and runs Snakemake with the site's
     profile. Each rule becomes its own SLURM job; the conda
-    environments in `condaEnvs:` are built by Snakemake on first use.
+    environments in `condaEnvs:` are built by Snakemake on first use. Where an
+    administrator has to build environments, `envs/chromsimpipe_all.yml` is
+    everything in one environment; see `docs/setup.qmd`.
 
 ### Input data
 
@@ -380,7 +399,7 @@ explains P(s), its local slope, and how to plot them from `ps_curves.tsv` and
 | `profiles/<site>/env.sh` | Module loads for that site |
 | `workflows/ChromSimPipe.snakefile` | The workflow |
 | `workflows/utils/benchmarking.py` | Builds `{runName}_benchmarking.tsv` |
-| `envs/*.yml` | Conda environments used by the rules |
+| `envs/*.yml` | Conda environments used by the rules: `cohesin_sim.yml` and `ctcf_extraction.yml` (built by Snakemake), or `chromsimpipe_all.yml`, both in one, for administrator-built setups |
 
 ---
 

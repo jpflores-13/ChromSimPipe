@@ -50,6 +50,19 @@ resolution and normalization, and CTCF peaks in each locus window. Each check
 prints `PASS`, `WARN` or `FAIL`. It needs the conda environments (built by the
 first run, or by `bash ChromSimPipe.sh --conda-create-envs-only`).
 
+## Optional: a cheap 1D screen
+
+```bash
+bash sweep_1d.sh --condition cond1_baseline --lifetime 37500,75000,150000 --out sweep_1d.tsv
+```
+
+Runs cohesin on the CTCF track alone (no polymer, no GPU) for every
+combination of the settings given, and reports how often each convergent
+CTCF pair is held by a cohesin. Use it to pick parameter ranges, or to check a
+perturbation affects your loops at all, before spending GPU time; it needs the
+oriented CTCF files (`--until validateCTCF`). See
+[A 1D screen](recipes.qmd#a-1d-screen-before-3d-runs).
+
 ## Test run first
 
 `config/ChromSimConfig.test.yaml` is the full config cut down to a cheap

@@ -60,6 +60,14 @@ the simulated maps change the way the real Hi-C maps change, CTCF is a
 sufficient explanation. If they don't, something else (cohesin itself,
 another protein, transcription, compartments) has to be involved.
 
+CTCF is the shipped example, not the limit. The same design tests **any
+mechanism the model can include**: cohesin dynamics, other factors that
+bridge DNA (sticky sites, e.g. YY1, LDB1 or condensates), chromatin
+compaction, and where cohesin loads or slows down
+([Beyond CTCF](#beyond-ctcf-other-mechanisms-in-the-model) below). Keep
+everything else fixed, change one mechanism, and the Hi-C says whether that
+mechanism is enough.
+
 ::: {.callout-important}
 ### Hi-C is never an input to the simulation
 
@@ -134,6 +142,72 @@ loop no longer ends at a fixed place.</figcaption>
 </figure>
 ```
 
+### Beyond CTCF: other mechanisms in the model
+
+Loop extrusion with CTCF barriers is the default. Each condition can switch on
+more of the model, one config entry each:
+
+| Mechanism | Config option | Use it to test |
+|-----------|---------------|----------------|
+| Cohesin loop extrusion | `lifetime`, `separation`, `vlef` | WAPL, NIPBL or RAD21 perturbations; how far cohesin extrudes |
+| CTCF barriers | `ctcf_type`; `ctcf_capture` (one value, or `{min, max}` from peak signal) | CTCF binding changes, degrons, weak vs. strong sites |
+| No cohesin | `separation: none` | cohesin loss; which contacts need extrusion at all |
+| **Sticky sites** | `sticky:`, `sticky_cross:` | YY1, LDB1, YAP; enhancer–promoter contacts; loops CTCF can't explain |
+| Chromatin compaction | `attraction_energy` | global compaction, e.g. under hyperosmotic stress |
+| Where cohesin loads or slows | `loading:`, `pausing:` | loading at NIPBL peaks or enhancers; RNA Pol II as an obstacle |
+
+**Sticky sites** deserve a closer look, because they make loops in a
+different way from cohesin. The beads under a factor's peaks (from a column
+such as `YY1_Peaks` in the samplesheet) attract each other in 3D, with an
+energy in kT. Nothing moves along the DNA: two sticky regions drift around,
+meet, and tend to stay together. That gives a dot between them **with no CTCF
+and no orientation rule**, and with many sites a checkerboard of contacts
+among them; the same mechanism with A/B labels gives compartments.
+
+```{=html}
+<figure style="margin: 1.5rem 0;">
+<svg viewBox="0 0 760 220" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Two ways to make a loop: left, cohesin extrudes a loop stopped by convergent CTCF; right, two sticky sites bound by a bridging factor find each other in 3D without cohesin."
+     style="width:100%; height:auto; max-width:760px; font-family: system-ui, sans-serif;">
+  <text x="185" y="22" text-anchor="middle" font-size="15" font-weight="600" fill="#222">Extrusion: cohesin + CTCF</text>
+  <path d="M20 180 L160 180 C 110 45, 250 45, 200 180 L350 180" fill="none" stroke="#555" stroke-width="4"/>
+  <ellipse cx="180" cy="176" rx="30" ry="14" fill="none" stroke="#e07b00" stroke-width="5"/>
+  <polygon points="146,190 146,212 166,201" fill="#c0392b"/>
+  <polygon points="214,190 214,212 194,201" fill="#c0392b"/>
+  <text x="140" y="95" text-anchor="end" font-size="13" fill="#222">needs a convergent</text>
+  <text x="140" y="111" text-anchor="end" font-size="13" fill="#222">CTCF pair</text>
+  <text x="575" y="22" text-anchor="middle" font-size="15" font-weight="600" fill="#222">Sticky sites: bridging factor</text>
+  <path d="M410 180 L540 180 C 490 45, 660 45, 610 180 L740 180" fill="none" stroke="#555" stroke-width="4"/>
+  <circle cx="560" cy="150" r="11" fill="#2f6fb0"/>
+  <circle cx="590" cy="150" r="11" fill="#2f6fb0"/>
+  <text x="575" y="128" text-anchor="middle" font-size="13" fill="#2f6fb0">attract (kT)</text>
+  <text x="680" y="95" font-size="13" fill="#222">any orientation,</text>
+  <text x="680" y="111" font-size="13" fill="#222">no cohesin needed</text>
+</svg>
+<figcaption>Two ways the model can bring distant DNA together. Left: cohesin
+extrudes until a convergent CTCF pair stops it. Right: beads under a bridging
+factor's peaks (blue) attract each other in 3D, so the loop forms without
+extrusion and without an orientation rule.</figcaption>
+</figure>
+```
+
+Two ways to use this:
+
+- **Is a loop a bridge or an extrusion loop?** Add the factor as sticky sites,
+  then run the same condition with `separation: none`: a bridge loop survives
+  without cohesin, an extrusion loop doesn't.
+- **Explaining what CTCF can't.** In the worked example below, the JAK1–AK4
+  loop gained after sorbitol has no convergent CTCF pair in either condition,
+  so CTCF alone can't make it. If another factor's peaks sit at both anchors
+  (YAP, for example, which is reported to form condensates under
+  hyperosmotic stress), making them sticky is a mechanism the model can
+  test.
+
+Compare sticky conditions against a control with `attraction_energy: 0`
+(the same polymer force, see the recipe), and sweep the energy (1–3 kT),
+since it isn't known in advance. [Perturbation recipes](recipes.qmd) has
+worked examples of every row above.
+
 ### How ChromSimPipe turns this into a simulation
 
 The model is run by the Hansen lab's
@@ -152,7 +226,7 @@ ChromSimPipe wraps that in a Snakemake workflow. Every box below is a
 
 ```{mermaid}
 flowchart TD
-  S["ChromSimSamplesheet.txt<br/>(CTCF peaks, Hi-C per sample)"] --> P
+  S["ChromSimSamplesheet.txt<br/>(CTCF peaks, Hi-C, optional factor peaks)"] --> P
   C["config/ChromSimConfig.yaml<br/>(loci, conditions, physics)"] --> P
   P["configs/parameters.py<br/>(reads both)"] --> HIC["convertHic<br/>.hic / .mcool / .cool → .cool"]
   P --> MOT["getMotif<br/>JASPAR MA0139.1"]
@@ -182,7 +256,8 @@ Two details matter for understanding the outputs:
   folder, `output/loci/<locus>/`, and every entry in `conditions:` is run at
   every locus. A condition is a set of cohesin parameters plus one sample's
   CTCF sites (`ctcf_type`) and one sample's Hi-C to compare against
-  (`compare_hic`). With the shipped config (3 conditions, `n_replicates: 3`,
+  (`compare_hic`), optionally with the other mechanisms above (sticky
+  sites, compaction, loading, pausing). With the shipped config (3 conditions, `n_replicates: 3`,
   `n_shards: 2`) that is 3 × 3 × 2 = **18 GPU jobs per locus**.
 
 ## One-time setup
@@ -337,6 +412,12 @@ exit
   Snakemake), but the extra flag tells Snakemake to build the environments
   and stop.
 - `exit` releases the compute node.
+
+If your cluster doesn't let users build conda environments, ask the
+administrator to build `envs/chromsimpipe_all.yml` (everything in one
+environment) and point both `condaEnvs` entries at it; see
+[Setup: environments built by an administrator](setup.qmd#environments-built-by-an-administrator).
+Skip the build step above in that case.
 
 ::: {.callout-tip}
 `envs/cohesin_sim.yml` pins `cuda-version=12.4`, because CUDA 13 dropped
@@ -901,7 +982,9 @@ Sys.setenv(RETICULATE_PYTHON = file.path(sim_env, "bin", "python"))
 ```
 
 Snakemake keeps a copy of each environment file next to the environment it
-built; the one listing `hic2cool` is the simulation environment.
+built; the one listing `hic2cool` is the simulation environment. If an
+administrator built the environment instead, set `RETICULATE_PYTHON` to
+`<its path>/bin/python` directly.
 :::
 
 Plot it with ggplot2. The chunk is folded because it is mostly plotting
@@ -1347,7 +1430,9 @@ at your own loci is more convincing.
 - **"Not reproduced" is a statement about the model.** When the
   simulation fails to reproduce a change (like the JAK1–AK4 loop), the
   conclusion is that the CTCF change *as the model represents it* is not
-  enough, which points to something the model leaves out.
+  enough. The next step is to add a candidate mechanism (sticky sites for a
+  bridging factor, compaction, targeted loading) and test whether *it* is
+  enough ([Beyond CTCF](#beyond-ctcf-other-mechanisms-in-the-model)).
 :::
 
 ## References and how to cite

@@ -2,9 +2,25 @@
 
 **ChromSimPipe** is a physics-based polymer simulation framework for testing
 mechanistic hypotheses about 3D chromatin organisation. Given CTCF binding
-data (CUT&Tag or ChIP-seq peaks) and Hi-C maps as input, it simulates
-cohesin loop extrusion under different parameter conditions and compares the
+data (CUT&Tag or ChIP-seq peaks), optionally other factors' peaks, and Hi-C
+maps, it simulates chromatin under conditions you define and compares the
 resulting contact maps to your experimental Hi-C.
+
+Each condition is one hypothesis, built from these mechanisms:
+
+| Mechanism | Config option | Use it to test |
+|-----------|---------------|----------------|
+| Cohesin loop extrusion | `lifetime`, `separation`, `vlef` | WAPL, NIPBL or RAD21 perturbations; how far cohesin extrudes |
+| CTCF barriers | `ctcf_type`; `ctcf_capture` (one value, or `{min, max}` from peak signal) | CTCF binding changes, degrons, weak vs. strong sites |
+| No cohesin | `separation: none` | cohesin loss; which contacts need extrusion at all |
+| **Sticky sites** (bridging factors, condensates) | `sticky:`, `sticky_cross:`, from a peak column in the samplesheet | YY1, LDB1, YAP; enhancer–promoter contacts; loops CTCF can't explain; compartments |
+| Chromatin compaction | `attraction_energy` | global compaction, e.g. under hyperosmotic stress |
+| Where cohesin loads or slows | `loading:`, `pausing:` | loading at NIPBL peaks or enhancers; RNA Pol II as an obstacle |
+
+Compare two conditions that differ in one mechanism, and the Hi-C tells you
+which one is enough to explain a change. [Perturbation recipes](recipes.qmd)
+has a worked example of each; [Configuration](configuration.qmd#every-condition-option)
+lists every option.
 
 ::: {.callout-note}
 **Included example.** The default configuration ships with a use case from
@@ -19,7 +35,7 @@ runs the same way.
 ```
   ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
   (one row per sample: metadata,               (loci, conditions, polysim,
-   CTCF_Peaks, Hi-C)                            genome, motif, envs, outputDir)
+   CTCF_Peaks, Hi-C, optional factor peaks)     genome, motif, envs, outputDir)
           │                                               │
           └───────────────────────┬───────────────────────┘
                                   ▼
@@ -54,12 +70,11 @@ experimental states, `condition1` and `condition2`:
 
 ## Example loci (STRS use case, hg38, HEK293T)
 
+The shipped config simulates one window; add entries to `loci:` for more.
+
 | Key | Chrom | Window | Genes |
 |-----|-------|--------|-------|
-| `chr1_fig1` | chr1 | 64.2 – 66.2 Mb | JAK1 / AK4 / LEPR |
-| `chr4_fig1` | chr4 | 1.7 – 3.7 Mb | RNF4 / ADD1 / HTT |
-| `chr6_fig1` | chr6 | 124.1 – 126.1 Mb | NKAIN2 / RNF217 |
-| `chr16_sox8` | chr16 | 0.4 – 2.3 Mb | SOX8 |
+| `chr1_fig1` | chr1 | 64.21 – 66.17 Mb | JAK1 / AK4 / LEPR |
 
 ## Cohesin model
 

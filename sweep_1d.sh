@@ -22,11 +22,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-SIMENV=$(grep -l hic2cool .snakemake/conda/*.yaml 2>/dev/null | head -1 | sed 's/\.yaml$//')
-if [[ -z "${SIMENV}" || ! -x "${SIMENV}/bin/python" ]]; then
-    echo "The conda environments are not built yet. On a compute node, run:" >&2
-    echo "  bash ChromSimPipe.sh --conda-create-envs-only" >&2
-    exit 1
-fi
+## The simulation environment, from `condaEnvs: sim` in the config
+source scripts/sim_env.sh
+find_sim_env
 
 CHROMSIM_CONFIG="${CONFIG}" "${SIMENV}/bin/python" scripts/sweep_1d.py "${ARGS[@]}"

@@ -45,7 +45,7 @@ notify:                        # emails at workflow start / success / error
   events:  ['start', 'success', 'error']
   command: 'mail -s {subject} {email}'   # body on stdin
 condaEnvs:                     # env file, env name, or env path
-  sim:  'envs/cohesin_sim.yml'
+  sim:  'envs/cohesin_sim.yml'   # or both: an env built from envs/chromsimpipe_all.yml
   ctcf: 'envs/ctcf_extraction.yml'
 
 loci:       [{name, chrom, region_start, region_end, label, anchor_bp}, ...]
