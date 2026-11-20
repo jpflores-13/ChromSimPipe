@@ -37,7 +37,8 @@ lets one samplesheet serve every cluster: each cluster links its own copies
 into `data/` (next section). On a single cluster, absolute paths are simpler
 and no linking is needed.
 
-**Hi-C formats.** `.hic` is converted with `hic2cool`; from an `.mcool` the
+**Hi-C formats.** `.hic` (format version 8 or 9) is converted with
+[hictk](https://github.com/paulsengroup/hictk); from an `.mcool` the
 `resolution` set in the config (1 kb by default) is copied out, so the file
 must contain it; a `.cool` must already be binned at `resolution`. Without
 Hi-C, write `NA` and leave `compare_hic` out of the conditions: the
@@ -160,9 +161,9 @@ only if `conda env list` shows it for that user.
 Resolved with conda-forge and bioconda for a Linux GPU node, the combined
 file gives the same versions of everything the simulation and analysis
 compute with (Python 3.10, NumPy 1.26, OpenMM 8.1, CUDA 12.4, cooler,
-hic2cool, bedtools, MEME) as the two separate files. MEME needs an older Perl,
-which holds a few support libraries (hdf5, matplotlib, samtools) one version
-back. If you prefer two environments, build `envs/cohesin_sim.yml` and
+bedtools, MEME) as the two separate files. MEME needs an older Perl,
+which holds a few support libraries (hdf5, matplotlib, samtools) and hictk
+(2.1 rather than 2.2; both read `.hic` versions 8 and 9) one version back. If you prefer two environments, build `envs/cohesin_sim.yml` and
 `envs/ctcf_extraction.yml` the same way and point `sim` and `ctcf` at each.
 
 ## 5. Email (optional)

@@ -57,34 +57,70 @@ def _resolve_cmap(name):
     return name if name in matplotlib.colormaps else "YlOrRd"
 
 
-def resolve_balance(clr, balance):
+## Order 'auto' tries: Juicer's KR, then SCALE (what Juicer 2 writes to .hic
+## version 9 files, often without KR), both copied from a .hic by hictk
+## convert; then cooler's ICE `weight` (a balanced .mcool/.cool).
+AUTO_BALANCE = ("KR", "SCALE", "weight")
+
+
+def pick_balance(available, balance, where):
     """
-    cooler ``balance`` argument for ``clr``: False for raw counts, or the
-    bins column holding normalization weights. ``True`` means cooler's
-    default ``weight`` (ICE); a string names a column such as ``KR``, which
-    hic2cool writes for Juicer normalizations; ``"auto"`` takes ``KR`` if the
-    file has it (a converted .hic), else ``weight`` (a balanced .mcool/.cool).
-    Raises if the column is missing.
+    The normalization ``balance`` resolves to among ``available`` (the
+    normalization names a file has; ``where`` names the file in errors).
+    False/None: raw counts (False). True: cooler's ``weight``. ``"auto"``: the
+    first of AUTO_BALANCE present. Any other string: that name. Raises
+    ValueError if it is missing.
     """
     if balance is False or balance is None:
         return False
-    available = [c for c in clr.bins().columns if c not in ("chrom", "start", "end")]
     if str(balance).lower() == "auto":
-        for column in ("KR", "weight"):
+        for column in AUTO_BALANCE:
             if column in available:
                 return column
         raise ValueError(
-            f"hic_balance 'auto' found neither KR nor weight in {clr.uri}; available: "
+            f"hic_balance 'auto' found none of {', '.join(AUTO_BALANCE)} in {where}; available: "
             f"{available}. Set analysis.hic_balance to one of them, or False for raw counts "
             "(or balance the file with `cooler balance`)."
         )
     column = "weight" if balance is True else str(balance)
     if column not in available:
         raise ValueError(
-            f"no '{column}' normalization in {clr.uri}; available: {available}. "
+            f"no '{column}' normalization in {where}; available: {available}. "
             "Set analysis.hic_balance in the config."
         )
     return column
+
+
+def resolve_balance(clr, balance):
+    """
+    cooler ``balance`` argument for ``clr``: False for raw counts, or the
+    bins column holding normalization weights. ``True`` means cooler's
+    default ``weight`` (ICE); a string names a column such as ``KR`` or
+    ``SCALE``, which hictk convert writes for a .hic file's normalizations;
+    ``"auto"`` takes ``KR``, else ``SCALE`` (a converted .hic), else
+    ``weight`` (a balanced .mcool/.cool). Raises if the column is missing.
+    """
+    available = [c for c in clr.bins().columns if c not in ("chrom", "start", "end")]
+    return pick_balance(available, balance, clr.uri)
+
+
+def balance_args(clr, balance):
+    """
+    Keyword arguments for ``clr.matrix(...)``: ``balance`` resolved with
+    :func:`resolve_balance`, plus ``divisive_weights``, how that column's
+    weights apply. hictk convert stores a .hic file's normalization vectors
+    as Juicer has them (contacts are divided by them) and marks each column
+    with the HDF5 attribute ``divisive_weights``; cooler does not read that
+    attribute and treats only columns named KR, VC or VC_SQRT as divisive,
+    so ``SCALE`` would otherwise be multiplied. Without the attribute (ICE
+    ``weight``, files from hic2cool) cooler's own default is kept (None).
+    """
+    column = resolve_balance(clr, balance)
+    if column is False:
+        return {"balance": False}
+    with clr.open("r") as h5:
+        flag = h5["bins"][column].attrs.get("divisive_weights")
+    return {"balance": column, "divisive_weights": None if flag is None else bool(flag)}
 
 
 def load_region_matrix(
@@ -99,7 +135,7 @@ def load_region_matrix(
     Fetch a dense (N, N) matrix for ``chrom:start-end`` at the given
     resolution. Returns ``None`` if cooler is missing or the file doesn't
     exist. NaNs (from balancing) are replaced with 0. ``balance`` is passed
-    to :func:`resolve_balance` (True, False, or a column name such as "KR").
+    to :func:`balance_args` (True, False, "auto", or a column name such as "KR").
 
     ``N`` equals ``(end_bp - start_bp) // resolution`` - the caller can
     assume the simulated contact map and the experimental matrix share the
@@ -122,8 +158,7 @@ def load_region_matrix(
 
     region = f"{chrom}:{start_bp}-{end_bp}"
     try:
-        mat = np.asarray(clr.matrix(balance=resolve_balance(clr, balance)).fetch(region),
-                         dtype=float)
+        mat = np.asarray(clr.matrix(**balance_args(clr, balance)).fetch(region), dtype=float)
     except Exception as e:
         logger.warning(f"  failed to fetch {region} from {mcool_path}: {e}")
         return None

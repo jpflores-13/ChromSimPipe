@@ -9,7 +9,7 @@ find_sim_env() {
     entry=$(sed -nE "s/^[[:space:]]+sim:[[:space:]]*['\"]?([^'\"#[:space:]]+).*/\1/p" "${CONFIG}" | head -1)
     entry="${entry/#\~/$HOME}"
     if [[ -z "${entry}" || "${entry}" == *.yml || "${entry}" == *.yaml ]]; then
-        SIMENV=$(grep -l hic2cool .snakemake/conda/*.yaml 2>/dev/null | head -1 | sed 's/\.yaml$//')
+        SIMENV=$(grep -l hictk .snakemake/conda/*.yaml 2>/dev/null | head -1 | sed 's/\.yaml$//')
         if [[ -z "${SIMENV}" || ! -x "${SIMENV}/bin/python" ]]; then
             echo "The conda environments are not built yet. On a compute node, run:" >&2
             echo "  bash ChromSimPipe.sh --conda-create-envs-only" >&2

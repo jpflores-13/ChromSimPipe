@@ -387,7 +387,7 @@ instead.
 
 The rules run in two conda environments, listed under `condaEnvs:` in the
 config: `sim` (`envs/cohesin_sim.yml`: polysim, polychrom, OpenMM, cooler,
-hic2cool) and `ctcf` (`envs/ctcf_extraction.yml`: bedtools, samtools,
+hictk) and `ctcf` (`envs/ctcf_extraction.yml`: bedtools, samtools,
 MEME/FIMO). Snakemake builds them the first time they are needed. Building
 needs more memory than a login node allows and takes about 30 minutes, so do
 it once, by hand, on a compute node:
@@ -444,7 +444,7 @@ experimental sample. The shipped file is:
 - `Hi-C`: the Hi-C map to compare simulations against, as `.hic`, `.mcool`
   or `.cool`. The `convertHic` step turns each into a single-resolution
   `.cool` at the config's `resolution`: a `.hic` is converted with
-  `hic2cool`, the matching resolution is copied out of an `.mcool` (so the
+  `hictk` (`.hic` format version 8 or 9), the matching resolution is copied out of an `.mcool` (so the
   file must contain 1 kb bins with the default `resolution`), and a `.cool`
   must already be at that resolution.
 
@@ -977,12 +977,12 @@ loading it), from the repo folder of the run:
 #| eval: false
 #| label: r-python
 env_files <- list.files(".snakemake/conda", pattern = "\\.yaml$", full.names = TRUE)
-sim_env   <- sub("\\.yaml$", "", Filter(\(f) any(grepl("hic2cool", readLines(f))), env_files)[1])
+sim_env   <- sub("\\.yaml$", "", Filter(\(f) any(grepl("hictk", readLines(f))), env_files)[1])
 Sys.setenv(RETICULATE_PYTHON = file.path(sim_env, "bin", "python"))
 ```
 
 Snakemake keeps a copy of each environment file next to the environment it
-built; the one listing `hic2cool` is the simulation environment. If an
+built; the one listing `hictk` is the simulation environment. If an
 administrator built the environment instead, set `RETICULATE_PYTHON` to
 `<its path>/bin/python` directly.
 :::
@@ -1050,8 +1050,9 @@ plotMatrix(hic, use.scores = "count")
   `HiCExperiment` object, not the whole genome.
 - `plotMatrix(..., use.scores = "count")` draws the raw counts. The pipeline
   itself compares against a balanced map (`analysis.hic_balance` in the
-  config; `auto` uses `KR`, which `hic2cool` stores as a separate column for
-  a converted `.hic`, else cooler's `weight` from a balanced `.mcool`); for a visual
+  config; `auto` uses `KR`, else `SCALE`, which `hictk convert` stores as
+  separate columns for a converted `.hic`, else cooler's `weight` from a
+  balanced `.mcool`); for a visual
   side-by-side, raw counts on a log scale are fine.
 
 Finally, the agreement scores for every condition at this locus, collected
@@ -1306,7 +1307,7 @@ add `--configfile <file>`. For each locus and each sample it checks:
 |-------|-------|
 | Genome | each locus' chromosome is there, and the window fits inside it |
 | CTCF peaks | the same chromosome names as the genome; peaks inside each window; no peak past a chromosome's end, which would mean another assembly |
-| Hi-C (`.hic`, `.mcool`, `.cool`) | the config's resolution (1 kb) is in the file; the same chromosome names; chromosome lengths identical to the genome's, i.e. the same assembly; for `.mcool`/`.cool`, the normalization `analysis.hic_balance` asks for |
+| Hi-C (`.hic`, `.mcool`, `.cool`) | the config's resolution (1 kb) is in the file; the same chromosome names; chromosome lengths identical to the genome's, i.e. the same assembly; the normalization `analysis.hic_balance` asks for |
 
 Each check prints `PASS`, `WARN` or `FAIL`, ending in a count. When names
 differ only in style, the message says so (for example, the genome has `chr7`
@@ -1374,8 +1375,8 @@ Line by line:
   CTCF peaks they use, so comparing them isolates the CTCF change, exactly as
   `cond1_baseline` and `cond2_ctcf-only` do in the shipped config. The third
   shipped condition is left out, which keeps the run at 24 GPU jobs.
-- `analysis.hic_balance: auto` (the default) uses `KR` from the converted
-  `.hic` and cooler's `weight` from the `.mcool`, so mixed formats need no
+- `analysis.hic_balance: auto` (the default) uses `KR` (else `SCALE`) from
+  the converted `.hic` and cooler's `weight` from the `.mcool`, so mixed formats need no
   extra setting.
 
 ::: {.callout-tip}
@@ -1460,5 +1461,5 @@ tiling approach from Yang et al. 2023 (*Nat Commun* 14:1913). The example data
 are from the STRS project (Flores et al. 2026; GEO
 [GSE310051](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE310051),
 Hi-C, and [GSE310047](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE310047),
-CUT&Tag). The full list, including OpenMM, cooler, hic2cool, FIMO and
+CUT&Tag). The full list, including OpenMM, cooler, hictk, FIMO and
 Snakemake, is on the [References](references.qmd) page.

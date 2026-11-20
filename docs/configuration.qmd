@@ -60,10 +60,15 @@ analysis:   {n_jobs, msd, hic_balance, apa, msd_probe, msd_fit, calibration}
 ```
 
 `analysis.hic_balance` names the normalization read from each `.cool` when
-comparing with experiment. `hic2cool` copies Juicer's normalizations as
-columns named `KR`, `VC` and `VC_SQRT`; `weight` is cooler's own ICE
-balancing, which balanced `.mcool`/`.cool` files carry; `auto` (the default)
-takes `KR` if present, else `weight`; `False` compares raw counts.
+comparing with experiment. A `.hic` is converted with `hictk convert`, which
+copies every normalization the file stores as a column named after the method:
+`KR`, `VC` and `VC_SQRT` from Juicer 1 (`.hic` version 8), and usually
+`SCALE`, `VC` and `VC_SQRT` without `KR` from Juicer 2 (`.hic` version 9,
+e.g. ENCODE's GRCh38 Hi-C). `weight` is cooler's own ICE balancing, which
+balanced `.mcool`/`.cool` files carry. `auto` (the default) takes `KR` if
+present, else `SCALE`, else `weight`; a name (`KR`, `SCALE`, `VC`, ...) asks
+for that column; `False` compares raw counts. `bash check_inputs.sh` reports
+which one a run will use, for `.hic` files too.
 
 `analysis.calibration` converts simulation units to nm and seconds.
 `default_anchor` picks how: `hic` (P(s) against the Hi-C), `msd` (the

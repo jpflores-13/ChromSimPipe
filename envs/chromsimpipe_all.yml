@@ -7,17 +7,16 @@ channels:
   - bioconda
 dependencies:
   - python=3.10
-  - numpy<2            # hic2cool and polychrom predate NumPy 2
+  - numpy<2            # polychrom predates NumPy 2
   - scipy
   - h5py
   - pandas
   - pyyaml
   - openmm
   - cuda-version=12.4  # needs an NVIDIA driver >= 550
-  - cooler
+  - cooler>=0.9        # Cooler.matrix(divisive_weights=...), for hictk's SCALE weights
   - cooltools
-  - hic2cool
-  - multiprocess       # needed by hic2cool
+  - hictk>=2           # .hic versions 8 and 9
   - bedtools>=2.31
   - samtools>=1.17
   - meme>=5.5          # FIMO

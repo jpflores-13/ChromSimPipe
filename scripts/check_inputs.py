@@ -10,8 +10,8 @@ For every sample in the samplesheet and every locus in the config:
     and have peaks in each window;
   - the Hi-C (.hic, .mcool or .cool) has the config's resolution, the same
     chromosome names, the same chromosome lengths as the genome (the same
-    assembly), and, for .mcool/.cool, the normalization analysis.hic_balance
-    asks for.
+    assembly), and the normalization analysis.hic_balance asks for. A .hic
+    (format version 8 or 9) is read with hictk.
 
 Prints a report and exits 1 if anything fails. Nothing is written.
 
@@ -78,14 +78,15 @@ def read_peaks(path):
 
 
 def hic_info(path, resolution):
-    """(chromosome sizes, resolutions, assembly label, cooler for balance checks or None)."""
+    """(chromosome sizes, resolutions, label, normalizations at `resolution` or None)."""
     name = path.lower()
     if name.endswith(".hic"):
-        from hic2cool.hic2cool_utils import read_header
-        with open(path, "rb") as f:
-            chrs, resolutions, _, genome, _ = read_header(f)
-        sizes = {c[1]: int(c[2]) for c in chrs.values() if str(c[1]).lower() != "all"}
-        return sizes, sorted(resolutions), genome, None
+        from prepare_hic import hic_header, hic_normalizations
+        header = hic_header(path)
+        norms = (hic_normalizations(path, resolution)
+                 if resolution in header["resolutions"] else None)
+        label = f"{header['assembly']} (.hic format version {header['version']})"
+        return header["chromsizes"], header["resolutions"], label, norms
     import cooler
     if name.endswith(".mcool"):
         groups = cooler.fileops.list_coolers(path)
@@ -96,7 +97,8 @@ def hic_info(path, resolution):
         uri, res = path, None
     clr = cooler.Cooler(uri)
     sizes = {k: int(v) for k, v in clr.chromsizes.items()}
-    return sizes, res if res is not None else [clr.binsize], None, clr
+    norms = [c for c in clr.bins().columns if c not in ("chrom", "start", "end")]
+    return sizes, res if res is not None else [clr.binsize], None, norms
 
 
 def main():
@@ -166,7 +168,7 @@ def main():
                 report("FAIL", "file not found")
                 continue
             try:
-                hsizes, hres, label, clr = hic_info(hic_path, res)
+                hsizes, hres, label, norms = hic_info(hic_path, res)
             except Exception as e:
                 report("WARN", f"could not read it here ({e}); check again after convertHic, "
                                f"on {p.MCOOL_FILES[sample]}")
@@ -183,10 +185,10 @@ def main():
                                    "genome: different assemblies")
                 elif c in gsizes:
                     report("PASS", f"{c} has the same length in the Hi-C and the genome")
-            if clr is not None and res in hres:
-                from analysis.experimental_compare import resolve_balance
+            if norms is not None and res in hres:
+                from analysis.experimental_compare import pick_balance
                 try:
-                    col = resolve_balance(clr, p.ANALYSIS["hic_balance"])
+                    col = pick_balance(norms, p.ANALYSIS["hic_balance"], hic_path)
                     report("PASS", f"normalization: {col if col else 'raw counts'}")
                 except ValueError as e:
                     report("FAIL", str(e))

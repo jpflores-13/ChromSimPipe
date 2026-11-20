@@ -24,7 +24,7 @@ getMotif ─► orientCTCF (per CTCF sample) ─► validateCTCF
 
 | Rule | What it does |
 |------|--------------|
-| `convertHic` | `.hic` (hic2cool), `.mcool` or `.cool` → one `.cool` at `resolution` |
+| `convertHic` | `.hic` (hictk), `.mcool` or `.cool` → one `.cool` at `resolution` |
 | `getMotif` | Downloads `ctcf_motif.jaspar_id` from JASPAR (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | FIMO motif strand → oriented CTCF BED for the locus |
 | `validateCTCF` | Checks every BED parses and maps onto the polymer |

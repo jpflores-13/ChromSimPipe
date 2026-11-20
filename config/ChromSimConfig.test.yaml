@@ -91,7 +91,7 @@ notify:
 ##   - the name of an existing environment, e.g. 'cohesin_sim'
 ##   - the path to an existing environment, e.g. '~/.local/share/mamba/envs/cohesin_sim'
 condaEnvs:
-  sim:  'envs/cohesin_sim.yml'        # polysim, polychrom, OpenMM, cooler, hic2cool, analysis
+  sim:  'envs/cohesin_sim.yml'        # polysim, polychrom, OpenMM, cooler, hictk, analysis
   ctcf: 'envs/ctcf_extraction.yml'    # bedtools, samtools, MEME/FIMO
 
 
@@ -199,9 +199,12 @@ analysis:
   msd:    False                # two-point MSD + polymer dynamics (slow)
 
   ## Hi-C normalization used when comparing with experiment: a weights column
-  ## in the .cool bins table. hic2cool copies Juicer's as KR, VC, VC_SQRT;
-  ## 'weight' is cooler's ICE (what balanced .mcool/.cool files carry);
-  ## 'auto' takes KR if present, else weight; False compares raw counts.
+  ## in the .cool bins table. A .hic is converted with hictk, which copies
+  ## each normalization it stores as a column named after the method (KR,
+  ## SCALE, VC, VC_SQRT, ...; Juicer 2 / .hic version 9 files often have
+  ## SCALE but no KR); 'weight' is cooler's ICE (what balanced .mcool/.cool
+  ## files carry); 'auto' takes KR if present, else SCALE, else weight;
+  ## False compares raw counts.
   hic_balance: auto
 
   ## APA / absolute loop quantification over convergent CTCF pairs

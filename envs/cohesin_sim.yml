@@ -8,7 +8,7 @@ channels:
 dependencies:
   # --- Core ---
   - python=3.10
-  - numpy<2          # hic2cool and polychrom predate NumPy 2
+  - numpy<2          # polychrom predates NumPy 2
   - scipy
   - h5py             # simulation output (polychrom HDF5Reporter) and merging
   - pandas           # summary tables
@@ -27,10 +27,11 @@ dependencies:
   - cuda-version=12.4
 
   # --- Hi-C data processing ---
-  - cooler           # reads .cool files (experimental_compare.py, ps_curve.py)
+  - cooler>=0.9      # reads .cool files (experimental_compare.py, ps_curve.py); 0.9 added
+                     # Cooler.matrix(divisive_weights=...), needed for hictk's SCALE weights
   - cooltools        # analysis helpers
-  - hic2cool         # converts .hic → .cool (convertHic rule)
-  - multiprocess     # required by hic2cool but missing from its conda package
+  - hictk>=2         # reads .hic versions 8 and 9: converts .hic → .cool (convertHic rule)
+                     # and reads .hic headers (check_inputs.py)
 
   # --- Analysis & visualization ---
   - matplotlib

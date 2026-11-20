@@ -249,9 +249,11 @@ locus and sample, checks: the locus chromosome is in the genome and the window
 fits (lengths from `<genome>.fai`, else by reading the FASTA); the CTCF peaks
 use the same chromosome names, have peaks in each window and none past a
 chromosome's end; the Hi-C has `resolution`, the same chromosome names, and
-chromosome lengths identical to the genome's (`.hic` headers are read with
-hic2cool's `read_header`, `.mcool`/`.cool` with cooler), and for
-`.mcool`/`.cool` the normalization `analysis.hic_balance` resolves to. It
+chromosome lengths identical to the genome's (`.hic` headers, format
+version 8 or 9, are read with `hictk metadata` and `hictk dump --table chroms`
+via `hic_header()` in `scripts/prepare_hic.py`; `.mcool`/`.cool` with cooler),
+and the normalization `analysis.hic_balance` resolves to (for a `.hic`, among
+those `hictk dump --table normalizations` lists at `resolution`). It
 prints PASS / WARN / FAIL lines and exits 1 on any FAIL. Nothing is written.
 
 ### `unlock.sh`: release lock after failure
@@ -264,7 +266,7 @@ dies without cleanup, the lock persists and the next run refuses to start.
 
 | Rule | Runs | What it does |
 |------|------|--------------|
-| `convertHic` | per Hi-C sample | `scripts/prepare_hic.py`: `.hic` (hic2cool), `.mcool` or `.cool` → one `.cool` at `resolution` |
+| `convertHic` | per Hi-C sample | `scripts/prepare_hic.py`: `.hic` (hictk), `.mcool` or `.cool` → one `.cool` at `resolution` |
 | `getMotif` | once | `wget` the JASPAR motif (skipped when `ctcf_motif.meme` is set) |
 | `orientCTCF` | per CTCF sample used by a condition | `extract_ctcf_sites.py` |
 | `validateCTCF` | once | `validate_ctcf.py`: sanity-checks all BED files |
@@ -438,13 +440,25 @@ Snakemake rule, which runs `scripts/prepare_hic.py` on each file in the
 samplesheet's `Hi-C` column to produce a single-resolution
 `output/mcool/<sample>.cool` at the configured resolution (default 1 kb):
 
-- `.hic`: `hic2cool convert` (Juicer's normalizations become `KR`, `VC`, `VC_SQRT` columns);
+- `.hic` (format version 8 or 9): `hictk convert <in.hic> <out.cool> --resolutions <resolution>`;
+  every normalization in the file becomes a bins column named after the method
+  (`KR`, `SCALE`, `VC`, `VC_SQRT`, ...). The run stops with the resolutions the
+  file has if `resolution` is not among them;
 - `.mcool`: the `/resolutions/<resolution>` cooler is copied out; the run stops
   with the resolutions the file has if `resolution` is not among them;
 - `.cool`: copied after checking its bin size equals `resolution`.
 
 It prints the normalization columns found. `analysis.hic_balance: auto` uses
-`KR` if present, else cooler's `weight`.
+`KR` if present, else `SCALE` (Juicer 2 / `.hic` version 9 files often have no
+`KR`), else cooler's `weight` (`AUTO_BALANCE` in
+`analysis/experimental_compare.py`). hictk keeps Juicer's vectors as they are
+(contacts are divided by them) and marks each column with the HDF5 attribute
+`divisive_weights`; cooler ignores that attribute and treats only columns
+named `KR`, `VC` or `VC_SQRT` as divisive, so `balance_args()` in the same
+file reads it and passes `divisive_weights=` to `Cooler.matrix()`. Without
+it `SCALE` would be multiplied, not divided. Anything that reads a converted
+`.cool` balanced should go through `balance_args()` (or pass
+`divisive_weights=True` for `.hic`-derived columns).
 
 The Bonev 2017 mESC/cortical-neuron download scripts and the Sox2
 quick-look plotter from the original lab project now live in `legacy/`

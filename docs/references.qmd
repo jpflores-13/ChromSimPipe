@@ -49,8 +49,10 @@ MIT license. <https://github.com/ahansenlab/polysim_bootcamp>
 **Cooler**: sparse storage format for Hi-C contact matrices.
 <https://github.com/open2c/cooler>
 
-**hic2cool**: `.hic` → `.cool` format conversion.
-<https://github.com/4dn-dcic/hic2cool>
+**hictk**: reading `.hic` (format versions 8 and 9) and `.hic` → `.cool`
+conversion. Rossini R, Paulsen J (2024). hictk: blazing fast toolkit to work
+with .hic and .cool files. *Bioinformatics* 40(7):btae408.
+<https://github.com/paulsengroup/hictk>
 
 **FIMO (MEME Suite)**: motif scanning used for CTCF site extraction.
 <https://meme-suite.org/meme/tools/fimo>

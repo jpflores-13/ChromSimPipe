@@ -201,7 +201,7 @@ def compute_ps_from_cooler(
         UCSC-style region, e.g. "chr3:34,000,000-36,000,000".
     balance : bool or str
         False for raw counts, True for cooler's ``weight`` column, or the
-        name of a normalization column (e.g. "KR" from hic2cool).
+        name of a normalization column (e.g. "KR" or "SCALE" from a .hic converted by hictk).
     min_diag : int
         Ignore the first ``min_diag`` diagonals (near-diagonal noise).
     resolution : int, optional
@@ -231,18 +231,18 @@ def compute_ps_from_cooler(
     clr = cooler.Cooler(uri)
     bp_per_bin = clr.binsize
     try:
-        from experimental_compare import resolve_balance
+        from experimental_compare import balance_args
     except ImportError:
-        from analysis.experimental_compare import resolve_balance
-    balance = resolve_balance(clr, balance)
+        from analysis.experimental_compare import balance_args
+    selector = clr.matrix(**balance_args(clr, balance))
 
     if region is not None:
-        mat = clr.matrix(balance=balance).fetch(region)
+        mat = selector.fetch(region)
     else:
         # Largest cis block - pick the longest chromosome
         chromsizes = clr.chromsizes
         chrom = str(chromsizes.idxmax())
-        mat = clr.matrix(balance=balance).fetch(chrom)
+        mat = selector.fetch(chrom)
 
     mat = np.asarray(mat, dtype=float)
     mat[~np.isfinite(mat)] = 0.0
