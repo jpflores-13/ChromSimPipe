@@ -291,9 +291,61 @@ dynamics), without invoking anything we can’t observe?</strong></p>
 <p>The simulation models cohesin loop extrusion: cohesin rings load onto
 chromatin and extrude DNA into loops, stalling when they encounter CTCF
 sites oriented the right way. Where cohesins stall and how long they
-live determines the 3D contact map. By varying which CTCF sites are
-present and cohesin dynamics parameters, the simulation tests
-user-defined hypotheses.</p>
+live determines the 3D contact map. Each condition can add more of
+polysim’s model, so a condition is a hypothesis built from these
+mechanisms:</p>
+<table>
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 35%" />
+<col style="width: 38%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Mechanism</th>
+<th>Config option</th>
+<th>Use it to test</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Cohesin loop extrusion</td>
+<td><code>lifetime</code>, <code>separation</code>,
+<code>vlef</code></td>
+<td>WAPL, NIPBL or RAD21 perturbations; how far cohesin extrudes</td>
+</tr>
+<tr class="even">
+<td>CTCF barriers</td>
+<td><code>ctcf_type</code>; <code>ctcf_capture</code> (one value, or
+<code>{min, max}</code> from peak signal)</td>
+<td>CTCF binding changes, degrons, weak vs. strong sites</td>
+</tr>
+<tr class="odd">
+<td>No cohesin</td>
+<td><code>separation: none</code></td>
+<td>cohesin loss; which contacts need extrusion at all</td>
+</tr>
+<tr class="even">
+<td><strong>Sticky sites</strong> (bridging factors, condensates)</td>
+<td><code>sticky:</code>, <code>sticky_cross:</code>, from a peak column
+in the samplesheet</td>
+<td>YY1, LDB1, YAP; enhancer–promoter contacts; loops CTCF can’t
+explain; compartments</td>
+</tr>
+<tr class="odd">
+<td>Chromatin compaction</td>
+<td><code>attraction_energy</code></td>
+<td>global compaction, e.g. under hyperosmotic stress</td>
+</tr>
+<tr class="even">
+<td>Where cohesin loads or slows</td>
+<td><code>loading:</code>, <code>pausing:</code></td>
+<td>loading at NIPBL peaks or enhancers; RNA Pol II as an obstacle</td>
+</tr>
+</tbody>
+</table>
+<p><code>scripts/sim_features.py</code> turns the peak-based options
+into polysim’s inputs (see section 5a).</p>
 <p><strong>Example conditions (shipped in
 <code>config/ChromSimConfig.yaml</code>):</strong></p>
 <table>
@@ -535,8 +587,11 @@ row per setting. No polymer, no GPU.</p>
 id="check_inputs.sh-check-the-inputs-before-a-run"><code>check_inputs.sh</code>:
 check the inputs before a run</h3>
 <p><code>bash check_inputs.sh</code> finds the simulation conda
-environment (the copy of <code>envs/cohesin_sim.yml</code> Snakemake
-keeps under <code>.snakemake/conda/</code>) and runs
+environment with <code>scripts/sim_env.sh</code>, from
+<code>condaEnvs: sim</code> in the config: for an env file, the
+environment Snakemake built from it (it keeps a copy of the file under
+<code>.snakemake/conda/</code>); for a path, that environment; for a
+name, the one <code>conda env list</code> shows. It then runs
 <code>scripts/check_inputs.py</code> with it. That script imports
 <code>configs/parameters.py</code> (so the config and samplesheet are
 read exactly as in a run) and, for every locus and sample, checks: the

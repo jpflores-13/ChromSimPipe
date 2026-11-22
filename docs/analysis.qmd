@@ -46,6 +46,18 @@ one of the most diagnostic outputs: a well-tuned simulation matches the
 in different units). See [P(s)](ps.qmd) for how it is calculated, how to read
 it, and how to plot it.
 
+### Calibration
+
+The analysis converts simulation units (monomers, saved frames) into nm and
+seconds, so simulated distances and loop lifetimes can be compared with
+imaging. `analysis.calibration.default_anchor` picks how: `hic` (matching
+P(s) to the Hi-C), `msd` (matching the two-point MSD to an imaging MSD; needs
+`analysis.msd: True`), or `none`. With `calibration.msd.reference_condition`,
+one condition (typically a no-cohesin one) is calibrated and every other
+condition reuses its units; see
+[Calibrating to live imaging](recipes.qmd#calibrating-to-live-imaging). The
+result is `*_calibration.json`.
+
 ### APA (Aggregate Peak Analysis)
 
 APA averages the contact matrix around all convergent CTCF pairs (the loop
@@ -53,6 +65,11 @@ anchors). A strong APA peak (bright center relative to corners) indicates
 successful loop extrusion between convergent CTCF sites.
 
 ### Experimental comparison
+
+Every condition gets the same outputs, whatever mechanisms it uses (sticky
+sites, compaction, loading, pausing, no cohesin), so conditions compare file
+for file. For sticky sites or compaction, compare against a control with
+`attraction_energy: 0`, which uses the same polymer force.
 
 The experimental `.cool` file (at the config's `resolution`) is loaded with `cooler` and
 plotted alongside the simulated contact map at the same scale. Visual alignment

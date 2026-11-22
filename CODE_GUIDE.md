@@ -33,8 +33,20 @@ we can't observe?**
 The simulation models cohesin loop extrusion: cohesin rings load onto
 chromatin and extrude DNA into loops, stalling when they encounter CTCF
 sites oriented the right way. Where cohesins stall and how long they live
-determines the 3D contact map. By varying which CTCF sites are present
-and cohesin dynamics parameters, the simulation tests user-defined hypotheses.
+determines the 3D contact map. Each condition can add more of polysim's model,
+so a condition is a hypothesis built from these mechanisms:
+
+| Mechanism | Config option | Use it to test |
+|-----------|---------------|----------------|
+| Cohesin loop extrusion | `lifetime`, `separation`, `vlef` | WAPL, NIPBL or RAD21 perturbations; how far cohesin extrudes |
+| CTCF barriers | `ctcf_type`; `ctcf_capture` (one value, or `{min, max}` from peak signal) | CTCF binding changes, degrons, weak vs. strong sites |
+| No cohesin | `separation: none` | cohesin loss; which contacts need extrusion at all |
+| **Sticky sites** (bridging factors, condensates) | `sticky:`, `sticky_cross:`, from a peak column in the samplesheet | YY1, LDB1, YAP; enhancer–promoter contacts; loops CTCF can't explain; compartments |
+| Chromatin compaction | `attraction_energy` | global compaction, e.g. under hyperosmotic stress |
+| Where cohesin loads or slows | `loading:`, `pausing:` | loading at NIPBL peaks or enhancers; RNA Pol II as an obstacle |
+
+`scripts/sim_features.py` turns the peak-based options into polysim's inputs
+(see section 5a).
 
 **Example conditions (shipped in `config/ChromSimConfig.yaml`):**
 
@@ -232,8 +244,11 @@ per setting. No polymer, no GPU.
 
 ### `check_inputs.sh`: check the inputs before a run
 
-`bash check_inputs.sh` finds the simulation conda environment (the copy of
-`envs/cohesin_sim.yml` Snakemake keeps under `.snakemake/conda/`) and runs
+`bash check_inputs.sh` finds the simulation conda environment with
+`scripts/sim_env.sh`, from `condaEnvs: sim` in the config: for an env file,
+the environment Snakemake built from it (it keeps a copy of the file under
+`.snakemake/conda/`); for a path, that environment; for a name, the one
+`conda env list` shows. It then runs
 `scripts/check_inputs.py` with it. That script imports `configs/parameters.py`
 (so the config and samplesheet are read exactly as in a run) and, for every
 locus and sample, checks: the locus chromosome is in the genome and the window

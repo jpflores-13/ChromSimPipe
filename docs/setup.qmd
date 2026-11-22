@@ -8,6 +8,8 @@
   [Cluster Reference](cluster.qmd#conda-version))
 - CTCF peak files (CUT&Tag / ChIP-seq narrowPeak) for your samples, and optionally
   their Hi-C maps (`.hic`, `.mcool` or `.cool`)
+- Optionally, other factors' peaks (e.g. YY1, LDB1, NIPBL, Pol II) for the
+  sticky-site, loading or pausing options
 - A genome FASTA with the same chromosome names as the peaks
 
 There is no separate setup script: converting Hi-C, orienting CTCF sites,
@@ -128,6 +130,42 @@ condaEnvs:
   sim:  '~/.local/share/mamba/envs/cohesin_sim'
   ctcf: '~/.local/share/mamba/envs/ctcf_extraction'
 ```
+
+### Environments built by an administrator
+
+Some clusters don't let users create conda environments; an administrator
+builds them once and users only use them. For that case, `envs/chromsimpipe_all.yml`
+holds everything in **one** environment (the two files above, combined), so
+there is a single build to ask for:
+
+```bash
+conda env create -f envs/chromsimpipe_all.yml -p /shared/envs/chromsimpipe
+```
+
+The build needs access to conda-forge, bioconda and github.com (pip installs
+polychrom and polysim from GitHub) and about 16 GB of memory; no GPU. The GPU
+nodes need an NVIDIA driver of 550 or newer for CUDA 12.4 (`nvidia-smi`
+shows it). Then point both entries at it, with the full path:
+
+```yaml
+condaEnvs:
+  sim:  '/shared/envs/chromsimpipe'
+  ctcf: '/shared/envs/chromsimpipe'
+```
+
+Users don't activate the environment themselves: Snakemake activates it for
+each job, so they only need `conda` (24.7.1 or newer) on their `PATH`, loaded
+in their profile's `env.sh`. `check_inputs.sh` and `sweep_1d.sh` find it from
+the same `condaEnvs: sim` entry. A full path works everywhere; a name works
+only if `conda env list` shows it for that user.
+
+Resolved with conda-forge and bioconda for a Linux GPU node, the combined
+file gives the same versions of everything the simulation and analysis
+compute with (Python 3.10, NumPy 1.26, OpenMM 8.1, CUDA 12.4, cooler,
+hic2cool, bedtools, MEME) as the two separate files. MEME needs an older Perl,
+which holds a few support libraries (hdf5, matplotlib, samtools) one version
+back. If you prefer two environments, build `envs/cohesin_sim.yml` and
+`envs/ctcf_extraction.yml` the same way and point `sim` and `ctcf` at each.
 
 ## 5. Email (optional)
 

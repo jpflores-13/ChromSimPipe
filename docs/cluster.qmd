@@ -161,6 +161,11 @@ that SLURM jobs inherit. Rules run scripts with `"$CONDA_PREFIX/bin/python"`,
 the activated environment's own interpreter, because in cluster jobs another
 `python` (for example the launcher's `env/` venv) can come first on `PATH`.
 
+On clusters where users can't build environments, an administrator builds
+`envs/chromsimpipe_all.yml` (everything in one environment) and both
+`condaEnvs` entries point at its path; see
+[Setup](setup.qmd#environments-built-by-an-administrator).
+
 ### Resource values in profiles
 
 Snakemake evaluates each resource value as a Python expression. Numbers and
