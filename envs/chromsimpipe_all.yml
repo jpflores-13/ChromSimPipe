@@ -1,0 +1,33 @@
+name: chromsimpipe
+## envs/cohesin_sim.yml + envs/ctcf_extraction.yml in one environment, for
+## clusters where an administrator builds environments (see docs/setup.qmd).
+## Point both condaEnvs entries (sim, ctcf) at the built environment.
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.10
+  - numpy<2            # hic2cool and polychrom predate NumPy 2
+  - scipy
+  - h5py
+  - pandas
+  - pyyaml
+  - openmm
+  - cuda-version=12.4  # needs an NVIDIA driver >= 550
+  - cooler
+  - cooltools
+  - hic2cool
+  - multiprocess       # needed by hic2cool
+  - bedtools>=2.31
+  - samtools>=1.17
+  - meme>=5.5          # FIMO
+  - wget
+  - matplotlib
+  - openpyxl
+  - cython
+  - setuptools
+  - c-compiler         # polysim compiles its Cython module on first use
+  - pip
+  - pip:
+    - git+https://github.com/open2c/polychrom.git
+    - git+https://github.com/ahansenlab/polysim_bootcamp.git@7f273ab648e7c606c7212702bb5caa1604810006
