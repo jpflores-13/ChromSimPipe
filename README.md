@@ -47,7 +47,8 @@ A script-by-script description of the code is in
 ```
   ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
   (one row per sample: metadata,               (loci, conditions, polysim,
-   CTCF_Peaks, Hi-C, optional factor peaks)     genome, motif, envs, outputDir)
+   CTCF_Peaks, Hi-C, optional factor peaks,     genome, motif, envs, outputDir)
+   CTCF_BigWig / CTCF_Input_BigWig)
           │                                               │
           └───────────────────────┬───────────────────────┘
                                   ▼
@@ -59,7 +60,7 @@ A script-by-script description of the code is in
                                   │
      convertHic ── getMotif ── preparePolysim      (shared by all loci)
                                   │
-              orientCTCF ── validateCTCF                 (per locus)
+     orientCTCF ── validateCTCF ── ctcfOccupancy*        (per locus)
                                   │
      simulateShard (locus × condition × replicate × shard, GPU, polysim)
                                   │
@@ -68,6 +69,7 @@ A script-by-script description of the code is in
          analyzeCondition (locus × condition: contact map, P(s), APA,
                insulation, comparison with Hi-C) ── benchmarkSummary
                                   │
+  * only for conditions with ctcf_capture {by: occupancy}
                                   ▼
                  output/loci/{locus}/analysis/{condition}/
 ```
@@ -129,8 +131,10 @@ and a config, then `sbatch` one launcher.
 
 2. Edit the tab-separated `ChromSimSamplesheet.txt`. Each row is one
    experimental sample. `CTCF_Peaks` (narrowPeak/BED) and `Hi-C` (`.hic`,
-   `.mcool` or `.cool`) are required columns (write `NA` if a sample has no file of that kind);
-   every other column is metadata:
+   `.mcool` or `.cool`) are required columns (write `NA` if a sample has no file of that kind).
+   `CTCF_BigWig` (CTCF ChIP signal) is optional, needed only by `ctcf_capture: {by: occupancy}`;
+   `CTCF_Input_BigWig` (its input) is optional on top of that and, when given, is subtracted as
+   background. Every other column is metadata:
 
     | Project | Cell_Type | Condition  | CTCF_Peaks                | Hi-C                 |
     |---------|-----------|------------|---------------------------|----------------------|
@@ -295,6 +299,7 @@ sbatch ChromSimPipe.sh       # --rerun-incomplete is on by default
 | `preparePolysim` | 1 | Builds polysim's Cython cohesin model once |
 | `orientCTCF` | loci × CTCF samples used (2) | FIMO motif strand → oriented CTCF BED for the locus |
 | `validateCTCF` | 1 per locus (1) | Checks every BED parses and maps onto the polymer |
+| `ctcfOccupancy` | loci × CTCF samples with `ctcf_capture: {by: occupancy}` (0) | CTCF occupancy per oriented site from the ChIP bigWig, minus input when given (`scripts/ctcf_occupancy.py`) |
 | `simulateShard` | loci × conditions × reps × shards (18, GPU) | polysim 3D loop-extrusion simulation |
 | `mergeShards` | loci × conditions × reps (9) | Concatenates shard trajectories |
 | `analyzeCondition` | loci × conditions (3) | Contact maps, P(s), insulation, APA, Hi-C comparison |
@@ -351,6 +356,19 @@ accounts, and `module avail` shows the available software.
 `profiles/local`, start with `bash ChromSimPipe.sh` instead of `sbatch`.
 
 ---
+
+## Disk usage and cleanup
+
+Trajectories dominate storage (hundreds of GB per locus). By default the pipeline
+removes them once nothing reads them again, controlled by the `cleanup:` block of the config:
+
+| Key | Default | Effect |
+|---|---|---|
+| `cleanup.shards` | `true` | Delete per-shard dirs right after `mergeShards` writes the merged dir (only if the merge produced output) |
+| `cleanup.blocks` | `true` | Delete the merged `blocks_*.h5` after `analyzeCondition` succeeds; contact maps, P(s), APA etc. stay in `loci/<locus>/analysis` |
+
+Set `blocks: false` to keep trajectories, e.g. to re-run analysis with new code.
+With `blocks: true`, re-analysing a condition means re-simulating it.
 
 ## Output structure
 
@@ -418,8 +436,9 @@ biological context, and the shared settings in its `polysim:` block.
 | `polysim: vlef` | 0.0025 | Probability a leg steps per timestep: sets extrusion speed relative to polymer motion |
 
 Each condition can also use more of polysim's model: no cohesin
-(`separation: none`), CTCF strength from peak signal (`ctcf_capture: {min,
-max}`), other factors as sticky sites (`sticky:`, e.g. YY1, LDB1, condensates),
+(`separation: none`), per-site CTCF strength (`ctcf_capture: {min, max}` by
+peak-signal rank, `{by: occupancy}` from the CTCF ChIP bigWig, or
+`{by: table, file}` from your own per-site values), other factors as sticky sites (`sticky:`, e.g. YY1, LDB1, condensates),
 chromatin compaction (`attraction_energy`), and targeted cohesin loading or
 pausing (`loading:`, `pausing:`). `docs/configuration.qmd` lists every option
 and `docs/recipes.qmd` has a worked example of each, including calibrating
@@ -431,7 +450,9 @@ ChromSimPipe runs the Hansen lab's [polysim](https://github.com/ahansenlab/polys
 package (Cython cohesin model + bond updater on polychrom / OpenMM), pinned in
 `envs/cohesin_sim.yml`. Each oriented CTCF site becomes a stall site with
 probability `ctcf_capture` per encounter (+ sites stop leftward-moving legs, −
-sites rightward-moving ones). Cohesin moves one monomer per `1 / vlef` LEF
+sites rightward-moving ones). With per-site probabilities from occupancy or a
+table, several sites of different peaks on one monomer combine as
+1 − ∏(1 − p), the chance that at least one bound CTCF stalls the leg. Cohesin moves one monomer per `1 / vlef` LEF
 timesteps, each timestep being `poly_steps_per_block` polymer steps, and every
 `saveevery`-th block is saved, after an optional unsaved equilibration
 (`initskip`) of at least one cohesin lifetime. ChromSimPipe seeds polysim's C

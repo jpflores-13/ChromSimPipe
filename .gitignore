@@ -23,6 +23,7 @@ build/
 
 # Conda
 .conda/
+.conda_envs/
 *.conda
 
 # Jupyter

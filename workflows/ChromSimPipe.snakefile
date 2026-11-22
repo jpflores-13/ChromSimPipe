@@ -17,6 +17,8 @@
 #     preparePolysim    once (builds polysim's Cython LEF model)
 #     orientCTCF        per locus x CTCF sample
 #     validateCTCF      per locus
+#     ctcfOccupancy     per locus x CTCF sample, only for ctcf_capture {by: occupancy}
+#                       (CTCF_BigWig required, CTCF_Input_BigWig optional)
 #     simulateShard     per locus x condition x replicate x shard (GPU)
 #     mergeShards       per locus x condition x replicate
 #     analyzeCondition  per locus x condition (needs convertHic output)
@@ -41,6 +43,7 @@ from configs.parameters import (
     SIMULATION_CONDITIONS, CTCF_TYPES, CTCF_PEAKS, HIC_FILES, MCOOL_FILES,
     SAMPLES, RUN_NAME, N_REPLICATES, N_SHARDS, ANALYSIS, CALIBRATION, GENOME_ASSEMBLY, GENOME,
     OUTPUT_DIR, LOCI, LOCUS_NAMES, locus_paths, ctcf_bed_path, condition_peak_files,
+    OCCUPANCY_SETTINGS, capture_input_file,
 )
 
 
@@ -52,13 +55,19 @@ def rel(path):
     return path if r.startswith("..") else r
 
 
-def conda_env(key):
+def conda_env(key, default=None):
     """Resolve a condaEnvs entry: an env file, an existing env name, or an env path."""
-    env = os.path.expanduser(str(config["condaEnvs"][key]))
+    env = os.path.expanduser(str(config["condaEnvs"].get(key) or default))
     if env.endswith((".yml", ".yaml")) and not os.path.isabs(env):
         return os.path.abspath(env)   # Snakemake resolves env files from workflows/ otherwise
     return env
 
+
+## Storage: both default to on (delete what nothing downstream reads).
+##   cleanup.shards - delete per-shard dirs once merged into merged_<...>_rep<N>
+##   cleanup.blocks - delete merged blocks_*.h5 once the condition's analysis finished
+_cl = config.get("cleanup") or {}
+CLEANUP = {"shards": bool(_cl.get("shards", True)), "blocks": bool(_cl.get("blocks", True))}
 
 COND_LOOKUP = {c["name"]: c for c in SIMULATION_CONDITIONS}
 COND_NAMES  = list(COND_LOOKUP)
@@ -82,6 +91,7 @@ def LP(wildcards, key):
 
 ENV_SIM  = conda_env("sim")
 ENV_CTCF = conda_env("ctcf")
+ENV_OCC  = conda_env("occupancy", "envs/ctcf_occupancy.yml")
 
 MOTIF = config["ctcf_motif"]
 MOTIF_MEME = (os.path.expanduser(MOTIF["meme"]) if MOTIF.get("meme")
@@ -277,6 +287,37 @@ rule validateCTCF:
         """
 
 
+rule ctcfOccupancy:
+    input:
+        peaks = lambda wildcards: CTCF_PEAKS[wildcards.ctcfType],
+        sites = f"{L('ctcf')}/ctcf_oriented_{GENOME_ASSEMBLY}_{{ctcfType}}.bed",
+        chip  = lambda wildcards: SAMPLES[wildcards.ctcfType]["ctcf_bigwig"],
+        ## optional: without an input bigWig, `--input` is passed empty and occupancy is ChIP alone
+        inp   = lambda wildcards: [SAMPLES[wildcards.ctcfType]["ctcf_input_bigwig"]]
+                                  if SAMPLES[wildcards.ctcfType]["ctcf_input_bigwig"] else []
+    output:
+        tsv = f"{L('ctcf')}/ctcf_occupancy_{GENOME_ASSEMBLY}_{{ctcfType}}.tsv"
+    log:
+        err = f"{LOG_DIR}/{{locus}}/ctcfOccupancy_{{ctcfType}}.err",
+        out = f"{LOG_DIR}/{{locus}}/ctcfOccupancy_{{ctcfType}}.out"
+    benchmark:
+        f"{BENCH_DIR}/ctcfOccupancy_{{locus}}_{{ctcfType}}.tsv"
+    params:
+        chrom        = lambda wildcards: LOCI[wildcards.locus]["chrom"],
+        ref          = lambda wildcards: OCCUPANCY_SETTINGS[wildcards.ctcfType]["ref"],
+        window       = lambda wildcards: OCCUPANCY_SETTINGS[wildcards.ctcfType]["window"],
+        input_window = lambda wildcards: OCCUPANCY_SETTINGS[wildcards.ctcfType]["input_window"]
+    conda: ENV_OCC
+    shell:
+        """
+        "$CONDA_PREFIX/bin/python" scripts/ctcf_occupancy.py \
+            --peaks {input.peaks} --sites {input.sites} \
+            --chip {input.chip} --input {input.inp} --chrom {params.chrom} \
+            --window {params.window} --input-window {params.input_window} --ref {params.ref} \
+            --output {output.tsv} 1> {log.out} 2> {log.err}
+        """
+
+
 rule simulateShard:
     input:
         validated = f"{L('done')}/validateCTCF.done",
@@ -285,7 +326,11 @@ rule simulateShard:
             wildcards.locus, COND_LOOKUP[wildcards.condition]["ctcf_type"])),
         ## peak files for the condition's sticky / loading / pausing options (none by default)
         features  = lambda wildcards: [rel(f) for f in
-                                       condition_peak_files(COND_LOOKUP[wildcards.condition]).values()]
+                                       condition_peak_files(COND_LOOKUP[wildcards.condition]).values()],
+        ## per-site stall table for ctcf_capture {by: occupancy | table} (none otherwise)
+        capture   = lambda wildcards: [rel(f) for f in [capture_input_file(
+            COND_LOOKUP[wildcards.condition]["params"]["ctcf_capture"], wildcards.locus,
+            COND_LOOKUP[wildcards.condition]["ctcf_type"])] if f]
     output:
         done = f"{L('done')}/simulateShard_{{condition}}_rep{{rep}}_shard{{shard}}.done"
     log:
@@ -327,7 +372,8 @@ rule mergeShards:
     params:
         configfile = CONFIGFILE,
         sim_dir    = lambda wildcards: LP(wildcards, "sims"),
-        n_shards   = N_SHARDS
+        n_shards   = N_SHARDS,
+        cleanup    = "--cleanup" if CLEANUP["shards"] else ""
     conda: ENV_SIM
     shell:
         """
@@ -335,7 +381,7 @@ rule mergeShards:
             "$CONDA_PREFIX/bin/python" scripts/merge_shards.py \
             --condition {wildcards.condition} \
             --replicate {wildcards.rep} \
-            --n-shards {params.n_shards} \
+            --n-shards {params.n_shards} {params.cleanup} \
             --results-dir {params.sim_dir} 1> {log.out} 2> {log.err}
         touch {output.done}
         """
@@ -366,7 +412,12 @@ rule analyzeCondition:
         out_dir    = lambda wildcards: f"{LP(wildcards, 'analysis')}/{wildcards.condition}",
         mcool_dir  = MCOOL_DIR,
         n_jobs     = ANALYSIS["n_jobs"],
-        msd_flag   = "" if ANALYSIS["msd"] else "--no-msd"
+        msd_flag   = "" if ANALYSIS["msd"] else "--no-msd",
+        ## merged trajectories of this condition (<params>_ctcf-<type>_rep<N>)
+        merged_glob = lambda wildcards: (
+            f"{LP(wildcards, 'sims')}/merged_{COND_LOOKUP[wildcards.condition]['params']['name']}"
+            f"_ctcf-{COND_LOOKUP[wildcards.condition]['ctcf_type']}_rep"),
+        rm_blocks  = CLEANUP["blocks"]
     conda: ENV_SIM
     shell:
         """
@@ -380,6 +431,14 @@ rule analyzeCondition:
             --n-jobs {params.n_jobs} \
             --skip-existing \
             {params.msd_flag} 1> {log.out} 2> {log.err}
+        ## Analysis outputs (contact maps, P(s), APA ...) are in out_dir; the polymer
+        ## trajectories are not read again, and are the bulk of the storage.
+        ## Only reached when the analysis succeeded (set -e). Disable with cleanup.blocks: false.
+        if [ "{params.rm_blocks}" = "True" ]; then
+            for d in {params.merged_glob}[0-9]*; do
+                [ -d "$d" ] && rm -f "$d"/blocks_*.h5
+            done
+        fi
         touch {output.done}
         """
 
