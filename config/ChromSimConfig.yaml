@@ -119,6 +119,24 @@ loci:
     label:        "chr1 Fig1 gained+lost (JAK1/AK4/LEPR locus)"
     anchor_bp:    65190000   # midpoint of figure window 64.71-65.67 Mb
 
+  - name:         static_loop_20180
+    chrom:        chr12
+    region_start: 117110000
+    region_end:   118100000
+    label:        "static loop loop_20180 (480 kb, log2FC -0.06)"
+
+  - name:         lost_loop_5295
+    chrom:        chr3
+    region_start: 101560000
+    region_end:   102480000
+    label:        "lost loop loop_5295 (410 kb, log2FC -3.82)"
+
+  - name:         gained_loop_18643
+    chrom:        chr4
+    region_start: 2130000
+    region_end:   3240000
+    label:        "gained loop loop_18643 (550 kb, log2FC 1.72)"
+
 
 
 ## =============================================================================

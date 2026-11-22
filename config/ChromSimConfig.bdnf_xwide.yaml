@@ -1,0 +1,404 @@
+## =============================================================================
+## ChromSimPipe configuration: Bdnf locus, EXTRA-WIDE window (mm10), cohesin lifetime x3
+##
+## Extra-wide version of config/ChromSimConfig.bdnf_wide.yaml: a 5.52 Mb region
+## (chr2:106.58-112.10 Mb) so the arch view reaches the putative enhancers and ATAC
+## peaks well beyond the 108.8-110.3 Mb cluster (ATAC summits cluster at 104-106.7 and
+## 112-114 Mb; the window takes the part between the two CTCF-free gaps below).
+##
+## Changes vs bdnf_wide:
+##   * cohesin lifetime 225,000 LEF timesteps (3 x 75,000) in every extruding condition
+##   * no union step: every CN H3K27ac summit (13) and every E14.5 forebrain ATAC summit
+##     (54, proxy) is a putative enhancer, as two labelled sticky factors (Enhancer_H3K27ac,
+##     Enhancer_ATAC) in the same C / D condition; each has E-P = 3 kT, E-E = 0. Summits
+##     within 1 kb of any protein-coding TSS are still dropped. Built by
+##     scripts/ebf3/build_bdnf_xwide_sites.py
+##   * CTCF tier tables: results/bdnf_xwide/ctcf_site_tiers_{CN,ES,NPC}.tsv
+##
+## Everything else (polymer, sampling, cohesin speed, CTCF stalling modes) is unchanged.
+## CAVEATS (docs/bdnf/README.md): Bdnf is silent (<= 0.62 FPKM) in every Bonev state;
+## no validated distal enhancer (no VISTA within 1.4 Mb); promoters = all 9 Bdnf TSSs.
+## Exploratory, not a test of a validated E-P pair. NPC / CN Hi-C = neocortex (ncx_),
+## ChIP = in vitro; ATAC is forebrain E14.5 (proxy).
+## =============================================================================
+
+samplesheet:   'ChromSimSamplesheet.bdnf_xwide.txt'
+fileNamesFrom: ['Condition']           # sample names: ES, NPC, CN
+outputDir:     'output_bdnf_xwide'
+
+## UCSC mm10, primary chromosomes only (chr1-19, X, Y, M); md5 of the source
+## mm10.fa.gz checked against UCSC's md5sum.txt. See docs/ebf3/00_environment_audit.md.
+genome:          'data/mm10.primary.fa'
+genome_assembly: 'mm10'
+
+ctcf_motif:
+  jaspar_id:   'MA0139.1'              # vertebrate CTCF core motif; conserved in mouse
+  meme:        ''
+  jaspar_url:  'https://jaspar.elixir.no/api/v1/matrix/{jaspar_id}/?format=meme'
+  fimo_thresh: 1.0e-4
+  flank_bp:    250
+  unoriented:  'drop'
+
+## Storage: delete what nothing downstream reads (both default to true).
+##   shards - per-shard dirs, once merged into merged_<...>_rep<N>
+##   blocks - merged blocks_*.h5 trajectories, once the condition's analysis finished
+##            (contact maps, P(s), APA ... are kept in loci/<locus>/analysis)
+cleanup:
+  shards: true
+  blocks: true
+
+resolution:   1000
+n_replicates: 3
+n_shards:     4
+
+hpcProfile: 'profiles/longleaf'
+notify:
+  email:   ''
+  events:  ['start', 'success', 'error']
+  command: 'mail -s {subject} {email}'
+condaEnvs:
+  sim:  'envs/cohesin_sim.yml'
+  ctcf: 'envs/ctcf_extraction.yml'
+
+## =============================================================================
+## Locus: chr2:106,580,000-112,100,000 (5.52 Mb, 5,520 monomers). Left edge in the
+## CTCF-free gap 106,474,703-106,682,912 (208 kb), right edge in 111,669,454-112,196,841
+## (527 kb); both pass the insulation edge check in ES, ncx_NPC and ncx_CN (no strong
+## boundary within 20 kb): results/bdnf_xwide/window_edge_check.json.
+## The first Bdnf TSS is 3,095 kb into the window (109,674,700 - 106,580,000), 2,373 kb
+## from the gene end (109,727,007) to the right edge.
+## anchor_bp = first Bdnf TSS (exon I, chr2:109,674,700) -> monomer 3094.
+## =============================================================================
+loci:
+  - name:         bdnf_xwide
+    chrom:        chr2
+    region_start: 106580000
+    region_end:   112100000
+    label:        "Bdnf locus, extra-wide window (mm10)"
+    anchor_bp:    109674000
+
+## =============================================================================
+## Conditions. Compare B to A (same default force), C and D to A0 (the
+## heteropolymer force that sticky sites switch on). Never compare C to A.
+## Sticky: E-E = 0, P-P = 0, E-P = 3 kT via sticky_cross (see rationale doc,
+## which pastes the sticky_types() matrix for this locus).
+## =============================================================================
+conditions:
+  # ---- A: plain polymer, default repulsion. Control for B.
+  - name:         A_polymer
+    description:  "No cohesin, default polymer force (control for B)"
+    params_name:  polymer
+    separation:   none
+    ctcf_type:    CN
+    compare_hic:  CN
+
+  # ---- A0: plain polymer, attraction-capable force. Control for C and D.
+  - name:         A0_polymer_attr
+    description:  "No cohesin, heteropolymer force at 0 kT (control for C, D)"
+    params_name:  polymer_attr
+    separation:   none
+    attraction_energy: 0
+    ctcf_type:    CN
+    compare_hic:  CN
+
+  # ---- B: loop extrusion + CTCF barriers
+  - name:         C_sticky_t1
+    description:  "No cohesin, enhancer candidates-Bdnf promoters attraction 3 kT [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  sticky_t1
+    separation:   none
+    ctcf_type:    CN
+    compare_hic:  CN
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+  # ---- D: extrusion + CTCF + sticky E-P (permissive set)
+
+  - name:         A_polymer_ES
+    description:  "No cohesin, default polymer force (ES)"
+    params_name:  polymer
+    separation:   none
+    ctcf_type:    ES
+    compare_hic:  ES
+
+  - name:         A0_polymer_attr_ES
+    description:  "No cohesin, heteropolymer force at 0 kT (ES)"
+    params_name:  polymer_attr
+    separation:   none
+    attraction_energy: 0
+    ctcf_type:    ES
+    compare_hic:  ES
+
+  - name:         C_sticky_t1_ES
+    description:  "No cohesin, enhancer candidates-Bdnf promoters attraction 3 kT (ES) [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  sticky_t1
+    separation:   none
+    ctcf_type:    ES
+    compare_hic:  ES
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+  - name:         A_polymer_NPC
+    description:  "No cohesin, default polymer force (NPC)"
+    params_name:  polymer
+    separation:   none
+    ctcf_type:    NPC
+    compare_hic:  NPC
+
+  - name:         A0_polymer_attr_NPC
+    description:  "No cohesin, heteropolymer force at 0 kT (NPC)"
+    params_name:  polymer_attr
+    separation:   none
+    attraction_energy: 0
+    ctcf_type:    NPC
+    compare_hic:  NPC
+
+  - name:         C_sticky_t1_NPC
+    description:  "No cohesin, enhancer candidates-Bdnf promoters attraction 3 kT (NPC) [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  sticky_t1
+    separation:   none
+    ctcf_type:    NPC
+    compare_hic:  NPC
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+  # ---- B / D with per-site CTCF stall probabilities (Michele's comments, 2026-11-12):
+  #      _occ  = occupancy from bigWigs (scripts/ctcf_occupancy.py, ctcfOccupancy rule)
+  #      _tier = hand-set tiers from Hi-C dot strength (scripts/ebf3/ctcf_dot_strength.py)
+  #      Sites on one monomer combine as 1 - prod(1 - p) (Harvey supplement 8.3).
+
+  - name:         B_extrusion_occ
+    description:  "Cohesin extrusion + CN CTCF; stall p = CTCF occupancy from ChIP - input bigWigs, top chromosome peak = 1"
+    params_name:  extrusion_occ
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: occupancy}
+    ctcf_type:    CN
+    compare_hic:  CN
+
+  - name:         D_combined_t1_occ
+    description:  "Cohesin + CN CTCF (stall p = CTCF occupancy from ChIP - input bigWigs, top chromosome peak = 1) + E-P attraction 3 kT [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  combined_t1_occ
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: occupancy}
+    ctcf_type:    CN
+    compare_hic:  CN
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+  - name:         B_extrusion_occ_ES
+    description:  "Cohesin extrusion + ES CTCF; stall p = CTCF occupancy from ChIP - input bigWigs, top chromosome peak = 1"
+    params_name:  extrusion_occ
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: occupancy}
+    ctcf_type:    ES
+    compare_hic:  ES
+
+  - name:         D_combined_t1_occ_ES
+    description:  "Cohesin + ES CTCF (stall p = CTCF occupancy from ChIP - input bigWigs, top chromosome peak = 1) + E-P attraction 3 kT [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  combined_t1_occ
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: occupancy}
+    ctcf_type:    ES
+    compare_hic:  ES
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+  - name:         B_extrusion_occ_NPC
+    description:  "Cohesin extrusion + NPC CTCF; stall p = CTCF occupancy from ChIP - input bigWigs, top chromosome peak = 1"
+    params_name:  extrusion_occ
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: occupancy}
+    ctcf_type:    NPC
+    compare_hic:  NPC
+
+  - name:         D_combined_t1_occ_NPC
+    description:  "Cohesin + NPC CTCF (stall p = CTCF occupancy from ChIP - input bigWigs, top chromosome peak = 1) + E-P attraction 3 kT [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  combined_t1_occ
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: occupancy}
+    ctcf_type:    NPC
+    compare_hic:  NPC
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+  - name:         B_extrusion_tier
+    description:  "Cohesin extrusion + CN CTCF; stall p per site from Hi-C dot strength: 0.35 / 0.5 / 0.6"
+    params_name:  extrusion_tier
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: table, file: 'results/{locus}/ctcf_site_tiers_{ctcf_type}.tsv', column: tier_s, default: 0.35}
+    ctcf_type:    CN
+    compare_hic:  CN
+
+  - name:         D_combined_t1_tier
+    description:  "Cohesin + CN CTCF (stall p per site from Hi-C dot strength: 0.35 / 0.5 / 0.6) + E-P attraction 3 kT [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  combined_t1_tier
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: table, file: 'results/{locus}/ctcf_site_tiers_{ctcf_type}.tsv', column: tier_s, default: 0.35}
+    ctcf_type:    CN
+    compare_hic:  CN
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+  - name:         B_extrusion_tier_ES
+    description:  "Cohesin extrusion + ES CTCF; stall p per site from Hi-C dot strength: 0.35 / 0.5 / 0.6"
+    params_name:  extrusion_tier
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: table, file: 'results/{locus}/ctcf_site_tiers_{ctcf_type}.tsv', column: tier_s, default: 0.35}
+    ctcf_type:    ES
+    compare_hic:  ES
+
+  - name:         D_combined_t1_tier_ES
+    description:  "Cohesin + ES CTCF (stall p per site from Hi-C dot strength: 0.35 / 0.5 / 0.6) + E-P attraction 3 kT [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  combined_t1_tier
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: table, file: 'results/{locus}/ctcf_site_tiers_{ctcf_type}.tsv', column: tier_s, default: 0.35}
+    ctcf_type:    ES
+    compare_hic:  ES
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+  - name:         B_extrusion_tier_NPC
+    description:  "Cohesin extrusion + NPC CTCF; stall p per site from Hi-C dot strength: 0.35 / 0.5 / 0.6"
+    params_name:  extrusion_tier
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: table, file: 'results/{locus}/ctcf_site_tiers_{ctcf_type}.tsv', column: tier_s, default: 0.35}
+    ctcf_type:    NPC
+    compare_hic:  NPC
+
+  - name:         D_combined_t1_tier_NPC
+    description:  "Cohesin + NPC CTCF (stall p per site from Hi-C dot strength: 0.35 / 0.5 / 0.6) + E-P attraction 3 kT [H3K27ac + ATAC peaks as separate enhancer factors]"
+    params_name:  combined_t1_tier
+    lifetime:     225000
+    separation:   240
+    ctcf_capture: {by: table, file: 'results/{locus}/ctcf_site_tiers_{ctcf_type}.tsv', column: tier_s, default: 0.35}
+    ctcf_type:    NPC
+    compare_hic:  NPC
+    sticky:
+      - {factor: Enhancer_H3K27ac, peaks: H3K27ac_Peaks, energy: 0.0, span: summit}
+      - {factor: Enhancer_ATAC,    peaks: ATAC_Peaks,    energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer_H3K27ac, Promoter], energy: 3.0}
+      - {factors: [Enhancer_ATAC, Promoter], energy: 3.0}
+
+## =============================================================================
+## Identical for every condition: matched sampling makes A/A0/B/C/D comparable.
+## 5,520 + 2 x 270 = 6,060 monomers per copy -> 11 copies on a 66,660-monomer chain.
+## =============================================================================
+tiling:
+  padding:    270
+  chain_size: 70000
+
+sim_run:
+  seed_base:            42
+  frames_per_replicate: 10000          # 2,500 per shard x saveevery 100 = 250,000 blocks (> one 225,000-step LEF lifetime, multiple of 1000)
+  contact_radius:       3.0
+  hdf5_frames_per_file: 100
+
+polysim:
+  platform:             CUDA
+  density:              0.3
+  angle_k:              0.05
+  bond_wiggle:          0.1
+  repel:                3.0
+  confinement_k:        1.0
+  smc_bond_wiggle:      0.2
+  smc_bond_dist:        0.5
+  vlef:                 0.0025
+  life_boost_stalled:   4.0
+  integrator:           langevin
+  dt:                   40
+  colrate:              0.01
+  poly_steps_per_block: 33
+  saveevery:            100
+  initsteps:            540000
+  initskip:             20
+  blocks_per_updater:   1000
+
+analysis:
+  n_jobs: 4
+  msd:    False
+  hic_balance: weight                  # cooler ICE (cis-only) from zoomify --balance
+  apa:
+    min_size_bins: 20
+    max_size_bins: 1000
+    pad:           10
+  msd_probe:
+    pairs:  {}
+    labels: {}
+    auto:
+      min_sep_monomers:       200
+      max_sep_monomers:       1500
+      require_convergent:     True
+      n_pairs:                2
+      require_conserved:      True
+      conserved_tol_monomers: 0
+      prefer_flanking:        True
+      disjoint_anchors:       True
+      relax_if_missing:       True
+  msd_fit:
+    lag_min_frames:     1
+    lag_max_frac:       0.3333333333333333
+    fit_lag_min:        5
+    fit_lag_max_frac:   0.25
+    min_n_lags_for_fit: 6
+  calibration:
+    default_anchor: hic
+    hic:
+      s_ref_bp:       100000
+      persistence_nm: 50.0
+      nm_per_bp:      0.34
+    msd:
+      expt_msd:      {}
+      loc_error_um2: 0.0
+      reference_condition: ''

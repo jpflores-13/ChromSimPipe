@@ -117,6 +117,108 @@ conditions:
     sticky_cross:
       - {factors: [Enhancer, Promoter], energy: 3.0}
 
+  # ---- Same five models with ES / NPC CTCF barriers and enhancer/promoter peaks,
+  #      compared to that cell type's Hi-C (for the all-cell-type panel figure).
+  - name:         A_polymer_ES
+    description:  "No cohesin, default polymer force (ES)"
+    params_name:  polymer
+    separation:   none
+    ctcf_type:    ES
+    compare_hic:  ES
+
+  - name:         A0_polymer_attr_ES
+    description:  "No cohesin, heteropolymer force at 0 kT (ES)"
+    params_name:  polymer_attr
+    separation:   none
+    attraction_energy: 0
+    ctcf_type:    ES
+    compare_hic:  ES
+
+  - name:         B_extrusion_ES
+    description:  "Cohesin extrusion + ES CTCF barriers"
+    params_name:  extrusion
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    ES
+    compare_hic:  ES
+
+  - name:         C_sticky_t1_ES
+    description:  "No cohesin, enhancer candidates-Bdnf promoters attraction 3 kT (ES)"
+    params_name:  sticky_t1
+    separation:   none
+    ctcf_type:    ES
+    compare_hic:  ES
+    sticky:
+      - {factor: Enhancer, peaks: Enhancer_Peaks, energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer, Promoter], energy: 3.0}
+
+  - name:         D_combined_t1_ES
+    description:  "Cohesin + ES CTCF + enhancer candidates-Bdnf promoters attraction 3 kT (ES)"
+    params_name:  combined_t1
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    ES
+    compare_hic:  ES
+    sticky:
+      - {factor: Enhancer, peaks: Enhancer_Peaks, energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer, Promoter], energy: 3.0}
+
+  - name:         A_polymer_NPC
+    description:  "No cohesin, default polymer force (NPC)"
+    params_name:  polymer
+    separation:   none
+    ctcf_type:    NPC
+    compare_hic:  NPC
+
+  - name:         A0_polymer_attr_NPC
+    description:  "No cohesin, heteropolymer force at 0 kT (NPC)"
+    params_name:  polymer_attr
+    separation:   none
+    attraction_energy: 0
+    ctcf_type:    NPC
+    compare_hic:  NPC
+
+  - name:         B_extrusion_NPC
+    description:  "Cohesin extrusion + NPC CTCF barriers"
+    params_name:  extrusion
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    NPC
+    compare_hic:  NPC
+
+  - name:         C_sticky_t1_NPC
+    description:  "No cohesin, enhancer candidates-Bdnf promoters attraction 3 kT (NPC)"
+    params_name:  sticky_t1
+    separation:   none
+    ctcf_type:    NPC
+    compare_hic:  NPC
+    sticky:
+      - {factor: Enhancer, peaks: Enhancer_Peaks, energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer, Promoter], energy: 3.0}
+
+  - name:         D_combined_t1_NPC
+    description:  "Cohesin + NPC CTCF + enhancer candidates-Bdnf promoters attraction 3 kT (NPC)"
+    params_name:  combined_t1
+    lifetime:     75000
+    separation:   240
+    ctcf_capture: 0.5
+    ctcf_type:    NPC
+    compare_hic:  NPC
+    sticky:
+      - {factor: Enhancer, peaks: Enhancer_Peaks, energy: 0.0, span: summit}
+      - {factor: Promoter, peaks: Promoter_Peaks, energy: 0.0, span: summit}
+    sticky_cross:
+      - {factors: [Enhancer, Promoter], energy: 3.0}
+
 ## =============================================================================
 ## Identical for every condition: matched sampling makes A/A0/B/C/D comparable.
 ## 1,900 + 2 x 270 = 2,440 monomers per copy -> 28 copies on a 68,320-monomer chain.

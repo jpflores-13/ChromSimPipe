@@ -1,4 +1,4 @@
-Project	Cell_Type	Condition	CTCF_Peaks	Hi-C	Enhancer_Peaks	Promoter_Peaks
-Bdnf	mESC	ES	data/peaks/ES_CTCF_chr2.narrowPeak	data/mcool/ES_chr2.mcool	data/peaks/bdnf/ES_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak
-Bdnf	NPC	NPC	data/peaks/NPC_CTCF_chr2.narrowPeak	data/mcool/ncx_NPC_chr2.mcool	data/peaks/bdnf/NPC_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak
-Bdnf	CN	CN	data/peaks/CN_CTCF_chr2.narrowPeak	data/mcool/ncx_CN_chr2.mcool	data/peaks/bdnf/CN_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak
+Project	Cell_Type	Condition	CTCF_Peaks	Hi-C	Enhancer_Peaks	Promoter_Peaks	CTCF_BigWig	CTCF_Input_BigWig
+Bdnf	mESC	ES	data/peaks/ES_CTCF_chr2.narrowPeak	data/mcool/ES_chr2.mcool	data/peaks/bdnf/ES_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak	data/raw/gse96107/GSE96107_ES_CTCF.bw	data/raw/gse96107/GSE96107_ES_Input.bw
+Bdnf	NPC	NPC	data/peaks/NPC_CTCF_chr2.narrowPeak	data/mcool/ncx_NPC_chr2.mcool	data/peaks/bdnf/NPC_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak	data/raw/gse96107/GSE96107_NPC_CTCF.bw	data/raw/gse96107/GSE96107_NPC_Input.bw
+Bdnf	CN	CN	data/peaks/CN_CTCF_chr2.narrowPeak	data/mcool/ncx_CN_chr2.mcool	data/peaks/bdnf/CN_enhancers.narrowPeak	data/peaks/bdnf/Bdnf_promoters.narrowPeak	data/raw/gse96107/GSE96107_CN_CTCF.bw	data/raw/gse96107/GSE96107_CN_Input.bw
