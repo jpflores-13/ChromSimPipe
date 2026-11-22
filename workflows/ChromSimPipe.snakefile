@@ -63,6 +63,12 @@ def conda_env(key, default=None):
     return env
 
 
+## Storage: both default to on (delete what nothing downstream reads).
+##   cleanup.shards - delete per-shard dirs once merged into merged_<...>_rep<N>
+##   cleanup.blocks - delete merged blocks_*.h5 once the condition's analysis finished
+_cl = config.get("cleanup") or {}
+CLEANUP = {"shards": bool(_cl.get("shards", True)), "blocks": bool(_cl.get("blocks", True))}
+
 COND_LOOKUP = {c["name"]: c for c in SIMULATION_CONDITIONS}
 COND_NAMES  = list(COND_LOOKUP)
 
@@ -366,7 +372,8 @@ rule mergeShards:
     params:
         configfile = CONFIGFILE,
         sim_dir    = lambda wildcards: LP(wildcards, "sims"),
-        n_shards   = N_SHARDS
+        n_shards   = N_SHARDS,
+        cleanup    = "--cleanup" if CLEANUP["shards"] else ""
     conda: ENV_SIM
     shell:
         """
@@ -374,7 +381,7 @@ rule mergeShards:
             "$CONDA_PREFIX/bin/python" scripts/merge_shards.py \
             --condition {wildcards.condition} \
             --replicate {wildcards.rep} \
-            --n-shards {params.n_shards} \
+            --n-shards {params.n_shards} {params.cleanup} \
             --results-dir {params.sim_dir} 1> {log.out} 2> {log.err}
         touch {output.done}
         """
@@ -405,7 +412,12 @@ rule analyzeCondition:
         out_dir    = lambda wildcards: f"{LP(wildcards, 'analysis')}/{wildcards.condition}",
         mcool_dir  = MCOOL_DIR,
         n_jobs     = ANALYSIS["n_jobs"],
-        msd_flag   = "" if ANALYSIS["msd"] else "--no-msd"
+        msd_flag   = "" if ANALYSIS["msd"] else "--no-msd",
+        ## merged trajectories of this condition (<params>_ctcf-<type>_rep<N>)
+        merged_glob = lambda wildcards: (
+            f"{LP(wildcards, 'sims')}/merged_{COND_LOOKUP[wildcards.condition]['params']['name']}"
+            f"_ctcf-{COND_LOOKUP[wildcards.condition]['ctcf_type']}_rep"),
+        rm_blocks  = CLEANUP["blocks"]
     conda: ENV_SIM
     shell:
         """
@@ -419,6 +431,14 @@ rule analyzeCondition:
             --n-jobs {params.n_jobs} \
             --skip-existing \
             {params.msd_flag} 1> {log.out} 2> {log.err}
+        ## Analysis outputs (contact maps, P(s), APA ...) are in out_dir; the polymer
+        ## trajectories are not read again, and are the bulk of the storage.
+        ## Only reached when the analysis succeeded (set -e). Disable with cleanup.blocks: false.
+        if [ "{params.rm_blocks}" = "True" ]; then
+            for d in {params.merged_glob}[0-9]*; do
+                [ -d "$d" ] && rm -f "$d"/blocks_*.h5
+            done
+        fi
         touch {output.done}
         """
 

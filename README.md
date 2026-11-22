@@ -338,6 +338,19 @@ accounts, and `module avail` shows the available software.
 
 ---
 
+## Disk usage and cleanup
+
+Trajectories dominate storage (hundreds of GB per locus). By default the pipeline
+removes them once nothing reads them again, controlled by the `cleanup:` block of the config:
+
+| Key | Default | Effect |
+|---|---|---|
+| `cleanup.shards` | `true` | Delete per-shard dirs right after `mergeShards` writes the merged dir (only if the merge produced output) |
+| `cleanup.blocks` | `true` | Delete the merged `blocks_*.h5` after `analyzeCondition` succeeds; contact maps, P(s), APA etc. stay in `loci/<locus>/analysis` |
+
+Set `blocks: false` to keep trajectories, e.g. to re-run analysis with new code.
+With `blocks: true`, re-analysing a condition means re-simulating it.
+
 ## Output structure
 
 Everything is written under `outputDir` (default `output/` in the repo folder,
