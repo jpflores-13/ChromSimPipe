@@ -51,6 +51,15 @@ ctcf_motif:
   ##   'error' - stop the workflow
   unoriented:  'drop'
 
+## Storage: delete what nothing downstream reads (both default to true if omitted).
+##   shards - per-shard dirs, once merged into merged_<...>_rep<N>
+##   blocks - merged blocks_*.h5 trajectories, once the condition's analysis finished
+##            (contact maps, P(s), APA ... are kept in loci/<locus>/analysis)
+## Set blocks: false to keep trajectories for re-analysis with new analysis code.
+cleanup:
+  shards: true
+  blocks: true
+
 ## Resolution
 resolution: 1000   # bp per monomer (also the .cool resolution)
 

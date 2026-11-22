@@ -256,6 +256,13 @@ def merge_one(results_dir, base_name, shard_dirs, cleanup=False):
     merge_params(existing, output_dir)
 
     if cleanup:
+        ## never delete the only copy: the merge can return without output
+        ## (e.g. no frames found) instead of raising
+        if not (glob.glob(os.path.join(output_dir, "blocks_*.h5"))
+                or glob.glob(os.path.join(output_dir, "*.npy"))
+                or os.path.exists(os.path.join(output_dir, "conformations.h5"))):
+            logger.error(f"  {base_name}: merge produced no output; keeping shard dirs")
+            return
         for shard_dir in existing:
             shutil.rmtree(shard_dir)
             logger.info(f"  Deleted shard dir: {os.path.basename(shard_dir)}")
