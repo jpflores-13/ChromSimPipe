@@ -238,7 +238,7 @@ reading the CTCF bigWig named in the samplesheet. The grey text
 under each station is the tool it runs, and the file icons are the main
 outputs.
 
-![The ChromSimPipe workflow as a subway map: one station per Snakemake rule, with the tool each rule runs and its main output files.](images/chromsimpipe_subway.svg){#fig-subway fig-alt="Subway map of the ChromSimPipe workflow. From the samplesheet, the blue main line runs through getMotif, orientCTCF (output: oriented CTCF BED), validateCTCF, simulateShard (polysim on a GPU), mergeShards and analyzeCondition (output: contact maps and metrics) to benchmarkSummary. A green line, preparePolysim, joins at simulateShard. An orange line, convertHic (output: Hi-C .cool), joins at analyzeCondition. A dashed pink optional line, ctcfOccupancy (output: site occupancy table), leaves orientCTCF and joins at simulateShard."}
+![The ChromSimPipe workflow as a subway map: one station per Snakemake rule, with the tool each rule runs and its main output files.](images/chromsimpipe_subway.svg){#fig-subway .column-page fig-alt="Subway map of the ChromSimPipe workflow. From the samplesheet, the blue main line runs through getMotif, orientCTCF (output: oriented CTCF BED), validateCTCF, simulateShard (polysim on a GPU), mergeShards and analyzeCondition (output: contact maps and metrics) to benchmarkSummary. A green line, preparePolysim, joins at simulateShard. An orange line, convertHic (output: Hi-C .cool), joins at analyzeCondition. A dashed pink optional line, ctcfOccupancy (output: site occupancy table), leaves orientCTCF and joins at simulateShard."}
 
 The rule-level steps repeat many times in a run. `orientCTCF` runs once per
 locus × CTCF sample (and so does `ctcfOccupancy`, when a condition needs it),

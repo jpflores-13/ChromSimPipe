@@ -26,17 +26,20 @@ jobs:
       - name: Set up Quarto
         uses: quarto-dev/quarto-actions/setup@v2
 
-      - name: Set up R (vignette.qmd has R chunks; all are eval false)
+      - name: Set up R (docs have R chunks; ps.qmd runs one to draw a toy figure)
         uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true
 
-      - name: Install knitr and rmarkdown
+      - name: Install knitr, rmarkdown and the plotting packages
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
           packages: |
             any::knitr
             any::rmarkdown
+            any::ggplot2
+            any::patchwork
+            any::scales
           dependencies: '"hard"'
 
       - name: Check rmarkdown loads

@@ -1,0 +1,37 @@
+# slitherFlow spec for the project route map in docs/journey.qmd (docs/images/journey_subway.svg).
+# This map is a route through a project, not a Snakemake rule graph, so it is written by hand.
+# Rebuild: slitherflow render docs/images/journey_subway.yaml -o docs/images/journey_subway.svg
+
+title: "A ChromSimPipe project"
+subtitle: "From CTCF data to a result"
+input: {label: "Start", sublabel: "", file: "IDEA"}
+
+trunk:
+  stations:
+    - {label: below, name: "0. Right tool?", tool: "CTCF data, loop question"}
+    - {label: above, name: "1. Frame the question", tool: "two conditions, a few loci"}
+    - {label: below, name: "2. Get the inputs ready", tool: "peaks, genome, Hi-C"}
+    - {label: above, name: "3. Fill in two files", tool: "samplesheet + config"}
+    - {label: below, name: "4. Check, dry run, test run", tool: "before GPU time"}
+    - {label: above, name: "5. Full run", tool: "one sbatch"}
+    - {label: below, name: "6. Read the output", tool: "maps, P(s), insulation, APA"}
+  lines: [yes, no]
+
+lines:
+  yes:
+    name: "Model reproduces the Hi-C"
+    color: "#009E73"
+    row: -1
+    to: terminus
+    stations:
+      - {name: "7a. CTCF is sufficient", tool: "stress-test it"}
+  no:
+    name: "Model misses the Hi-C"
+    color: "#D55E00"
+    row: 1
+    to: terminus
+    stations:
+      - {name: "7b. Something else is involved", tool: "add it to the model"}
+
+terminus: {name: "8. Write it up", sublabel: "", row: 0}
+footnote: "Stage 7 is a decision: does the model reproduce your Hi-C? If not, add the missing mechanism as a new condition and go back to stage 3."

@@ -15,22 +15,13 @@ files described in Stage 2.
 
 ## The route at a glance
 
-```{mermaid}
-%%| fig-align: center
-flowchart TD
-    A["<b>0. Is this the right tool?</b><br/>CTCF data + a question about loops"] --> B["<b>1. Frame the question</b><br/>two conditions, a few loci"]
-    B --> C["<b>2. Get the inputs ready</b><br/>peaks, genome, Hi-C (optional)"]
-    C --> D["<b>3. Fill in two files</b><br/>samplesheet + config"]
-    D --> E["<b>4. Check, dry run, test run</b><br/>cheap checks before GPU time"]
-    E --> F["<b>5. Full run</b><br/>one sbatch, then wait"]
-    F --> G["<b>6. Read the output</b><br/>maps, P(s), insulation, APA"]
-    G --> H{"Does the model<br/>reproduce your Hi-C?"}
-    H -- yes --> I["<b>7a. CTCF is a sufficient explanation</b><br/>stress-test it (robustness)"]
-    H -- no --> J["<b>7b. Something else is involved</b><br/>add it to the model (recipes)"]
-    I --> K["<b>8. Write it up</b>"]
-    J --> K
-    J -. "new condition" .-> D
-```
+![The route through a ChromSimPipe project as a subway map. Stages 0–6 run along a shared line; at stage 7 the route splits on whether the model reproduces your Hi-C, and both branches end at stage 8.](images/journey_subway.svg){#fig-journey .column-page fig-alt="Subway map of a ChromSimPipe project. A shared line runs through stages 0 to 6: right tool, frame the question, get the inputs ready, fill in two files, check with a dry run and test run, full run, read the output. It then splits: a green line for when the model reproduces the Hi-C (7a, CTCF is sufficient, stress-test it) and an orange line for when it misses (7b, something else is involved, add it to the model). Both end at stage 8, write it up."}
+
+Stage 7 is the fork: the green line is the route when the model reproduces
+your Hi-C, the orange one when it doesn't. When it doesn't, you add the
+missing mechanism as a new condition and go back to Stage 3, as the footnote
+says (the map draws connections left to right only, so that loop is not
+drawn as a line).
 
 Most of the effort is in Stages 2 and 3, and most mistakes are caught in
 Stage 4. The simulation itself (Stage 5) needs no attention once it starts.

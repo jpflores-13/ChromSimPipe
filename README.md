@@ -44,35 +44,23 @@ A script-by-script description of the code is in
 
 ### How the pieces fit together
 
-```
-  ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
-  (one row per sample: metadata,               (loci, conditions, polysim,
-   CTCF_Peaks, Hi-C, optional factor peaks,     genome, motif, envs, outputDir)
-   CTCF_BigWig / CTCF_Input_BigWig)
-          │                                               │
-          └───────────────────────┬───────────────────────┘
-                                  ▼
-                        configs/parameters.py
-                (parses both; the only place values are read)
-                                  │
-                                  ▼
-                   workflows/ChromSimPipe.snakefile
-                                  │
-     convertHic ── getMotif ── preparePolysim      (shared by all loci)
-                                  │
-     orientCTCF ── validateCTCF ── ctcfOccupancy*        (per locus)
-                                  │
-     simulateShard (locus × condition × replicate × shard, GPU, polysim)
-                                  │
-                mergeShards (locus × condition × replicate)
-                                  │
-         analyzeCondition (locus × condition: contact map, P(s), APA,
-               insulation, comparison with Hi-C) ── benchmarkSummary
-                                  │
-  * only for conditions with ctcf_capture {by: occupancy}
-                                  ▼
-                 output/loci/{locus}/analysis/{condition}/
-```
+You fill in two files: `ChromSimSamplesheet.txt` (one row per sample:
+metadata, `CTCF_Peaks`, `Hi-C`, optional factor peaks and
+`CTCF_BigWig` / `CTCF_Input_BigWig`) and `config/ChromSimConfig.yaml` (loci,
+conditions, polysim, genome, motif, envs, `outputDir`).
+`configs/parameters.py` parses both; it is the only place values are read.
+`workflows/ChromSimPipe.snakefile` then runs these rules:
+
+![ChromSimPipe workflow as a subway map](docs/images/chromsimpipe_subway.svg)
+
+`convertHic`, `getMotif` and `preparePolysim` are shared by all loci;
+`orientCTCF`, `validateCTCF` and `ctcfOccupancy` run per locus
+(`ctcfOccupancy` only for conditions with `ctcf_capture: {by: occupancy}`);
+`simulateShard` runs per locus × condition × replicate × shard on a GPU;
+`mergeShards` per locus × condition × replicate; `analyzeCondition` per locus ×
+condition, writing to `output/loci/{locus}/analysis/{condition}/`. The map is
+drawn with [slitherFlow](https://github.com/mikemartinez99/slitherFlow) from
+`docs/images/chromsimpipe_subway.yaml`.
 
 ### Example conditions (STRS use case)
 

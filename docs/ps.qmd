@@ -12,17 +12,87 @@ loci 50 kb apart sits on one diagonal of the map, 50 bins from the main
 diagonal (at 1 kb bins). **P(s) is the average contact frequency along that
 diagonal:** how often two loci *s* apart touch, on average, across the region.
 Doing this for every diagonal gives a curve, contact frequency against
-distance.
+distance. @fig-ps-toy shows the idea on a small made-up map.
 
+::: {.callout-note}
+## Toy data
+
+The map in @fig-ps-toy is **invented for illustration**, not ChromSimPipe
+output or real Hi-C. It is built from a simple rule (contacts fall off as
+1/*s*, with random noise), so the steps of the calculation are easy to see. For
+real curves, see [Plotting it yourself in R](#plotting-it-yourself-in-r).
+:::
+
+```{r}
+#| label: fig-ps-toy
+#| fig-cap: "From a contact map to P(s), on toy data. Left: a made-up 200 × 200 contact map at 1 kb bins (contact frequency falling as 1/*s*, with noise), log10 scale. The highlighted diagonal holds every pair of loci 40 kb apart. Right: averaging each diagonal gives one point of P(s); the highlighted point is the average of the highlighted diagonal. On log–log axes the curve is close to a straight line with slope about −1."
+#| fig-width: 10
+#| fig-height: 4.6
+#| code-fold: true
+#| code-summary: "Code: build the toy map and its P(s)"
+#| message: false
+library(ggplot2)
+library(patchwork)
+
+set.seed(1)
+n_bins     <- 200
+resolution <- 1000
+d_show     <- 40
+
+toy <- outer(seq_len(n_bins), seq_len(n_bins), \(i, j) 1 / (abs(i - j) + 1))
+toy <- toy * matrix(rlnorm(n_bins^2, sdlog = 0.35), n_bins)
+toy <- (toy + t(toy)) / 2
+
+map_df <- expand.grid(i = seq_len(n_bins), j = seq_len(n_bins)) |>
+  transform(contacts = as.vector(toy), on_diag = abs(i - j) == d_show)
+
+ps_df <- data.frame(d = 1:150) |>
+  transform(s_bp = d * resolution,
+            ps   = vapply(d, \(k) mean(toy[cbind(seq_len(n_bins - k), seq_len(n_bins - k) + k)]),
+                          numeric(1)))
+
+p_map <- ggplot(map_df, aes(j, i, fill = log10(contacts))) +
+  geom_raster() +
+  geom_tile(data = subset(map_df, on_diag & i < j), fill = NA, colour = "#E69F00",
+            linewidth = 0.6) +
+  scale_fill_distiller(palette = "Reds", direction = 1, guide = "none") +
+  scale_y_reverse(expand = c(0, 0)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  coord_fixed() +
+  annotate("label", x = 150, y = 35, size = 3.4, label.size = 0,
+           label = paste0("diagonal d = ", d_show, "\n(loci ", d_show, " kb apart)")) +
+  labs(x = "bin (1 kb)", y = "bin (1 kb)", title = "Toy contact map") +
+  theme_minimal(base_size = 12)
+
+p_ps <- ggplot(ps_df, aes(s_bp, ps)) +
+  geom_line(colour = "grey30") +
+  geom_point(data = subset(ps_df, d == d_show), colour = "#E69F00", size = 3.5) +
+  annotate("text", x = d_show * resolution * 0.8, y = ps_df$ps[d_show] * 0.45, hjust = 1,
+           size = 3.4, label = "mean of the\nhighlighted diagonal") +
+  scale_x_log10(labels = scales::label_number(scale_cut = scales::cut_si("b"))) +
+  scale_y_log10() +
+  labs(x = "genomic separation s", y = "P(s), mean contacts", title = "P(s), log–log") +
+  theme_minimal(base_size = 12)
+
+p_map + p_ps + plot_layout(widths = c(1, 1.1))
 ```
-contact map                      P(s)
- ╲ . . . .                        │╲
- . ╲ . . .       average each     │ ╲___
- . . ╲ . .   ──  diagonal   ──►   │     ╲___
- . . . ╲ .                        │         ╲____
- . . . . ╲                        └──────────────── s
-   ↑ diagonal d = loci d bins apart
-```
+
+How the toy figure is made, chunk by chunk:
+
+- `outer()` fills a 200 × 200 matrix where the value for bins *i* and *j* is
+  1 / (|*i* − *j*| + 1): the further apart, the fewer contacts. `rlnorm()`
+  multiplies every cell by random noise, and averaging the matrix with its
+  transpose (`t()`) keeps it symmetric, like a real contact map. `set.seed(1)`
+  makes the noise the same every time the page is built.
+- `ps_df` is the P(s) calculation itself: for each offset `d`,
+  `toy[cbind(rows, rows + d)]` picks the cells of the `d`-th diagonal and
+  `mean()` averages them. This is the same formula the pipeline uses
+  ([below](#for-a-simulation)). The curve stops at 150 kb: the last diagonals
+  of a 200-bin map hold only a handful of pairs, so their averages are noisy,
+  the same reason real curves are trusted only up to about half the window.
+- The left panel draws the map on a log10 colour scale, with one diagonal
+  (`d_show`, 40 kb) outlined. The right panel draws P(s) on log–log axes and
+  marks the point that diagonal produces.
 
 Contacts become rarer the further apart two loci are, so P(s) falls with *s*.
 Plotted on log–log axes it is close to a straight line, because it falls off

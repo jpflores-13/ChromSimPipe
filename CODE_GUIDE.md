@@ -58,18 +58,20 @@ so a condition is a hypothesis built from these mechanisms:
 
 ### Data flow
 
-```
-ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C,
-                          optional CTCF_BigWig / CTCF_Input_BigWig)
-    ↓  orientCTCF rule → scripts/extract_ctcf_sites.py  (strand via FIMO)
-Oriented CTCF BED files (output/loci/<locus>/ctcf/)
-    ↓  ctcfOccupancy rule → scripts/ctcf_occupancy.py  (only for ctcf_capture {by: occupancy})
-Per-site CTCF occupancy tables (output/loci/<locus>/ctcf/ctcf_occupancy_*.tsv)
-    ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim
-Simulated conformations (output/loci/<locus>/sims/)
-    ↓  analyzeCondition rule → scripts/run_analysis_all.py
-Comparison figures  ←→  experimental Hi-C (.cool, from .hic/.mcool/.cool via the convertHic rule)
-```
+![ChromSimPipe workflow as a subway map](docs/images/chromsimpipe_subway.svg)
+
+The rules on the map, the scripts they call, and what they write:
+
+| Rule | Script | Writes |
+|------|--------|--------|
+| `convertHic` | `scripts/prepare_hic.py` | `output/mcool/<sample>.cool`, from `.hic`, `.mcool` or `.cool` |
+| `orientCTCF` | `scripts/extract_ctcf_sites.py` (strand via FIMO) | oriented CTCF BEDs, `output/loci/<locus>/ctcf/` |
+| `ctcfOccupancy` | `scripts/ctcf_occupancy.py` (only for `ctcf_capture {by: occupancy}`) | `output/loci/<locus>/ctcf/ctcf_occupancy_*.tsv` |
+| `simulateShard` | `scripts/run_simulation_shard.py` + polysim | simulated conformations, `output/loci/<locus>/sims/` |
+| `analyzeCondition` | `scripts/run_analysis_all.py` | contact maps, P(s), comparison with the experimental Hi-C |
+
+The samplesheet (`ChromSimSamplesheet.txt`) supplies the inputs: metadata,
+`CTCF_Peaks`, `Hi-C`, and optionally `CTCF_BigWig` / `CTCF_Input_BigWig`.
 
 ### Setup and launch
 

@@ -32,30 +32,20 @@ runs the same way.
 
 ## How the pieces fit together
 
-```
-  ChromSimSamplesheet.txt                      config/ChromSimConfig.yaml
-  (one row per sample: metadata,               (loci, conditions, polysim,
-   CTCF_Peaks, Hi-C, optional factor peaks)     genome, motif, envs, outputDir)
-          │                                               │
-          └───────────────────────┬───────────────────────┘
-                                  ▼
-                        configs/parameters.py
-                                  │
-                                  ▼
-     convertHic ── getMotif ── preparePolysim      (shared by all loci)
-                                  │
-     orientCTCF ── validateCTCF ── ctcfOccupancy*        (per locus)
-                                  │
-     simulateShard (locus × condition × replicate × shard, GPU, polysim)
-                                  │
-                mergeShards (locus × condition × replicate)
-                                  │
-         analyzeCondition (locus × condition: contact map, P(s), APA,
-               insulation, comparison with Hi-C)
-                                  │
-                                  ▼
-                 output/loci/{locus}/analysis/{condition}/
-```
+You fill in two files: `ChromSimSamplesheet.txt` (one row per sample: its
+CTCF peaks, Hi-C and any other data files) and `config/ChromSimConfig.yaml`
+(loci, conditions, physics, genome, motif, environments, `outputDir`).
+`configs/parameters.py` reads both; it is the only place values are read.
+`workflows/ChromSimPipe.snakefile` then runs the rules on the map below.
+Shared steps (`convertHic`, `getMotif`, `preparePolysim`) run once; CTCF
+orientation runs per locus; the simulation runs per locus × condition ×
+replicate × shard on a GPU; the analysis writes to
+`output/loci/{locus}/analysis/{condition}/`.
+
+![The ChromSimPipe workflow as a subway map: one station per Snakemake rule. The dashed pink line runs only for conditions with `ctcf_capture: {by: occupancy}`.](images/chromsimpipe_subway.svg){.column-page fig-alt="Subway map of the ChromSimPipe workflow, one station per Snakemake rule: getMotif, orientCTCF, validateCTCF, simulateShard, mergeShards, analyzeCondition and benchmarkSummary on the main line; preparePolysim and convertHic joining it; and an optional ctcfOccupancy line."}
+
+The [vignette](vignette.qmd#how-chromsimpipe-turns-this-into-a-simulation)
+explains how to read the map.
 
 ## Example conditions
 
