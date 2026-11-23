@@ -8,13 +8,13 @@ input: {label: "Start", sublabel: "", file: "IDEA"}
 
 trunk:
   stations:
-    - {label: below, name: "0. Right tool?", tool: "CTCF data, loop question"}
-    - {label: above, name: "1. Frame the question", tool: "two conditions, a few loci"}
-    - {label: below, name: "2. Get the inputs ready", tool: "peaks, genome, Hi-C"}
-    - {label: above, name: "3. Fill in two files", tool: "samplesheet + config"}
-    - {label: below, name: "4. Check, dry run, test run", tool: "before GPU time"}
+    - {label: below, name: "0. Right tool?", tool: "CTCF + a loop question"}
+    - {label: above, name: "1. Frame it", tool: "2 conditions, a few loci"}
+    - {label: below, name: "2. Get inputs", tool: "peaks, genome, Hi-C"}
+    - {label: above, name: "3. Two files", tool: "samplesheet + config"}
+    - {label: below, name: "4. Check", tool: "dry run, test run"}
     - {label: above, name: "5. Full run", tool: "one sbatch"}
-    - {label: below, name: "6. Read the output", tool: "maps, P(s), insulation, APA"}
+    - {label: below, name: "6. Read output", tool: "maps, P(s), APA"}
   lines: [yes, no]
 
 lines:
@@ -24,14 +24,16 @@ lines:
     row: -1
     to: terminus
     stations:
-      - {name: "7a. CTCF is sufficient", tool: "stress-test it"}
+      - {name: "7a. CTCF suffices", tool: "stress-test it"}
   no:
     name: "Model misses the Hi-C"
     color: "#D55E00"
     row: 1
     to: terminus
     stations:
-      - {name: "7b. Something else is involved", tool: "add it to the model"}
+      - {name: "7b. Something else", tool: "add it to the model"}
 
 terminus: {name: "8. Write it up", sublabel: "", row: 0}
 footnote: "Stage 7 is a decision: does the model reproduce your Hi-C? If not, add the missing mechanism as a new condition and go back to stage 3."
+
+style: {spacing: 95, branch_spacing: 110, margin: 28, row_height: 95}

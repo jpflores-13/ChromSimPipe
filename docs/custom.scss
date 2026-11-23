@@ -15,3 +15,28 @@ $font-size-base: 0.95rem;
 pre.sourceCode {
   border-left: 3px solid $primary;
 }
+
+/* Long file paths and names in tables wrap instead of pushing the page sideways */
+td, th {
+  overflow-wrap: anywhere;
+}
+
+td code, th code {
+  word-break: break-all;
+}
+
+/* Long inline commands, paths and URLs wrap on narrow screens */
+p code, li code, p a, li a {
+  overflow-wrap: anywhere;
+}
+
+p code, li code {
+  white-space: pre-wrap;
+}
+
+/* A wide display equation scrolls inside its own box */
+mjx-container[display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}

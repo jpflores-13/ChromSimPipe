@@ -40,7 +40,7 @@ lines:
     color: "#CC79A7"
     optional: true
     from: "orientCTCF"
-    row: 1.2
+    row: 1.4
     to: {line: sim, station: "simulateShard"}
     stations:
       - {name: "ctcfOccupancy", tool: "pyBigWig", outputs: [{file: "TSV", label: "Site occupancy", label_side: left}]}
@@ -55,3 +55,5 @@ lines:
 
 terminus: {name: "benchmarkSummary", sublabel: "run time · memory", row: 0, file: "TSV"}
 footnote: "ctcfOccupancy runs only for conditions with ctcf_capture: {by: occupancy}, reading the samplesheet's CTCF_BigWig. getMotif is skipped when ctcf_motif.meme names a local motif file. simulateShard also reads factor peak files from the samplesheet when a condition uses sticky, loading or pausing options. Hi-C (.hic, .mcool or .cool) is used only to compare with the simulations; it never enters them."
+
+style: {spacing: 115, branch_spacing: 110, margin: 28, row_height: 115}

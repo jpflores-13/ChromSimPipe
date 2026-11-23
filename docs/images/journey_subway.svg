@@ -1,49 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1896 602" width="1896" height="602">
-<rect width="1896" height="602" fill="#ffffff"/>
-<text x="48.0" y="56.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2328" text-anchor="start">A ChromSimPipe project</text>
-<text x="48.0" y="84.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#59636e" text-anchor="start">From CTCF data to a result</text>
-<path d="M112.0,295.0 L1321.4,295.0 Q1343.4,295.0 1359.0,310.6 L1452.9,404.4 Q1468.4,420.0 1490.4,420.0 L1663.9,420.0 Q1685.9,420.0 1685.9,398.0 L1685.9,317.0" fill="none" stroke="#D55E00" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M112.0,285.0 L1321.4,285.0 Q1343.4,285.0 1359.0,269.4 L1452.9,175.6 Q1468.4,160.0 1490.4,160.0 L1649.9,160.0 Q1671.9,160.0 1671.9,182.0 L1671.9,263.0" fill="none" stroke="#009E73" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-<rect x="235.0" y="272.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="248.0" y="331.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">0. Right tool?</text>
-<text x="248.0" y="348.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">CTCF data, loop question</text>
-<rect x="405.0" y="272.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="418.0" y="251.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">1. Frame the question</text>
-<text x="418.0" y="268.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">two conditions, a few loci</text>
-<rect x="575.0" y="272.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="588.0" y="331.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">2. Get the inputs ready</text>
-<text x="588.0" y="348.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">peaks, genome, Hi-C</text>
-<rect x="745.0" y="272.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="758.0" y="251.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">3. Fill in two files</text>
-<text x="758.0" y="268.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">samplesheet + config</text>
-<rect x="915.0" y="272.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="928.0" y="331.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">4. Check, dry run, test run</text>
-<text x="928.0" y="348.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">before GPU time</text>
-<rect x="1085.0" y="272.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="1098.0" y="251.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">5. Full run</text>
-<text x="1098.0" y="268.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">one sbatch</text>
-<rect x="1255.0" y="272.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="1268.0" y="331.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">6. Read the output</text>
-<text x="1268.0" y="348.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">maps, P(s), insulation, APA</text>
-<circle cx="1578.9" cy="160.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="1578.9" y="126.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">7a. CTCF is sufficient</text>
-<text x="1578.9" y="143.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">stress-test it</text>
-<circle cx="1578.9" cy="420.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="1578.9" y="456.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">7b. Something else is involved</text>
-<text x="1578.9" y="473.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">add it to the model</text>
-<rect x="1660.9" y="258.0" width="36" height="64.0" rx="18.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="1709.9" y="286.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1f2328" text-anchor="start">8. Write it up</text>
-<path d="M47.0,261.0 H80.0 L93.0,274.0 V319.0 H47.0 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<path d="M80.0,261.0 V274.0 H93.0" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<rect x="42.0" y="288.0" width="56.0" height="18" rx="3" fill="#57606a"/>
-<text x="70.0" y="302.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">IDEA</text>
-<text x="70.0" y="232.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">Start</text>
-<line x1="48" y1="501.8" x2="1848.0" y2="501.8" stroke="#d0d7de" stroke-width="1.5"/>
-<line x1="48" y1="537.8" x2="94" y2="537.8" stroke="#009E73" stroke-width="7" stroke-linecap="round"/>
-<text x="106.0" y="542.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Model reproduces the Hi-C</text>
-<line x1="321.5" y1="537.8" x2="367.5" y2="537.8" stroke="#D55E00" stroke-width="7" stroke-linecap="round"/>
-<text x="379.5" y="542.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Model misses the Hi-C</text>
-<circle cx="575.32" cy="537.8" r="9" fill="#ffffff" stroke="#1f2328" stroke-width="3"/>
-<text x="592.3" y="542.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Step</text>
-<text x="48.0" y="571.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">Stage 7 is a decision: does the model reproduce your Hi-C? If not, add the missing mechanism as a new condition and go back to stage 3.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1232 532" width="1232" height="532">
+<rect width="1232" height="532" fill="#ffffff"/>
+<text x="28.0" y="56.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2328" text-anchor="start">A ChromSimPipe project</text>
+<text x="28.0" y="84.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#59636e" text-anchor="start">From CTCF data to a result</text>
+<path d="M92.0,260.0 L762.9,260.0 Q784.9,260.0 800.5,275.6 L859.3,334.4 Q874.9,350.0 896.9,350.0 L1019.9,350.0 Q1041.9,350.0 1041.9,328.0 L1041.9,282.0" fill="none" stroke="#D55E00" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M92.0,250.0 L762.9,250.0 Q784.9,250.0 800.5,234.4 L859.3,175.6 Q874.9,160.0 896.9,160.0 L1005.9,160.0 Q1027.9,160.0 1027.9,182.0 L1027.9,228.0" fill="none" stroke="#009E73" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="155.0" y="237.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="168.0" y="296.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">0. Right tool?</text>
+<text x="168.0" y="313.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">CTCF + a loop question</text>
+<rect x="250.0" y="237.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="263.0" y="216.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">1. Frame it</text>
+<text x="263.0" y="233.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">2 conditions, a few loci</text>
+<rect x="345.0" y="237.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="358.0" y="296.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">2. Get inputs</text>
+<text x="358.0" y="313.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">peaks, genome, Hi-C</text>
+<rect x="440.0" y="237.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="453.0" y="216.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">3. Two files</text>
+<text x="453.0" y="233.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">samplesheet + config</text>
+<rect x="535.0" y="237.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="548.0" y="296.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">4. Check</text>
+<text x="548.0" y="313.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">dry run, test run</text>
+<rect x="630.0" y="237.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="643.0" y="216.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">5. Full run</text>
+<text x="643.0" y="233.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">one sbatch</text>
+<rect x="725.0" y="237.0" width="26" height="36.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="738.0" y="296.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">6. Read output</text>
+<text x="738.0" y="313.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">maps, P(s), APA</text>
+<circle cx="934.9" cy="160.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="934.9" y="126.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">7a. CTCF suffices</text>
+<text x="934.9" y="143.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">stress-test it</text>
+<circle cx="934.9" cy="350.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="934.9" y="386.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">7b. Something else</text>
+<text x="934.9" y="403.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">add it to the model</text>
+<rect x="1016.9" y="223.0" width="36" height="64.0" rx="18.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="1065.9" y="251.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1f2328" text-anchor="start">8. Write it up</text>
+<path d="M27.0,226.0 H60.0 L73.0,239.0 V284.0 H27.0 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M60.0,226.0 V239.0 H73.0" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="22.0" y="253.0" width="56.0" height="18" rx="3" fill="#57606a"/>
+<text x="50.0" y="267.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">IDEA</text>
+<text x="50.0" y="197.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">Start</text>
+<line x1="28" y1="431.8" x2="1203.9" y2="431.8" stroke="#d0d7de" stroke-width="1.5"/>
+<line x1="28" y1="467.8" x2="74" y2="467.8" stroke="#009E73" stroke-width="7" stroke-linecap="round"/>
+<text x="86.0" y="472.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Model reproduces the Hi-C</text>
+<line x1="301.5" y1="467.8" x2="347.5" y2="467.8" stroke="#D55E00" stroke-width="7" stroke-linecap="round"/>
+<text x="359.5" y="472.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Model misses the Hi-C</text>
+<circle cx="555.32" cy="467.8" r="9" fill="#ffffff" stroke="#1f2328" stroke-width="3"/>
+<text x="572.3" y="472.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Step</text>
+<text x="28.0" y="501.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">Stage 7 is a decision: does the model reproduce your Hi-C? If not, add the missing mechanism as a new condition and go back to stage 3.</text>
 </svg>
