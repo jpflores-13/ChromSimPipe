@@ -225,27 +225,48 @@ a spring between the two legs of each cohesin. Saving thousands of 3D snapshots
 and counting which beads touch gives a simulated contact map with the same
 layout as a Hi-C map.
 
-ChromSimPipe wraps that in a Snakemake workflow. Every box below is a
-**rule**: a step that Snakemake runs as its own SLURM job.
+ChromSimPipe wraps that in a Snakemake workflow. Every station on the map
+below is a **rule**: a step that Snakemake runs as its own SLURM job. Read it
+like a subway map, left to right. The blue line is the main path, from the
+samplesheet through CTCF orientation to the GPU simulations and their
+analysis. The green line builds the cohesin model once before any simulation
+starts. The orange line converts the Hi-C, which joins only at the analysis
+step: it is used for the comparison, never for the simulation. The dashed
+pink line is optional: it runs only for conditions that give each CTCF site
+its own strength from its ChIP occupancy (`ctcf_capture: {by: occupancy}`),
+reading the CTCF bigWig named in the samplesheet. The grey text
+under each station is the tool it runs, and the file icons are the main
+outputs.
 
-```{mermaid}
-flowchart TD
-  S["ChromSimSamplesheet.txt<br/>(CTCF peaks, Hi-C, optional factor peaks)"] --> P
-  C["config/ChromSimConfig.yaml<br/>(loci, conditions, physics)"] --> P
-  P["configs/parameters.py<br/>(reads both)"] --> HIC["convertHic<br/>.hic / .mcool / .cool → .cool"]
-  P --> MOT["getMotif<br/>JASPAR MA0139.1"]
-  P --> PREP["preparePolysim<br/>build cohesin model once"]
-  MOT --> OR["orientCTCF (per locus × sample)<br/>FIMO strand → oriented BED"]
-  OR --> VAL["validateCTCF (per locus)"]
-  VAL --> SIM["simulateShard (GPU)<br/>locus × condition × replicate × shard"]
-  VAL -.-> OCC["ctcfOccupancy (per locus × sample)<br/>only for ctcf_capture {by: occupancy}"]
-  OCC -.-> SIM
-  PREP --> SIM
-  SIM --> MER["mergeShards<br/>locus × condition × replicate"]
-  MER --> ANA["analyzeCondition<br/>contact map, P(s), APA, Hi-C comparison"]
-  HIC --> ANA
-  ANA --> BEN["benchmarkSummary"]
+![The ChromSimPipe workflow as a subway map: one station per Snakemake rule, with the tool each rule runs and its main output files.](images/chromsimpipe_subway.svg){#fig-subway fig-alt="Subway map of the ChromSimPipe workflow. From the samplesheet, the blue main line runs through getMotif, orientCTCF (output: oriented CTCF BED), validateCTCF, simulateShard (polysim on a GPU), mergeShards and analyzeCondition (output: contact maps and metrics) to benchmarkSummary. A green line, preparePolysim, joins at simulateShard. An orange line, convertHic (output: Hi-C .cool), joins at analyzeCondition. A dashed pink optional line, ctcfOccupancy (output: site occupancy table), leaves orientCTCF and joins at simulateShard."}
+
+The rule-level steps repeat many times in a run. `orientCTCF` runs once per
+locus × CTCF sample (and so does `ctcfOccupancy`, when a condition needs it),
+`simulateShard` once per locus × condition × replicate ×
+shard, `mergeShards` once per locus × condition × replicate, and
+`analyzeCondition` once per locus × condition. `convertHic`, `getMotif`,
+`preparePolysim` and `benchmarkSummary` run once per run (`convertHic` once
+per Hi-C sample).
+
+::: {.callout-note collapse="true"}
+## How this map was made
+
+The map was drawn with [slitherFlow](https://github.com/mikemartinez99/slitherFlow)
+from the workflow's rule graph, then labelled by hand. The rule graph
+(`docs/images/chromsimpipe_rulegraph.dot`) follows the `input:` / `output:`
+wiring in `workflows/ChromSimPipe.snakefile`. The layout, names and tools are
+in `docs/images/chromsimpipe_subway.yaml`. After you add or rewire a rule,
+update both files, then redraw the map from the repo root with:
+
+```{bash}
+#| eval: false
+slitherflow render docs/images/chromsimpipe_subway.yaml -o docs/images/chromsimpipe_subway.svg
 ```
+
+`slitherflow render` reads the YAML spec and writes the SVG next to it. It
+also prints any labels or lines that overlap, which you can fix in the spec
+with `row:`, `x:` or `gap:`.
+:::
 
 Two details matter for understanding the outputs:
 

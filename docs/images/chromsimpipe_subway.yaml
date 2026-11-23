@@ -1,0 +1,57 @@
+# slitherFlow spec for the ChromSimPipe subway map (docs/images/chromsimpipe_subway.svg).
+# Rebuild: slitherflow render docs/images/chromsimpipe_subway.yaml -o docs/images/chromsimpipe_subway.svg
+# Drafted from docs/images/chromsimpipe_rulegraph.dot with `slitherflow draft`, then edited by hand.
+
+title: "ChromSimPipe"
+subtitle: "Cohesin loop extrusion  ·  Snakemake"
+input: {label: "Samplesheet", sublabel: "peaks · Hi-C", file: "TSV"}
+
+trunk:
+  stations:
+    - {name: "getMotif", tool: "JASPAR MA0139.1"}
+    - name: "orientCTCF"
+      tool: "FIMO · bedtools"
+      outputs: [{file: "BED", label: "Oriented CTCF", dy: -100}]
+    - {name: "validateCTCF", tool: "Python"}
+  lines: [sim]
+
+lines:
+  sim:
+    name: "Simulation (per locus × condition)"
+    color: "#0072B2"
+    row: 0
+    to: terminus
+    stations:
+      - {name: "simulateShard", tool: "polysim · GPU", gap: 40, label: below}
+      - {name: "mergeShards", tool: "Python"}
+      - name: "analyzeCondition"
+        tool: "Python"
+        outputs: [{file: "NPY", label: "Contact maps, metrics"}]
+  hic:
+    name: "Hi-C (comparison only)"
+    color: "#D55E00"
+    from: input
+    row: -2.6
+    to: {line: sim, station: "analyzeCondition"}
+    stations:
+      - {name: "convertHic", tool: "hic2cool · cooler", outputs: [{file: "COOL", label: "Hi-C at resolution"}]}
+  occupancy:
+    name: "Per-site CTCF strength (optional)"
+    color: "#CC79A7"
+    optional: true
+    from: "orientCTCF"
+    row: 1.2
+    to: {line: sim, station: "simulateShard"}
+    stations:
+      - {name: "ctcfOccupancy", tool: "pyBigWig", outputs: [{file: "TSV", label: "Site occupancy", label_side: left}]}
+  polysim:
+    name: "Model build"
+    color: "#009E73"
+    from: input
+    row: -1.4
+    to: {line: sim, station: "simulateShard"}
+    stations:
+      - {name: "preparePolysim", tool: "Cython"}
+
+terminus: {name: "benchmarkSummary", sublabel: "run time · memory", row: 0, file: "TSV"}
+footnote: "ctcfOccupancy runs only for conditions with ctcf_capture: {by: occupancy}, reading the samplesheet's CTCF_BigWig. getMotif is skipped when ctcf_motif.meme names a local motif file. simulateShard also reads factor peak files from the samplesheet when a condition uses sticky, loading or pausing options. Hi-C (.hic, .mcool or .cool) is used only to compare with the simulations; it never enters them."
