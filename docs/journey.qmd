@@ -15,7 +15,7 @@ files described in Stage 2.
 
 ## The route at a glance
 
-![The route through a ChromSimPipe project as a subway map. Stages 0–6 run along a shared line; at stage 7 the route splits on whether the model reproduces your Hi-C, and both branches end at stage 8. (Click the map to enlarge it.)](images/journey_subway.svg){#fig-journey .column-page .lightbox fig-alt="Subway map of a ChromSimPipe project. A shared line runs through stages 0 to 6: right tool, frame the question, get the inputs ready, fill in two files, check with a dry run and test run, full run, read the output. It then splits: a green line for when the model reproduces the Hi-C (7a, CTCF is sufficient, stress-test it) and an orange line for when it misses (7b, something else is involved, add it to the model). Both end at stage 8, write it up."}
+![The route through a ChromSimPipe project as a subway map. Stages 0–6 run along a shared line; at stage 7 the route splits on whether the model reproduces your Hi-C, and both branches end at stage 8. (Click the map to enlarge it.)](images/journey_subway.svg){#fig-journey .lightbox fig-alt="Subway map of a ChromSimPipe project. A shared line runs through stages 0 to 6: right tool, frame the question, get the inputs ready, fill in two files, check with a dry run and test run, full run, read the output. It then splits: a green line for when the model reproduces the Hi-C (7a, CTCF is sufficient, stress-test it) and an orange line for when it misses (7b, something else is involved, add it to the model). Both end at stage 8, write it up."}
 
 Stage 7 is the fork: the green line is the route when the model reproduces
 your Hi-C, the orange one when it doesn't. When it doesn't, you add the

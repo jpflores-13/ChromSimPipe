@@ -274,17 +274,19 @@ dies without cleanup, the lock persists and the next run refuses to start.
 |------|------|--------------|
 | `convertHic` | per Hi-C sample | `scripts/prepare_hic.py`: `.hic` (hic2cool), `.mcool` or `.cool` → one `.cool` at `resolution` |
 | `getMotif` | once | `wget` the JASPAR motif (skipped when `ctcf_motif.meme` is set) |
-| `orientCTCF` | per CTCF sample used by a condition | `extract_ctcf_sites.py` |
-| `validateCTCF` | once | `validate_ctcf.py`: sanity-checks all BED files |
-| `ctcfOccupancy` | per CTCF sample used by a `ctcf_capture: {by: occupancy}` condition | `ctcf_occupancy.py`: per-site occupancy from the ChIP bigWig, minus input when given (env `envs/ctcf_occupancy.yml`, config key `condaEnvs: occupancy`, optional) |
-| `simulateShard` | condition × replicate × shard (GPU) | `run_simulation_shard.py`: 18 jobs with the example config |
-| `mergeShards` | condition × replicate | `merge_shards.py`: concatenates shard HDF5 streams |
-| `analyzeCondition` | per condition | `run_analysis_all.py`: contact maps, P(s), APA, figures |
+| `preparePolysim` | once | imports polysim so its Cython cohesin model is built once, before the shards |
+| `orientCTCF` | per locus × CTCF sample used by a condition | `extract_ctcf_sites.py` |
+| `validateCTCF` | per locus | `validate_ctcf.py`: sanity-checks all BED files |
+| `ctcfOccupancy` | per locus × CTCF sample used by a `ctcf_capture: {by: occupancy}` condition | `ctcf_occupancy.py`: per-site occupancy from the ChIP bigWig, minus input when given (env `envs/ctcf_occupancy.yml`, config key `condaEnvs: occupancy`, optional) |
+| `simulateShard` | locus × condition × replicate × shard (GPU) | `run_simulation_shard.py`: 18 jobs per locus with the example config |
+| `mergeShards` | locus × condition × replicate | `merge_shards.py`: concatenates shard HDF5 streams; deletes the shard folders afterwards (`cleanup.shards`) |
+| `analyzeCondition` | locus × condition | `run_analysis_all.py`: contact maps, P(s), APA, figures; deletes the merged trajectories afterwards (`cleanup.blocks`) |
 | `benchmarkSummary` | once | `workflows/utils/benchmarking.py` |
 
 Every rule has the same parts, following bagPipes:
 
-- `log:`: stdout / stderr to `output/logs/{rule}_{wildcards}.out|.err`
+- `log:`: stdout / stderr to `output/logs/{locus}/{rule}_{wildcards}.out|.err`
+  (steps shared by all loci: `output/logs/{rule}_{wildcards}.out|.err`)
 - `benchmark:`: `output/benchmarks/{rule}_{wildcards}.tsv` (wall time,
   memory), summarised in `output/{runName}_benchmarking.tsv`
 - `conda:`: an entry from `condaEnvs` in the config; the shell runs scripts
@@ -753,16 +755,22 @@ Longleaf.
   `output/loci/<locus>/sims/<params_name>_ctcf-<ctcf_type>_rep<N>_shard<S>/`. Merged:
   `output/loci/<locus>/sims/merged_<params_name>_ctcf-<ctcf_type>_rep<N>/`. The
   `_ctcf-<type>` part separates runs with the same cohesin params but
-  different CTCF tracks.
+  different CTCF tracks. By default (`cleanup:` in the config) the shard
+  folders are deleted after merging, and the merged `blocks_*.h5` after the
+  analysis; the analysis results stay.
 - **RNG seed.** `seed_base + replicate * 10000 + shard * 1000`
   (`seed_base` = 42 in the config). Always derived from indices so reruns
   are reproducible.
 - **Every run writes `params.json`** with the full parameter dict + CTCF
   type + replicate. If a result looks wrong, check `params.json` first.
 - **Completion markers.** Snakemake tracks simulation, merge, and analysis
-  steps through `.done` files in `output/done/`. Delete the relevant
-  `.done` file if you need to re-run a step (for example after changing a
-  parameter that only the scripts read).
+  steps through `.done` files in `output/loci/<locus>/done/`
+  (`preparePolysim.done` is in `output/done/`). Delete the relevant `.done`
+  file if you need to re-run a step (for example after changing a parameter
+  that only the scripts read). With the default `cleanup:` settings the
+  shard folders and merged trajectories are deleted once used, so re-running
+  `mergeShards` or `analyzeCondition` means re-running the simulations too;
+  set `cleanup.blocks: false` before a run you may want to re-analyse.
 
 ## Common pitfalls
 
@@ -779,7 +787,7 @@ the GPU node's NVIDIA driver supports. `nvidia-smi` on a GPU node prints
 
 **No Hi-C comparison in the analysis output.** The analysis catches errors in
 each step, logs a warning and continues, so check
-`output/logs/analyzeCondition_*.err` for `WARNING`. A missing normalization
+`output/logs/<locus>/analyzeCondition_*.err` for `WARNING`. A missing normalization
 column (`no 'KR' normalization`) is fixed with `analysis.hic_balance` (`auto`, or a column it lists).
 
 **Snakemake lock error after a failed run.** Run `bash unlock.sh`, then
@@ -799,7 +807,7 @@ every column named in `fileNamesFrom`.
 
 **Analysis fails with "No results found".** Check that
 `output/loci/<locus>/sims/merged_*_rep*/` directories exist. If shards completed but the
-merged directory is missing, delete `output/done/mergeShards_<condition>_rep<N>.done`
+merged directory is missing, delete `output/loci/<locus>/done/mergeShards_<condition>_rep<N>.done`
 and resubmit.
 
 **No emails.** Check `$CHROMSIM_EMAIL` is set in the shell you submit from
@@ -818,6 +826,26 @@ clusters (Longleaf among them) refuse to load a `python` module and an
 `env.sh`; it brings its own Python.
 
 **Where the logs are.** Each job's stdout / stderr:
-`output/logs/<rule>_<wildcards>.out|.err`. SLURM's own job logs:
+`output/logs/<locus>/<rule>_<wildcards>.out|.err` (steps shared by all loci,
+such as `convertHic`, log to `output/logs/`). SLURM's own job logs:
 `output/logs_slurm/`. The launcher (main Snakemake process):
 `ChromSimPipe-<jobid>.out` in the repo root.
+
+## Rebuilding this guide
+
+`CODE_GUIDE.html` and `CODE_GUIDE.pdf` are built from this file. After
+editing it, rebuild both from the repo root. The HTML comes from pandoc, with
+the subway map built into the file and the extra styles in
+`docs/code-guide-style.html` (which keep long table entries on the page)
+added to pandoc's own:
+
+```bash
+pandoc CODE_GUIDE.md -s --toc --toc-depth=2 --embed-resources --resource-path=. -H docs/code-guide-style.html -o CODE_GUIDE.html
+```
+
+The PDF is that HTML printed by headless Chrome, without a header or footer
+(the path below is Chrome's location on a Mac):
+
+```bash
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --no-pdf-header-footer --print-to-pdf=CODE_GUIDE.pdf "file://$PWD/CODE_GUIDE.html"
+```

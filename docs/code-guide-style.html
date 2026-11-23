@@ -1,0 +1,9 @@
+<!-- Extra styles for CODE_GUIDE.html / CODE_GUIDE.pdf, added on top of pandoc's
+     defaults (see "Rebuilding this guide" at the end of CODE_GUIDE.md).
+     Tables with long file paths wrap inside the page instead of running off it. -->
+<style>
+table { table-layout: fixed; width: 100%; }
+td, th { overflow-wrap: anywhere; }
+td code, th code { word-break: break-all; white-space: pre-wrap; }
+img { max-width: 100%; height: auto; }
+</style>

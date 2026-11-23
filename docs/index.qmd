@@ -42,7 +42,7 @@ orientation runs per locus; the simulation runs per locus × condition ×
 replicate × shard on a GPU; the analysis writes to
 `output/loci/{locus}/analysis/{condition}/`.
 
-![The ChromSimPipe workflow as a subway map: one station per Snakemake rule. The dashed pink line runs only for conditions with `ctcf_capture: {by: occupancy}`. (Click the map to enlarge it.)](images/chromsimpipe_subway.svg){.column-page .lightbox fig-alt="Subway map of the ChromSimPipe workflow, one station per Snakemake rule: getMotif, orientCTCF, validateCTCF, simulateShard, mergeShards, analyzeCondition and benchmarkSummary on the main line; preparePolysim and convertHic joining it; and an optional ctcfOccupancy line."}
+![The ChromSimPipe workflow as a subway map: one station per Snakemake rule. The dashed pink line runs only for conditions with `ctcf_capture: {by: occupancy}`. (Click the map to enlarge it.)](images/chromsimpipe_subway.svg){.lightbox fig-alt="Subway map of the ChromSimPipe workflow, one station per Snakemake rule: getMotif, orientCTCF, validateCTCF, simulateShard, mergeShards, analyzeCondition and benchmarkSummary on the main line; preparePolysim and convertHic joining it; and an optional ctcfOccupancy line."}
 
 The [vignette](vignette.qmd#how-chromsimpipe-turns-this-into-a-simulation)
 explains how to read the map.

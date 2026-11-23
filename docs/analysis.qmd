@@ -79,9 +79,10 @@ at TAD boundaries and loop anchors validates the model.
 
 `scripts/run_analysis_all.py` is the single entry point. To add a metric:
 
-1. Add a function to `scripts/analysis/` (or to `run_analysis_all.py` directly
-   for simple cases)
-2. Call it inside the `analyze_condition()` function
+1. Add a function to a module in `analysis/` (or to `run_analysis_all.py`
+   directly for simple cases)
+2. Call it from `run_analysis_one()` (each replicate) or from the pooled steps
+   that `pool_replicates()` runs (each condition)
 3. Write outputs to `output/loci/{locus}/analysis/{condition}/`
 
 Snakemake's `analyzeCondition` rule tracks a completion marker in

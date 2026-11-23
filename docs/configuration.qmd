@@ -37,7 +37,11 @@ ctcf_motif:
 
 resolution:   1000             # bp per monomer
 n_replicates: 3
-n_shards:     4
+n_shards:     2
+
+cleanup:                       # delete what nothing downstream reads (both default true)
+  shards: true                 # per-shard folders, once merged
+  blocks: true                 # merged trajectories, once the condition is analysed
 
 hpcProfile: 'profiles/longleaf'   # compute site: profiles/<site>/{config.yaml, env.sh}
 notify:                        # emails at workflow start / success / error
@@ -47,6 +51,7 @@ notify:                        # emails at workflow start / success / error
 condaEnvs:                     # env file, env name, or env path
   sim:  'envs/cohesin_sim.yml'   # or both: an env built from envs/chromsimpipe_all.yml
   ctcf: 'envs/ctcf_extraction.yml'
+  # occupancy: 'envs/ctcf_occupancy.yml'   # optional; this is the default
 
 loci:       [{name, chrom, region_start, region_end, label, anchor_bp}, ...]
 conditions: [...]              # see below; each is simulated at every locus
@@ -79,6 +84,21 @@ polysim must be importable in the simulation environment; the workflow stops
 otherwise. Oriented CTCF BEDs must exist before simulation; there are no
 placeholder sites.
 :::
+
+## Disk usage: `cleanup:`
+
+Simulation trajectories take most of the space (hundreds of GB per locus).
+By default the pipeline deletes them once nothing reads them again:
+
+| Key | Default | Deletes | When |
+|-----|---------|---------|------|
+| `cleanup.shards` | `true` | the per-shard folders under `sims/` | after `mergeShards` has written the merged folder |
+| `cleanup.blocks` | `true` | the merged `blocks_*.h5` trajectories | after `analyzeCondition` succeeds; contact maps, P(s), APA and the other results in `analysis/` stay |
+
+With the defaults, re-running the analysis of a finished condition means
+re-running its simulations. Set `blocks: false` before a run whose
+trajectories you may want to re-analyse later, for example with new
+analysis code. Leaving either key out counts as `true`.
 
 ## The `polysim:` block
 

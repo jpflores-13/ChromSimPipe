@@ -84,6 +84,7 @@ Edit `config/ChromSimConfig.yaml`. The fields most runs change:
 | `polysim` | Simulation model settings (bootcamp defaults) |
 | `conditions` | One entry per simulation; `ctcf_type` / `compare_hic` name samples |
 | `n_replicates`, `n_shards` | Simulations per condition and GPU jobs per simulation |
+| `cleanup` | Delete shard folders and trajectories once used (both on by default); see [Disk usage](configuration.qmd#disk-usage-cleanup) |
 | `condaEnvs` | Env file, env name, or env path for each rule group |
 
 See [Configuration](configuration.qmd) for every field.

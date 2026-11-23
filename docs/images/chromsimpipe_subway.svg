@@ -1,95 +1,90 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 868" width="1220" height="868">
-<rect width="1220" height="868" fill="#ffffff"/>
-<text x="28.0" y="56.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2328" text-anchor="start">ChromSimPipe</text>
-<text x="28.0" y="84.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#59636e" text-anchor="start">Cohesin loop extrusion  ·  Snakemake</text>
-<path d="M92.0,459.0 L430.2,459.0 Q452.2,459.0 474.2,459.0 L991.4,459.0" fill="none" stroke="#0072B2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M66.0,425.0 L66.0,182.0 Q66.0,160.0 88.0,160.0 L583.4,160.0 Q605.4,160.0 620.9,175.6 L896.4,451.0" fill="none" stroke="#ffffff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M66.0,425.0 L66.0,182.0 Q66.0,160.0 88.0,160.0 L583.4,160.0 Q605.4,160.0 620.9,175.6 L896.4,451.0" fill="none" stroke="#D55E00" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M299.0,472.0 L299.0,598.0 Q299.0,620.0 321.0,620.0 L487.5,620.0 Q509.5,620.0 525.1,604.4 L662.5,467.0" fill="none" stroke="#ffffff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M299.0,472.0 L299.0,598.0 Q299.0,620.0 321.0,620.0 L487.5,620.0 Q509.5,620.0 525.1,604.4 L662.5,467.0" fill="none" stroke="#CC79A7" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="16 9"/>
-<path d="M66.0,425.0 L66.0,320.0 Q66.0,298.0 88.0,298.0 L487.5,298.0 Q509.5,298.0 525.1,313.6 L662.5,451.0" fill="none" stroke="#ffffff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M66.0,425.0 L66.0,320.0 Q66.0,298.0 88.0,298.0 L487.5,298.0 Q509.5,298.0 525.1,313.6 L662.5,451.0" fill="none" stroke="#009E73" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-<rect x="171.0" y="446.0" width="26" height="26.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="184.0" y="495.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">getMotif</text>
-<text x="184.0" y="512.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">JASPAR MA0139.1</text>
-<rect x="286.0" y="446.0" width="26" height="26.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="299.0" y="425.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">orientCTCF</text>
-<text x="299.0" y="442.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">FIMO · bedtools</text>
-<rect x="401.0" y="446.0" width="26" height="26.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="414.0" y="495.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">validateCTCF</text>
-<text x="414.0" y="512.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">Python</text>
-<circle cx="670.5" cy="459.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="670.5" y="495.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">simulateShard</text>
-<text x="670.5" y="512.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">polysim · GPU</text>
-<circle cx="780.9" cy="459.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="780.9" y="495.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">mergeShards</text>
-<text x="780.9" y="512.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">Python</text>
-<circle cx="904.4" cy="459.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="904.4" y="495.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">analyzeCondition</text>
-<text x="904.4" y="512.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">Python</text>
-<circle cx="238.5" cy="160.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="238.5" y="126.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">convertHic</text>
-<text x="238.5" y="143.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">hic2cool · cooler</text>
-<circle cx="471.5" cy="620.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="471.5" y="656.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">ctcfOccupancy</text>
-<text x="471.5" y="673.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">pyBigWig</text>
-<circle cx="238.5" cy="298.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="238.5" y="264.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">preparePolysim</text>
-<text x="238.5" y="281.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">Cython</text>
-<rect x="987.4" y="428.0" width="34" height="62.0" rx="17.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
-<text x="1034.3" y="455.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#1f2328" text-anchor="start">benchmarkSummary</text>
-<text x="1034.3" y="474.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">run time · memory</text>
-<path d="M27.0,430.0 H60.0 L73.0,443.0 V488.0 H27.0 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<path d="M60.0,430.0 V443.0 H73.0" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<rect x="22.0" y="457.0" width="56.0" height="18" rx="3" fill="#57606a"/>
-<text x="50.0" y="471.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">TSV</text>
-<text x="50.0" y="510.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">Samplesheet</text>
-<text x="50.0" y="526.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">peaks · Hi-C</text>
-<path d="M290.6,447.8 L248.8,392.0" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
-<path d="M201.0,330.0 H234.0 L247.0,343.0 V388.0 H201.0 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<path d="M234.0,330.0 V343.0 H247.0" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<rect x="196.0" y="357.0" width="56.0" height="18" rx="3" fill="#0072B2"/>
-<text x="224.0" y="371.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">BED</text>
-<text x="190.0" y="363.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="end">Oriented</text>
-<text x="190.0" y="379.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="end">CTCF</text>
-<path d="M913.4,449.7 L937.4,424.9" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
-<path d="M941.4,368.0 H974.4 L987.4,381.0 V426.0 H941.4 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<path d="M974.4,368.0 V381.0 H987.4" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<rect x="936.4" y="395.0" width="56.0" height="18" rx="3" fill="#0072B2"/>
-<text x="964.4" y="409.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">NPY</text>
-<text x="998.4" y="393.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">Contact maps,</text>
-<text x="998.4" y="409.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">metrics</text>
-<path d="M238.5,173.0 L238.5,189.0" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
-<path d="M215.5,193.0 H248.5 L261.5,206.0 V251.0 H215.5 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<path d="M248.5,193.0 V206.0 H261.5" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<rect x="210.5" y="220.0" width="56.0" height="18" rx="3" fill="#D55E00"/>
-<text x="238.5" y="234.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">COOL</text>
-<text x="272.5" y="218.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">Hi-C at</text>
-<text x="272.5" y="234.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">resolution</text>
-<path d="M471.5,607.0 L471.5,591.0" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
-<path d="M448.5,529.0 H481.5 L494.5,542.0 V587.0 H448.5 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<path d="M481.5,529.0 V542.0 H494.5" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<rect x="443.5" y="556.0" width="56.0" height="18" rx="3" fill="#CC79A7"/>
-<text x="471.5" y="570.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">TSV</text>
-<text x="437.5" y="562.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="end">Site</text>
-<text x="437.5" y="578.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="end">occupancy</text>
-<path d="M1027.5,485.3 L1051.3,512.4" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
-<path d="M1055.3,514.0 H1088.3 L1101.3,527.0 V572.0 H1055.3 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<path d="M1088.3,514.0 V527.0 H1101.3" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
-<rect x="1050.3" y="541.0" width="56.0" height="18" rx="3" fill="#0072B2"/>
-<text x="1078.3" y="555.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">TSV</text>
-<line x1="28" y1="701.8" x2="1192.1" y2="701.8" stroke="#d0d7de" stroke-width="1.5"/>
-<line x1="28" y1="737.8" x2="74" y2="737.8" stroke="#0072B2" stroke-width="7" stroke-linecap="round"/>
-<text x="86.0" y="742.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Simulation (per locus × condition)</text>
-<line x1="368.28" y1="737.8" x2="414.28" y2="737.8" stroke="#D55E00" stroke-width="7" stroke-linecap="round"/>
-<text x="426.3" y="742.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Hi-C (comparison only)</text>
-<line x1="619.52" y1="737.8" x2="665.52" y2="737.8" stroke="#CC79A7" stroke-width="7" stroke-linecap="round" stroke-dasharray="16 9"/>
-<text x="677.5" y="742.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Per-site CTCF strength (optional)</text>
-<line x1="952.38" y1="737.8" x2="998.38" y2="737.8" stroke="#009E73" stroke-width="7" stroke-linecap="round"/>
-<text x="1010.4" y="742.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Model build</text>
-<circle cx="38" cy="767.8" r="9" fill="#ffffff" stroke="#1f2328" stroke-width="3"/>
-<text x="55.0" y="772.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Step</text>
-<text x="28.0" y="801.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">ctcfOccupancy runs only for conditions with ctcf_capture: {by: occupancy}, reading the samplesheet's CTCF_BigWig. getMotif is skipped when ctcf_motif.meme names a local motif</text>
-<text x="28.0" y="819.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">file. simulateShard also reads factor peak files from the samplesheet when a condition uses sticky, loading or pausing options. Hi-C (.hic, .mcool or .cool) is used only to</text>
-<text x="28.0" y="837.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">compare with the simulations; it never enters them.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1090 845" width="1090" height="845">
+<rect width="1090" height="845" fill="#ffffff"/>
+<text x="24.0" y="56.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2328" text-anchor="start">ChromSimPipe</text>
+<text x="24.0" y="84.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="400" fill="#59636e" text-anchor="start">Cohesin loop extrusion  ·  Snakemake</text>
+<path d="M88.0,436.0 L384.2,436.0 Q406.2,436.0 428.2,436.0 L996.1,436.0" fill="none" stroke="#0072B2" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M62.0,402.0 L62.0,182.0 Q62.0,160.0 84.0,160.0 L552.9,160.0 Q574.9,160.0 590.4,175.6 L842.9,428.0" fill="none" stroke="#ffffff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M62.0,402.0 L62.0,182.0 Q62.0,160.0 84.0,160.0 L552.9,160.0 Q574.9,160.0 590.4,175.6 L842.9,428.0" fill="none" stroke="#D55E00" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M268.0,449.0 L268.0,575.0 Q268.0,597.0 290.0,597.0 L434.0,597.0 Q456.0,597.0 471.6,581.4 L609.0,444.0" fill="none" stroke="#ffffff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M268.0,449.0 L268.0,575.0 Q268.0,597.0 290.0,597.0 L434.0,597.0 Q456.0,597.0 471.6,581.4 L609.0,444.0" fill="none" stroke="#CC79A7" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="16 9"/>
+<path d="M62.0,402.0 L62.0,343.0 Q62.0,321.0 84.0,321.0 L480.0,321.0 Q502.0,321.0 517.6,336.6 L609.0,428.0" fill="none" stroke="#ffffff" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M62.0,402.0 L62.0,343.0 Q62.0,321.0 84.0,321.0 L480.0,321.0 Q502.0,321.0 517.6,336.6 L609.0,428.0" fill="none" stroke="#009E73" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="155.0" y="423.0" width="26" height="26.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="168.0" y="472.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">getMotif</text>
+<text x="168.0" y="489.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">JASPAR MA0139.1</text>
+<rect x="255.0" y="423.0" width="26" height="26.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="268.0" y="402.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">orientCTCF</text>
+<text x="268.0" y="419.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">FIMO · bedtools</text>
+<rect x="355.0" y="423.0" width="26" height="26.0" rx="13.0" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="368.0" y="472.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">validateCTCF</text>
+<text x="368.0" y="489.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">Python</text>
+<circle cx="617.0" cy="436.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="617.0" y="472.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">simulateShard</text>
+<text x="617.0" y="489.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">polysim · GPU</text>
+<circle cx="727.4" cy="436.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="727.4" y="472.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">mergeShards</text>
+<text x="727.4" y="489.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">Python</text>
+<circle cx="850.9" cy="436.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="850.9" y="472.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">analyzeCondition</text>
+<text x="850.9" y="489.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">Python</text>
+<circle cx="996.1" cy="436.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="996.1" y="472.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">benchmarkSummary</text>
+<text x="996.1" y="489.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">run time · memory</text>
+<circle cx="212.0" cy="160.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="212.0" y="126.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">convertHic</text>
+<text x="212.0" y="143.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">hic2cool · cooler</text>
+<circle cx="418.0" cy="597.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="418.0" y="633.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">ctcfOccupancy</text>
+<text x="418.0" y="650.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">pyBigWig</text>
+<circle cx="212.0" cy="321.0" r="11" fill="#ffffff" stroke="#1f2328" stroke-width="3.2"/>
+<text x="212.0" y="287.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">preparePolysim</text>
+<text x="212.0" y="304.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">Cython</text>
+<path d="M23.0,407.0 H56.0 L69.0,420.0 V465.0 H23.0 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M56.0,407.0 V420.0 H69.0" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="18.0" y="434.0" width="56.0" height="18" rx="3" fill="#57606a"/>
+<text x="46.0" y="448.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">TSV</text>
+<text x="46.0" y="487.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#1f2328" text-anchor="middle">Samplesheet</text>
+<text x="46.0" y="503.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="middle">peaks · Hi-C</text>
+<path d="M258.4,425.8 L220.0,384.8" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
+<path d="M170.0,327.0 H203.0 L216.0,340.0 V385.0 H170.0 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M203.0,327.0 V340.0 H216.0" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="165.0" y="354.0" width="56.0" height="18" rx="3" fill="#0072B2"/>
+<text x="193.0" y="368.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">BED</text>
+<text x="159.0" y="360.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="end">Oriented</text>
+<text x="159.0" y="376.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="end">CTCF</text>
+<path d="M859.9,426.7 L883.9,401.9" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
+<path d="M887.9,345.0 H920.9 L933.9,358.0 V403.0 H887.9 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M920.9,345.0 V358.0 H933.9" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="882.9" y="372.0" width="56.0" height="18" rx="3" fill="#0072B2"/>
+<text x="910.9" y="386.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">NPY</text>
+<text x="944.9" y="370.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">Contact maps,</text>
+<text x="944.9" y="386.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">metrics</text>
+<path d="M212.0,173.0 L212.0,189.0" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
+<path d="M189.0,193.0 H222.0 L235.0,206.0 V251.0 H189.0 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M222.0,193.0 V206.0 H235.0" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="184.0" y="220.0" width="56.0" height="18" rx="3" fill="#D55E00"/>
+<text x="212.0" y="234.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">COOL</text>
+<text x="246.0" y="218.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">Hi-C at</text>
+<text x="246.0" y="234.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">resolution</text>
+<path d="M418.0,584.0 L418.0,568.0" fill="none" stroke="#8c959f" stroke-width="2" stroke-dasharray="2 4" stroke-linecap="round"/>
+<path d="M395.0,506.0 H428.0 L441.0,519.0 V564.0 H395.0 Z" fill="#ffffff" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<path d="M428.0,506.0 V519.0 H441.0" fill="none" stroke="#1f2328" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="390.0" y="533.0" width="56.0" height="18" rx="3" fill="#CC79A7"/>
+<text x="418.0" y="547.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="11" font-weight="700" fill="#ffffff" text-anchor="middle">TSV</text>
+<text x="384.0" y="539.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="end">Site</text>
+<text x="384.0" y="555.0" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="end">occupancy</text>
+<line x1="24" y1="678.8" x2="1065.7" y2="678.8" stroke="#d0d7de" stroke-width="1.5"/>
+<line x1="24" y1="714.8" x2="70" y2="714.8" stroke="#0072B2" stroke-width="7" stroke-linecap="round"/>
+<text x="82.0" y="719.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Simulation (per locus × condition)</text>
+<line x1="364.28" y1="714.8" x2="410.28" y2="714.8" stroke="#D55E00" stroke-width="7" stroke-linecap="round"/>
+<text x="422.3" y="719.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Hi-C (comparison only)</text>
+<line x1="615.52" y1="714.8" x2="661.52" y2="714.8" stroke="#CC79A7" stroke-width="7" stroke-linecap="round" stroke-dasharray="16 9"/>
+<text x="673.5" y="719.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Per-site CTCF strength (optional)</text>
+<line x1="24" y1="744.8" x2="70" y2="744.8" stroke="#009E73" stroke-width="7" stroke-linecap="round"/>
+<text x="82.0" y="749.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Model build</text>
+<circle cx="203.62" cy="744.8" r="9" fill="#ffffff" stroke="#1f2328" stroke-width="3"/>
+<text x="220.6" y="749.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="14" font-weight="400" fill="#1f2328" text-anchor="start">Step</text>
+<text x="24.0" y="778.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">ctcfOccupancy runs only for conditions with ctcf_capture: {by: occupancy}, reading the samplesheet's CTCF_BigWig. getMotif is skipped when ctcf_motif.meme</text>
+<text x="24.0" y="796.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">names a local motif file. simulateShard also reads factor peak files from the samplesheet when a condition uses sticky, loading or pausing options. Hi-C</text>
+<text x="24.0" y="814.8" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="12.5" font-weight="400" fill="#59636e" text-anchor="start">(.hic, .mcool or .cool) is used only to compare with the simulations; it never enters them.</text>
 </svg>

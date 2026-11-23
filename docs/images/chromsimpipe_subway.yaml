@@ -11,7 +11,7 @@ trunk:
     - {name: "getMotif", tool: "JASPAR MA0139.1"}
     - name: "orientCTCF"
       tool: "FIMO · bedtools"
-      outputs: [{file: "BED", label: "Oriented CTCF", dy: -100}]
+      outputs: [{file: "BED", label: "Oriented CTCF", dy: -80}]
     - {name: "validateCTCF", tool: "Python"}
   lines: [sim]
 
@@ -20,18 +20,19 @@ lines:
     name: "Simulation (per locus × condition)"
     color: "#0072B2"
     row: 0
-    to: terminus
+    to: "none"
     stations:
-      - {name: "simulateShard", tool: "polysim · GPU", gap: 40, label: below}
+      - {name: "simulateShard", tool: "polysim · GPU", label: below}
       - {name: "mergeShards", tool: "Python"}
       - name: "analyzeCondition"
         tool: "Python"
         outputs: [{file: "NPY", label: "Contact maps, metrics"}]
+      - {name: "benchmarkSummary", tool: "run time · memory"}
   hic:
     name: "Hi-C (comparison only)"
     color: "#D55E00"
     from: input
-    row: -2.6
+    row: -2.4
     to: {line: sim, station: "analyzeCondition"}
     stations:
       - {name: "convertHic", tool: "hic2cool · cooler", outputs: [{file: "COOL", label: "Hi-C at resolution"}]}
@@ -48,12 +49,11 @@ lines:
     name: "Model build"
     color: "#009E73"
     from: input
-    row: -1.4
+    row: -1.0
     to: {line: sim, station: "simulateShard"}
     stations:
       - {name: "preparePolysim", tool: "Cython"}
 
-terminus: {name: "benchmarkSummary", sublabel: "run time · memory", row: 0, file: "TSV"}
 footnote: "ctcfOccupancy runs only for conditions with ctcf_capture: {by: occupancy}, reading the samplesheet's CTCF_BigWig. getMotif is skipped when ctcf_motif.meme names a local motif file. simulateShard also reads factor peak files from the samplesheet when a condition uses sticky, loading or pausing options. Hi-C (.hic, .mcool or .cool) is used only to compare with the simulations; it never enters them."
 
-style: {spacing: 115, branch_spacing: 110, margin: 28, row_height: 115}
+style: {spacing: 100, branch_spacing: 100, margin: 24, row_height: 115}

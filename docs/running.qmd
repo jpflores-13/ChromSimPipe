@@ -119,6 +119,11 @@ bash unlock.sh                    # release the Snakemake lock
 sbatch ChromSimPipe.sh            # --rerun-incomplete is on by default
 ```
 
+Finished steps are kept. With the default `cleanup:` settings, the shard
+folders and trajectories of finished steps are already deleted, so forcing
+`mergeShards` or `analyzeCondition` to run again also means re-simulating;
+see [Disk usage](configuration.qmd#disk-usage-cleanup).
+
 ### Changing or adding loci
 
 Edit the `loci:` list in the config and resubmit. Each locus is simulated in
@@ -138,7 +143,7 @@ output/
 ├── motifs/{jaspar_id}.meme
 ├── loci/{locus}/
 │   ├── ctcf/ctcf_oriented_{assembly}_{sample}.bed
-│   ├── sims/
+│   ├── sims/                           # trajectories; deleted once used (cleanup:)
 │   │   ├── {params_name}_ctcf-{sample}_rep{N}_shard{M}/   # per-shard GPU output
 │   │   └── merged_{params_name}_ctcf-{sample}_rep{N}/
 │   ├── analysis/{condition}/

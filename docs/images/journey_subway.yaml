@@ -21,14 +21,14 @@ lines:
   yes:
     name: "Model reproduces the Hi-C"
     color: "#009E73"
-    row: -1
+    row: -0.8
     to: terminus
     stations:
       - {name: "7a. CTCF suffices", tool: "stress-test it"}
   no:
     name: "Model misses the Hi-C"
     color: "#D55E00"
-    row: 1
+    row: 0.8
     to: terminus
     stations:
       - {name: "7b. Something else", tool: "add it to the model"}
@@ -36,4 +36,4 @@ lines:
 terminus: {name: "8. Write it up", sublabel: "", row: 0}
 footnote: "Stage 7 is a decision: does the model reproduce your Hi-C? If not, add the missing mechanism as a new condition and go back to stage 3."
 
-style: {spacing: 95, branch_spacing: 110, margin: 28, row_height: 95}
+style: {spacing: 80, branch_spacing: 90, margin: 24, row_height: 85}

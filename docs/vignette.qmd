@@ -238,7 +238,7 @@ reading the CTCF bigWig named in the samplesheet. The grey text
 under each station is the tool it runs, and the file icons are the main
 outputs.
 
-![The ChromSimPipe workflow as a subway map: one station per Snakemake rule, with the tool each rule runs and its main output files. (Click the map to enlarge it.)](images/chromsimpipe_subway.svg){#fig-subway .column-page .lightbox fig-alt="Subway map of the ChromSimPipe workflow. From the samplesheet, the blue main line runs through getMotif, orientCTCF (output: oriented CTCF BED), validateCTCF, simulateShard (polysim on a GPU), mergeShards and analyzeCondition (output: contact maps and metrics) to benchmarkSummary. A green line, preparePolysim, joins at simulateShard. An orange line, convertHic (output: Hi-C .cool), joins at analyzeCondition. A dashed pink optional line, ctcfOccupancy (output: site occupancy table), leaves orientCTCF and joins at simulateShard."}
+![The ChromSimPipe workflow as a subway map: one station per Snakemake rule, with the tool each rule runs and its main output files. (Click the map to enlarge it.)](images/chromsimpipe_subway.svg){#fig-subway .lightbox fig-alt="Subway map of the ChromSimPipe workflow. From the samplesheet, the blue main line runs through getMotif, orientCTCF (output: oriented CTCF BED), validateCTCF, simulateShard (polysim on a GPU), mergeShards and analyzeCondition (output: contact maps and metrics) to benchmarkSummary. A green line, preparePolysim, joins at simulateShard. An orange line, convertHic (output: Hi-C .cool), joins at analyzeCondition. A dashed pink optional line, ctcfOccupancy (output: site occupancy table), leaves orientCTCF and joins at simulateShard."}
 
 The rule-level steps repeat many times in a run. `orientCTCF` runs once per
 locus × CTCF sample (and so does `ctcfOccupancy`, when a condition needs it),
@@ -560,6 +560,7 @@ it, and every job re-reads it. Most of it you never touch. In order:
 | `ctcf_motif` | JASPAR ID, FIMO p-value, window, what to do with motif-less peaks | Rarely |
 | `resolution` | bp per monomer and `.cool` resolution (1000) | Rarely |
 | `n_replicates`, `n_shards` | Independent simulations per condition, GPU jobs per replicate | Cost vs. precision |
+| `cleanup` | Delete shard folders and trajectories once used (both on) | You may want to re-analyse a run later |
 | `hpcProfile`, `notify`, `condaEnvs` | Default compute site, emails, conda envs | Usually never (use env vars) |
 | **`loci`** | **Which genomic windows to simulate** | **Every project** |
 | **`conditions`** | **Which hypotheses to test** | **Every project** |
@@ -932,6 +933,19 @@ sbatch ChromSimPipe.sh
 To force one step to run again (for example after changing a setting only the
 scripts read), delete its `.done` marker and resubmit.
 
+::: {.callout-warning}
+## Trajectories are deleted once they are used
+
+Simulations take hundreds of GB per locus, so by default (`cleanup:` in the
+config) the pipeline deletes the per-shard folders after `mergeShards`, and
+the merged trajectories (`blocks_*.h5`) after `analyzeCondition` succeeds.
+The results in `analysis/` are kept. This means re-running the analysis of a
+finished condition finds nothing to analyse: to redo it, you re-run its
+simulations too. If you expect to re-analyse a run (for example with new
+analysis code), set `cleanup.blocks: false` in the config **before** you
+submit it. See [Disk usage](configuration.qmd#disk-usage-cleanup).
+:::
+
 ## Reading the outputs
 
 Everything is written under `outputDir` (`output/`, under
@@ -946,7 +960,7 @@ output/
 ├── done/preparePolysim.done
 ├── loci/{locus}/
 │   ├── ctcf/ctcf_oriented_hg38_{sample}.bed   oriented CTCF sites in the window
-│   ├── sims/                                  raw simulation output (large)
+│   ├── sims/                                  raw simulation output, deleted once used
 │   ├── analysis/{condition}/                  what you look at
 │   └── done/                                  completion markers
 ├── logs/{locus}/{rule}_{wildcards}.out|.err

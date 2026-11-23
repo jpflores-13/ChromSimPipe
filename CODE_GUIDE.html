@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
 <head>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
@@ -7,228 +7,242 @@
   <meta name="dcterms.date" content="2026-01-01" />
   <title>ChromSimPipe Code Guide</title>
   <style>
-    html {
-      font-size: 11pt;
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      background-color: #1a1a1a;
-      border: none;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
-    code{white-space: pre-wrap;}
-    span.smallcaps{font-variant: small-caps;}
-    div.columns{display: flex; gap: min(4vw, 1.5em);}
-    div.column{flex: auto; overflow-x: auto;}
-    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    /* The extra [class] is a hack that increases specificity enough to
-       override a similar rule in reveal.js */
-    ul.task-list[class]{list-style: none;}
-    ul.task-list li input[type="checkbox"] {
-      font-size: inherit;
-      width: 0.8em;
-      margin: 0 0.8em 0.2em -1.6em;
-      vertical-align: middle;
-    }
-    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
-    /* CSS for syntax highlighting */
-    pre > code.sourceCode { white-space: pre; position: relative; }
-    pre > code.sourceCode > span { line-height: 1.25; }
-    pre > code.sourceCode > span:empty { height: 1.2em; }
-    .sourceCode { overflow: visible; }
-    code.sourceCode > span { color: inherit; text-decoration: inherit; }
-    div.sourceCode { margin: 1em 0; }
-    pre.sourceCode { margin: 0; }
-    @media screen {
-    div.sourceCode { overflow: auto; }
-    }
-    @media print {
-    pre > code.sourceCode { white-space: pre-wrap; }
-    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
-    }
-    pre.numberSource code
-      { counter-reset: source-line 0; }
-    pre.numberSource code > span
-      { position: relative; left: -4em; counter-increment: source-line; }
-    pre.numberSource code > span > a:first-child::before
-      { content: counter(source-line);
-        position: relative; left: -1em; text-align: right; vertical-align: baseline;
-        border: none; display: inline-block;
-        -webkit-touch-callout: none; -webkit-user-select: none;
-        -khtml-user-select: none; -moz-user-select: none;
-        -ms-user-select: none; user-select: none;
-        padding: 0 4px; width: 4em;
-        color: #aaaaaa;
-      }
-    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-    div.sourceCode
-      {   }
-    @media screen {
-    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
-    }
-    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-    code span.at { color: #7d9029; } /* Attribute */
-    code span.bn { color: #40a070; } /* BaseN */
-    code span.bu { color: #008000; } /* BuiltIn */
-    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-    code span.ch { color: #4070a0; } /* Char */
-    code span.cn { color: #880000; } /* Constant */
-    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-    code span.dt { color: #902000; } /* DataType */
-    code span.dv { color: #40a070; } /* DecVal */
-    code span.er { color: #ff0000; font-weight: bold; } /* Error */
-    code span.ex { } /* Extension */
-    code span.fl { color: #40a070; } /* Float */
-    code span.fu { color: #06287e; } /* Function */
-    code span.im { color: #008000; font-weight: bold; } /* Import */
-    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-    code span.op { color: #666666; } /* Operator */
-    code span.ot { color: #007020; } /* Other */
-    code span.pp { color: #bc7a00; } /* Preprocessor */
-    code span.sc { color: #4070a0; } /* SpecialChar */
-    code span.ss { color: #bb6688; } /* SpecialString */
-    code span.st { color: #4070a0; } /* String */
-    code span.va { color: #19177c; } /* Variable */
-    code span.vs { color: #4070a0; } /* VerbatimString */
-    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-  </style>
+
+html {
+font-size: 11pt;
+color: #1a1a1a;
+background-color: #fdfdfd;
+}
+body {
+margin: 0 auto;
+max-width: 36em;
+padding-left: 50px;
+padding-right: 50px;
+padding-top: 50px;
+padding-bottom: 50px;
+hyphens: auto;
+overflow-wrap: break-word;
+text-rendering: optimizeLegibility;
+font-kerning: normal;
+}
+@media (max-width: 600px) {
+body {
+font-size: 0.9em;
+padding: 12px;
+}
+h1 {
+font-size: 1.8em;
+}
+}
+@media print {
+html {
+background-color: white;
+}
+body {
+background-color: transparent;
+color: black;
+font-size: 12pt;
+}
+p, h2, h3 {
+orphans: 3;
+widows: 3;
+}
+h2, h3, h4 {
+page-break-after: avoid;
+}
+}
+p {
+margin: 1em 0;
+}
+a {
+color: #1a1a1a;
+}
+a:visited {
+color: #1a1a1a;
+}
+img {
+max-width: 100%;
+}
+svg {
+height: auto;
+max-width: 100%;
+}
+h1, h2, h3, h4, h5, h6 {
+margin-top: 1.4em;
+}
+h5, h6 {
+font-size: 1em;
+font-style: italic;
+}
+h6 {
+font-weight: normal;
+}
+ol, ul {
+padding-left: 1.7em;
+margin-top: 1em;
+}
+li > ol, li > ul {
+margin-top: 0;
+}
+blockquote {
+margin: 1em 0 1em 1.7em;
+padding-left: 1em;
+border-left: 2px solid #e6e6e6;
+color: #606060;
+}
+code {
+font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+font-size: 85%;
+margin: 0;
+hyphens: manual;
+}
+pre {
+margin: 1em 0;
+overflow: auto;
+}
+pre code {
+padding: 0;
+overflow: visible;
+overflow-wrap: normal;
+}
+.sourceCode {
+background-color: transparent;
+overflow: visible;
+}
+hr {
+border: none;
+border-top: 1px solid #1a1a1a;
+height: 1px;
+margin: 1em 0;
+}
+table {
+margin: 1em 0;
+border-collapse: collapse;
+width: 100%;
+overflow-x: auto;
+display: block;
+font-variant-numeric: lining-nums tabular-nums;
+}
+table caption {
+margin-bottom: 0.75em;
+}
+tbody {
+margin-top: 0.5em;
+border-top: 1px solid #1a1a1a;
+border-bottom: 1px solid #1a1a1a;
+}
+th {
+border-top: 1px solid #1a1a1a;
+padding: 0.25em 0.5em 0.25em 0.5em;
+}
+td {
+padding: 0.125em 0.5em 0.25em 0.5em;
+}
+header {
+margin-bottom: 4em;
+text-align: center;
+}
+#TOC li {
+list-style: none;
+}
+#TOC ul {
+padding-left: 1.3em;
+}
+#TOC > ul {
+padding-left: 0;
+}
+#TOC a:not(:hover) {
+text-decoration: none;
+}
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+
+ul.task-list[class]{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+font-size: inherit;
+width: 0.8em;
+margin: 0 0.8em 0.2em -1.6em;
+vertical-align: middle;
+}
+.display.math{display: block; text-align: center; margin: 0.5rem auto;}
+
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+  <!-- Extra styles for CODE_GUIDE.html / CODE_GUIDE.pdf, added on top of pandoc's
+       defaults (see "Rebuilding this guide" at the end of CODE_GUIDE.md).
+       Tables with long file paths wrap inside the page instead of running off it. -->
+  <style>
+table { table-layout: fixed; width: 100%; }
+td, th { overflow-wrap: anywhere; }
+td code, th code { word-break: break-all; white-space: pre-wrap; }
+img { max-width: 100%; height: auto; }
+</style>
 </head>
 <body>
 <header id="title-block-header">
@@ -238,44 +252,38 @@
 </header>
 <nav id="TOC" role="doc-toc">
 <ul>
-<li><a href="#chromsimpipe-code-guide"
-id="toc-chromsimpipe-code-guide">ChromSimPipe code guide</a>
+<li><a href="#chromsimpipe-code-guide" id="toc-chromsimpipe-code-guide">ChromSimPipe code guide</a>
 <ul>
 <li><a href="#overview" id="toc-overview">Overview</a></li>
-<li><a href="#the-snakemake-pipeline-files"
-id="toc-the-snakemake-pipeline-files">The Snakemake pipeline
+<li><a href="#the-snakemake-pipeline-files" id="toc-the-snakemake-pipeline-files">The Snakemake pipeline
 files</a></li>
 <li><a href="#reading-order" id="toc-reading-order">Reading
 order</a></li>
 <li><a href="#project-layout" id="toc-project-layout">Project
 layout</a></li>
-<li><a href="#configuration-configsparameters.py"
-id="toc-configuration-configsparameters.py">1. Configuration:
+<li><a href="#configuration-configsparameters.py" id="toc-configuration-configsparameters.py">1. Configuration:
 <code>configs/parameters.py</code></a></li>
 <li><a href="#hi-c-data-preparation" id="toc-hi-c-data-preparation">2.
 Hi-C data preparation</a></li>
 <li><a href="#ctcf-annotation" id="toc-ctcf-annotation">3. CTCF
 annotation</a></li>
-<li><a href="#the-simulation-model-polysim"
-id="toc-the-simulation-model-polysim">4. The simulation model:
+<li><a href="#the-simulation-model-polysim" id="toc-the-simulation-model-polysim">4. The simulation model:
 polysim</a></li>
 <li><a href="#running-simulations" id="toc-running-simulations">5.
 Running simulations</a></li>
-<li><a href="#post-simulation-analysis"
-id="toc-post-simulation-analysis">6. Post-simulation analysis</a></li>
-<li><a href="#legacy-cluster-scripts-legacycluster"
-id="toc-legacy-cluster-scripts-legacycluster">Legacy cluster scripts
+<li><a href="#post-simulation-analysis" id="toc-post-simulation-analysis">6. Post-simulation analysis</a></li>
+<li><a href="#legacy-cluster-scripts-legacycluster" id="toc-legacy-cluster-scripts-legacycluster">Legacy cluster scripts
 (<code>legacy/cluster/</code>)</a></li>
 <li><a href="#conventions" id="toc-conventions">Conventions</a></li>
 <li><a href="#common-pitfalls" id="toc-common-pitfalls">Common
 pitfalls</a></li>
+<li><a href="#rebuilding-this-guide" id="toc-rebuilding-this-guide">Rebuilding this guide</a></li>
 </ul></li>
 </ul>
 </nav>
 <h1 id="chromsimpipe-code-guide">ChromSimPipe code guide</h1>
 <p>What each part of the codebase does, what it reads and writes, and
-how the steps connect. For running the pipeline, see <a
-href="README.md"><code>README.md</code></a>.</p>
+how the steps connect. For running the pipeline, see <a href="README.md"><code>README.md</code></a>.</p>
 <hr />
 <h2 id="overview">Overview</h2>
 <h3 id="what-this-pipeline-does">What this pipeline does</h3>
@@ -301,43 +309,43 @@ mechanisms:</p>
 <col style="width: 38%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Mechanism</th>
 <th>Config option</th>
 <th>Use it to test</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>Cohesin loop extrusion</td>
 <td><code>lifetime</code>, <code>separation</code>,
 <code>vlef</code></td>
 <td>WAPL, NIPBL or RAD21 perturbations; how far cohesin extrudes</td>
 </tr>
-<tr class="even">
+<tr>
 <td>CTCF barriers</td>
 <td><code>ctcf_type</code>; <code>ctcf_capture</code> (one value, or
 <code>{min, max}</code> from peak signal)</td>
 <td>CTCF binding changes, degrons, weak vs. strong sites</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>No cohesin</td>
 <td><code>separation: none</code></td>
 <td>cohesin loss; which contacts need extrusion at all</td>
 </tr>
-<tr class="even">
+<tr>
 <td><strong>Sticky sites</strong> (bridging factors, condensates)</td>
 <td><code>sticky:</code>, <code>sticky_cross:</code>, from a peak column
 in the samplesheet</td>
 <td>YY1, LDB1, YAP; enhancer–promoter contacts; loops CTCF can’t
 explain; compartments</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>Chromatin compaction</td>
 <td><code>attraction_energy</code></td>
 <td>global compaction, e.g. under hyperosmotic stress</td>
 </tr>
-<tr class="even">
+<tr>
 <td>Where cohesin loads or slows</td>
 <td><code>loading:</code>, <code>pausing:</code></td>
 <td>loading at NIPBL peaks or enhancers; RNA Pol II as an obstacle</td>
@@ -356,7 +364,7 @@ into polysim’s inputs (see section 5a).</p>
 <col style="width: 18%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Condition</th>
 <th>Cohesin</th>
 <th>CTCF sites</th>
@@ -364,19 +372,19 @@ into polysim’s inputs (see section 5a).</p>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>cond1_baseline</code></td>
 <td>Baseline</td>
 <td>Condition 1</td>
 <td>Does the model reproduce condition 1 Hi-C?</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>cond2_ctcf-only</code></td>
 <td>Baseline</td>
 <td>Condition 2</td>
 <td>Do condition 2 CTCF sites alone explain condition 2 Hi-C?</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>cond2_weak-ctcf</code></td>
 <td>Baseline</td>
 <td>Condition 2 (0.5× stall)</td>
@@ -385,13 +393,61 @@ into polysim’s inputs (see section 5a).</p>
 </tbody>
 </table>
 <h3 id="data-flow">Data flow</h3>
-<pre><code>ChromSimSamplesheet.txt  (one row per sample: metadata, CTCF_Peaks, Hi-C)
-    ↓  orientCTCF rule → scripts/extract_ctcf_sites.py  (strand via FIMO)
-Oriented CTCF BED files (output/loci/&lt;locus&gt;/ctcf/)
-    ↓  simulateShard rule → scripts/run_simulation_shard.py + polysim
-Simulated conformations (output/loci/&lt;locus&gt;/sims/)
-    ↓  analyzeCondition rule → scripts/run_analysis_all.py
-Comparison figures  ←→  experimental Hi-C (.cool, from .hic/.mcool/.cool via the convertHic rule)</code></pre>
+<figure>
+<img role="img" aria-label="ChromSimPipe workflow as a subway map" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDkwIDg0NSIgd2lkdGg9IjEwOTAiIGhlaWdodD0iODQ1Ij4KPHJlY3Qgd2lkdGg9IjEwOTAiIGhlaWdodD0iODQ1IiBmaWxsPSIjZmZmZmZmIi8+Cjx0ZXh0IHg9IjI0LjAiIHk9IjU2LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjMwIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMWYyMzI4IiB0ZXh0LWFuY2hvcj0ic3RhcnQiPkNocm9tU2ltUGlwZTwvdGV4dD4KPHRleHQgeD0iMjQuMCIgeT0iODQuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM1OTYzNmUiIHRleHQtYW5jaG9yPSJzdGFydCI+Q29oZXNpbiBsb29wIGV4dHJ1c2lvbiAgwrcgIFNuYWtlbWFrZTwvdGV4dD4KPHBhdGggZD0iTTg4LjAsNDM2LjAgTDM4NC4yLDQzNi4wIFE0MDYuMiw0MzYuMCA0MjguMiw0MzYuMCBMOTk2LjEsNDM2LjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwNzJCMiIgc3Ryb2tlLXdpZHRoPSI3IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTYyLjAsNDAyLjAgTDYyLjAsMTgyLjAgUTYyLjAsMTYwLjAgODQuMCwxNjAuMCBMNTUyLjksMTYwLjAgUTU3NC45LDE2MC4wIDU5MC40LDE3NS42IEw4NDIuOSw0MjguMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjE1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTYyLjAsNDAyLjAgTDYyLjAsMTgyLjAgUTYyLjAsMTYwLjAgODQuMCwxNjAuMCBMNTUyLjksMTYwLjAgUTU3NC45LDE2MC4wIDU5MC40LDE3NS42IEw4NDIuOSw0MjguMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRDU1RTAwIiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNMjY4LjAsNDQ5LjAgTDI2OC4wLDU3NS4wIFEyNjguMCw1OTcuMCAyOTAuMCw1OTcuMCBMNDM0LjAsNTk3LjAgUTQ1Ni4wLDU5Ny4wIDQ3MS42LDU4MS40IEw2MDkuMCw0NDQuMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjE1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTI2OC4wLDQ0OS4wIEwyNjguMCw1NzUuMCBRMjY4LjAsNTk3LjAgMjkwLjAsNTk3LjAgTDQzNC4wLDU5Ny4wIFE0NTYuMCw1OTcuMCA0NzEuNiw1ODEuNCBMNjA5LjAsNDQ0LjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0NDNzlBNyIgc3Ryb2tlLXdpZHRoPSI3IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1kYXNoYXJyYXk9IjE2IDkiLz4KPHBhdGggZD0iTTYyLjAsNDAyLjAgTDYyLjAsMzQzLjAgUTYyLjAsMzIxLjAgODQuMCwzMjEuMCBMNDgwLjAsMzIxLjAgUTUwMi4wLDMyMS4wIDUxNy42LDMzNi42IEw2MDkuMCw0MjguMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjE1IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTYyLjAsNDAyLjAgTDYyLjAsMzQzLjAgUTYyLjAsMzIxLjAgODQuMCwzMjEuMCBMNDgwLjAsMzIxLjAgUTUwMi4wLDMyMS4wIDUxNy42LDMzNi42IEw2MDkuMCw0MjguMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDA5RTczIiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cmVjdCB4PSIxNTUuMCIgeT0iNDIzLjAiIHdpZHRoPSIyNiIgaGVpZ2h0PSIyNi4wIiByeD0iMTMuMCIgZmlsbD0iI2ZmZmZmZiIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjMuMiIvPgo8dGV4dCB4PSIxNjguMCIgeT0iNDcyLjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE1IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMWYyMzI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5nZXRNb3RpZjwvdGV4dD4KPHRleHQgeD0iMTY4LjAiIHk9IjQ4OS4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMi41IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNTk2MzZlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5KQVNQQVIgTUEwMTM5LjE8L3RleHQ+CjxyZWN0IHg9IjI1NS4wIiB5PSI0MjMuMCIgd2lkdGg9IjI2IiBoZWlnaHQ9IjI2LjAiIHJ4PSIxMy4wIiBmaWxsPSIjZmZmZmZmIiBzdHJva2U9IiMxZjIzMjgiIHN0cm9rZS13aWR0aD0iMy4yIi8+Cjx0ZXh0IHg9IjI2OC4wIiB5PSI0MDIuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMxZjIzMjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPm9yaWVudENUQ0Y8L3RleHQ+Cjx0ZXh0IHg9IjI2OC4wIiB5PSI0MTkuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+RklNTyDCtyBiZWR0b29sczwvdGV4dD4KPHJlY3QgeD0iMzU1LjAiIHk9IjQyMy4wIiB3aWR0aD0iMjYiIGhlaWdodD0iMjYuMCIgcng9IjEzLjAiIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iIzFmMjMyOCIgc3Ryb2tlLXdpZHRoPSIzLjIiLz4KPHRleHQgeD0iMzY4LjAiIHk9IjQ3Mi4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzFmMjMyOCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+dmFsaWRhdGVDVENGPC90ZXh0Pgo8dGV4dCB4PSIzNjguMCIgeT0iNDg5LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM1OTYzNmUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlB5dGhvbjwvdGV4dD4KPGNpcmNsZSBjeD0iNjE3LjAiIGN5PSI0MzYuMCIgcj0iMTEiIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iIzFmMjMyOCIgc3Ryb2tlLXdpZHRoPSIzLjIiLz4KPHRleHQgeD0iNjE3LjAiIHk9IjQ3Mi4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzFmMjMyOCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+c2ltdWxhdGVTaGFyZDwvdGV4dD4KPHRleHQgeD0iNjE3LjAiIHk9IjQ4OS4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMi41IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNTk2MzZlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5wb2x5c2ltIMK3IEdQVTwvdGV4dD4KPGNpcmNsZSBjeD0iNzI3LjQiIGN5PSI0MzYuMCIgcj0iMTEiIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iIzFmMjMyOCIgc3Ryb2tlLXdpZHRoPSIzLjIiLz4KPHRleHQgeD0iNzI3LjQiIHk9IjQ3Mi4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzFmMjMyOCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+bWVyZ2VTaGFyZHM8L3RleHQ+Cjx0ZXh0IHg9IjcyNy40IiB5PSI0ODkuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UHl0aG9uPC90ZXh0Pgo8Y2lyY2xlIGN4PSI4NTAuOSIgY3k9IjQzNi4wIiByPSIxMSIgZmlsbD0iI2ZmZmZmZiIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjMuMiIvPgo8dGV4dCB4PSI4NTAuOSIgeT0iNDcyLjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE1IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMWYyMzI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5hbmFseXplQ29uZGl0aW9uPC90ZXh0Pgo8dGV4dCB4PSI4NTAuOSIgeT0iNDg5LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM1OTYzNmUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlB5dGhvbjwvdGV4dD4KPGNpcmNsZSBjeD0iOTk2LjEiIGN5PSI0MzYuMCIgcj0iMTEiIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iIzFmMjMyOCIgc3Ryb2tlLXdpZHRoPSIzLjIiLz4KPHRleHQgeD0iOTk2LjEiIHk9IjQ3Mi4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iIzFmMjMyOCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+YmVuY2htYXJrU3VtbWFyeTwvdGV4dD4KPHRleHQgeD0iOTk2LjEiIHk9IjQ4OS4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMi41IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNTk2MzZlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5ydW4gdGltZSDCtyBtZW1vcnk8L3RleHQ+CjxjaXJjbGUgY3g9IjIxMi4wIiBjeT0iMTYwLjAiIHI9IjExIiBmaWxsPSIjZmZmZmZmIiBzdHJva2U9IiMxZjIzMjgiIHN0cm9rZS13aWR0aD0iMy4yIi8+Cjx0ZXh0IHg9IjIxMi4wIiB5PSIxMjYuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMxZjIzMjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPmNvbnZlcnRIaWM8L3RleHQ+Cjx0ZXh0IHg9IjIxMi4wIiB5PSIxNDMuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+aGljMmNvb2wgwrcgY29vbGVyPC90ZXh0Pgo8Y2lyY2xlIGN4PSI0MTguMCIgY3k9IjU5Ny4wIiByPSIxMSIgZmlsbD0iI2ZmZmZmZiIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjMuMiIvPgo8dGV4dCB4PSI0MTguMCIgeT0iNjMzLjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE1IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMWYyMzI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5jdGNmT2NjdXBhbmN5PC90ZXh0Pgo8dGV4dCB4PSI0MTguMCIgeT0iNjUwLjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM1OTYzNmUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPnB5QmlnV2lnPC90ZXh0Pgo8Y2lyY2xlIGN4PSIyMTIuMCIgY3k9IjMyMS4wIiByPSIxMSIgZmlsbD0iI2ZmZmZmZiIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjMuMiIvPgo8dGV4dCB4PSIyMTIuMCIgeT0iMjg3LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE1IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjMWYyMzI4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5wcmVwYXJlUG9seXNpbTwvdGV4dD4KPHRleHQgeD0iMjEyLjAiIHk9IjMwNC4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMi41IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNTk2MzZlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5DeXRob248L3RleHQ+CjxwYXRoIGQ9Ik0yMy4wLDQwNy4wIEg1Ni4wIEw2OS4wLDQyMC4wIFY0NjUuMCBIMjMuMCBaIiBmaWxsPSIjZmZmZmZmIiBzdHJva2U9IiMxZjIzMjgiIHN0cm9rZS13aWR0aD0iMi4yIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+CjxwYXRoIGQ9Ik01Ni4wLDQwNy4wIFY0MjAuMCBINjkuMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cmVjdCB4PSIxOC4wIiB5PSI0MzQuMCIgd2lkdGg9IjU2LjAiIGhlaWdodD0iMTgiIHJ4PSIzIiBmaWxsPSIjNTc2MDZhIi8+Cjx0ZXh0IHg9IjQ2LjAiIHk9IjQ0OC4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFNWPC90ZXh0Pgo8dGV4dCB4PSI0Ni4wIiB5PSI0ODcuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiMxZjIzMjgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlNhbXBsZXNoZWV0PC90ZXh0Pgo8dGV4dCB4PSI0Ni4wIiB5PSI1MDMuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+cGVha3MgwrcgSGktQzwvdGV4dD4KPHBhdGggZD0iTTI1OC40LDQyNS44IEwyMjAuMCwzODQuOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOGM5NTlmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjIgNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xNzAuMCwzMjcuMCBIMjAzLjAgTDIxNi4wLDM0MC4wIFYzODUuMCBIMTcwLjAgWiIgZmlsbD0iI2ZmZmZmZiIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNMjAzLjAsMzI3LjAgVjM0MC4wIEgyMTYuMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cmVjdCB4PSIxNjUuMCIgeT0iMzU0LjAiIHdpZHRoPSI1Ni4wIiBoZWlnaHQ9IjE4IiByeD0iMyIgZmlsbD0iIzAwNzJCMiIvPgo8dGV4dCB4PSIxOTMuMCIgeT0iMzY4LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5CRUQ8L3RleHQ+Cjx0ZXh0IHg9IjE1OS4wIiB5PSIzNjAuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9ImVuZCI+T3JpZW50ZWQ8L3RleHQ+Cjx0ZXh0IHg9IjE1OS4wIiB5PSIzNzYuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9ImVuZCI+Q1RDRjwvdGV4dD4KPHBhdGggZD0iTTg1OS45LDQyNi43IEw4ODMuOSw0MDEuOSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOGM5NTlmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjIgNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik04ODcuOSwzNDUuMCBIOTIwLjkgTDkzMy45LDM1OC4wIFY0MDMuMCBIODg3LjkgWiIgZmlsbD0iI2ZmZmZmZiIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNOTIwLjksMzQ1LjAgVjM1OC4wIEg5MzMuOSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cmVjdCB4PSI4ODIuOSIgeT0iMzcyLjAiIHdpZHRoPSI1Ni4wIiBoZWlnaHQ9IjE4IiByeD0iMyIgZmlsbD0iIzAwNzJCMiIvPgo8dGV4dCB4PSI5MTAuOSIgeT0iMzg2LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5OUFk8L3RleHQ+Cjx0ZXh0IHg9Ijk0NC45IiB5PSIzNzAuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9InN0YXJ0Ij5Db250YWN0IG1hcHMsPC90ZXh0Pgo8dGV4dCB4PSI5NDQuOSIgeT0iMzg2LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM1OTYzNmUiIHRleHQtYW5jaG9yPSJzdGFydCI+bWV0cmljczwvdGV4dD4KPHBhdGggZD0iTTIxMi4wLDE3My4wIEwyMTIuMCwxODkuMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjOGM5NTlmIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1kYXNoYXJyYXk9IjIgNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CjxwYXRoIGQ9Ik0xODkuMCwxOTMuMCBIMjIyLjAgTDIzNS4wLDIwNi4wIFYyNTEuMCBIMTg5LjAgWiIgZmlsbD0iI2ZmZmZmZiIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cGF0aCBkPSJNMjIyLjAsMTkzLjAgVjIwNi4wIEgyMzUuMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWYyMzI4IiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8cmVjdCB4PSIxODQuMCIgeT0iMjIwLjAiIHdpZHRoPSI1Ni4wIiBoZWlnaHQ9IjE4IiByeD0iMyIgZmlsbD0iI0Q1NUUwMCIvPgo8dGV4dCB4PSIyMTIuMCIgeT0iMjM0LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjExIiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmZmZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5DT09MPC90ZXh0Pgo8dGV4dCB4PSIyNDYuMCIgeT0iMjE4LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM1OTYzNmUiIHRleHQtYW5jaG9yPSJzdGFydCI+SGktQyBhdDwvdGV4dD4KPHRleHQgeD0iMjQ2LjAiIHk9IjIzNC4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMi41IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNTk2MzZlIiB0ZXh0LWFuY2hvcj0ic3RhcnQiPnJlc29sdXRpb248L3RleHQ+CjxwYXRoIGQ9Ik00MTguMCw1ODQuMCBMNDE4LjAsNTY4LjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzhjOTU5ZiIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtZGFzaGFycmF5PSIyIDQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8cGF0aCBkPSJNMzk1LjAsNTA2LjAgSDQyOC4wIEw0NDEuMCw1MTkuMCBWNTY0LjAgSDM5NS4wIFoiIGZpbGw9IiNmZmZmZmYiIHN0cm9rZT0iIzFmMjMyOCIgc3Ryb2tlLXdpZHRoPSIyLjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHBhdGggZD0iTTQyOC4wLDUwNi4wIFY1MTkuMCBINDQxLjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzFmMjMyOCIgc3Ryb2tlLXdpZHRoPSIyLjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiLz4KPHJlY3QgeD0iMzkwLjAiIHk9IjUzMy4wIiB3aWR0aD0iNTYuMCIgaGVpZ2h0PSIxOCIgcng9IjMiIGZpbGw9IiNDQzc5QTciLz4KPHRleHQgeD0iNDE4LjAiIHk9IjU0Ny4wIiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZm9udC13ZWlnaHQ9IjcwMCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFNWPC90ZXh0Pgo8dGV4dCB4PSIzODQuMCIgeT0iNTM5LjAiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjEyLjUiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiM1OTYzNmUiIHRleHQtYW5jaG9yPSJlbmQiPlNpdGU8L3RleHQ+Cjx0ZXh0IHg9IjM4NC4wIiB5PSI1NTUuMCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9ImVuZCI+b2NjdXBhbmN5PC90ZXh0Pgo8bGluZSB4MT0iMjQiIHkxPSI2NzguOCIgeDI9IjEwNjUuNyIgeTI9IjY3OC44IiBzdHJva2U9IiNkMGQ3ZGUiIHN0cm9rZS13aWR0aD0iMS41Ii8+CjxsaW5lIHgxPSIyNCIgeTE9IjcxNC44IiB4Mj0iNzAiIHkyPSI3MTQuOCIgc3Ryb2tlPSIjMDA3MkIyIiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8dGV4dCB4PSI4Mi4wIiB5PSI3MTkuOCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiMxZjIzMjgiIHRleHQtYW5jaG9yPSJzdGFydCI+U2ltdWxhdGlvbiAocGVyIGxvY3VzIMOXIGNvbmRpdGlvbik8L3RleHQ+CjxsaW5lIHgxPSIzNjQuMjgiIHkxPSI3MTQuOCIgeDI9IjQxMC4yOCIgeTI9IjcxNC44IiBzdHJva2U9IiNENTVFMDAiIHN0cm9rZS13aWR0aD0iNyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjx0ZXh0IHg9IjQyMi4zIiB5PSI3MTkuOCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiMxZjIzMjgiIHRleHQtYW5jaG9yPSJzdGFydCI+SGktQyAoY29tcGFyaXNvbiBvbmx5KTwvdGV4dD4KPGxpbmUgeDE9IjYxNS41MiIgeTE9IjcxNC44IiB4Mj0iNjYxLjUyIiB5Mj0iNzE0LjgiIHN0cm9rZT0iI0NDNzlBNyIgc3Ryb2tlLXdpZHRoPSI3IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1kYXNoYXJyYXk9IjE2IDkiLz4KPHRleHQgeD0iNjczLjUiIHk9IjcxOS44IiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzFmMjMyOCIgdGV4dC1hbmNob3I9InN0YXJ0Ij5QZXItc2l0ZSBDVENGIHN0cmVuZ3RoIChvcHRpb25hbCk8L3RleHQ+CjxsaW5lIHgxPSIyNCIgeTE9Ijc0NC44IiB4Mj0iNzAiIHkyPSI3NDQuOCIgc3Ryb2tlPSIjMDA5RTczIiBzdHJva2Utd2lkdGg9IjciIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8dGV4dCB4PSI4Mi4wIiB5PSI3NDkuOCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZvbnQtd2VpZ2h0PSI0MDAiIGZpbGw9IiMxZjIzMjgiIHRleHQtYW5jaG9yPSJzdGFydCI+TW9kZWwgYnVpbGQ8L3RleHQ+CjxjaXJjbGUgY3g9IjIwMy42MiIgY3k9Ijc0NC44IiByPSI5IiBmaWxsPSIjZmZmZmZmIiBzdHJva2U9IiMxZjIzMjgiIHN0cm9rZS13aWR0aD0iMyIvPgo8dGV4dCB4PSIyMjAuNiIgeT0iNzQ5LjgiIGZvbnQtZmFtaWx5PSInSGVsdmV0aWNhIE5ldWUnLCBIZWx2ZXRpY2EsIEFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjMWYyMzI4IiB0ZXh0LWFuY2hvcj0ic3RhcnQiPlN0ZXA8L3RleHQ+Cjx0ZXh0IHg9IjI0LjAiIHk9Ijc3OC44IiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMi41IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNTk2MzZlIiB0ZXh0LWFuY2hvcj0ic3RhcnQiPmN0Y2ZPY2N1cGFuY3kgcnVucyBvbmx5IGZvciBjb25kaXRpb25zIHdpdGggY3RjZl9jYXB0dXJlOiB7Ynk6IG9jY3VwYW5jeX0sIHJlYWRpbmcgdGhlIHNhbXBsZXNoZWV0J3MgQ1RDRl9CaWdXaWcuIGdldE1vdGlmIGlzIHNraXBwZWQgd2hlbiBjdGNmX21vdGlmLm1lbWU8L3RleHQ+Cjx0ZXh0IHg9IjI0LjAiIHk9Ijc5Ni44IiBmb250LWZhbWlseT0iJ0hlbHZldGljYSBOZXVlJywgSGVsdmV0aWNhLCBBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMi41IiBmb250LXdlaWdodD0iNDAwIiBmaWxsPSIjNTk2MzZlIiB0ZXh0LWFuY2hvcj0ic3RhcnQiPm5hbWVzIGEgbG9jYWwgbW90aWYgZmlsZS4gc2ltdWxhdGVTaGFyZCBhbHNvIHJlYWRzIGZhY3RvciBwZWFrIGZpbGVzIGZyb20gdGhlIHNhbXBsZXNoZWV0IHdoZW4gYSBjb25kaXRpb24gdXNlcyBzdGlja3ksIGxvYWRpbmcgb3IgcGF1c2luZyBvcHRpb25zLiBIaS1DPC90ZXh0Pgo8dGV4dCB4PSIyNC4wIiB5PSI4MTQuOCIgZm9udC1mYW1pbHk9IidIZWx2ZXRpY2EgTmV1ZScsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTIuNSIgZm9udC13ZWlnaHQ9IjQwMCIgZmlsbD0iIzU5NjM2ZSIgdGV4dC1hbmNob3I9InN0YXJ0Ij4oLmhpYywgLm1jb29sIG9yIC5jb29sKSBpcyB1c2VkIG9ubHkgdG8gY29tcGFyZSB3aXRoIHRoZSBzaW11bGF0aW9uczsgaXQgbmV2ZXIgZW50ZXJzIHRoZW0uPC90ZXh0Pgo8L3N2Zz4=" alt="ChromSimPipe workflow as a subway map" />
+<figcaption aria-hidden="true">ChromSimPipe workflow as a subway
+map</figcaption>
+</figure>
+<p>The rules on the map, the scripts they call, and what they write:</p>
+<table>
+<colgroup>
+<col style="width: 27%" />
+<col style="width: 36%" />
+<col style="width: 36%" />
+</colgroup>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Script</th>
+<th>Writes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>convertHic</code></td>
+<td><code>scripts/prepare_hic.py</code></td>
+<td><code>output/mcool/&lt;sample&gt;.cool</code>, from
+<code>.hic</code>, <code>.mcool</code> or <code>.cool</code></td>
+</tr>
+<tr>
+<td><code>orientCTCF</code></td>
+<td><code>scripts/extract_ctcf_sites.py</code> (strand via FIMO)</td>
+<td>oriented CTCF BEDs,
+<code>output/loci/&lt;locus&gt;/ctcf/</code></td>
+</tr>
+<tr>
+<td><code>ctcfOccupancy</code></td>
+<td><code>scripts/ctcf_occupancy.py</code> (only for
+<code>ctcf_capture {by: occupancy}</code>)</td>
+<td><code>output/loci/&lt;locus&gt;/ctcf/ctcf_occupancy_*.tsv</code></td>
+</tr>
+<tr>
+<td><code>simulateShard</code></td>
+<td><code>scripts/run_simulation_shard.py</code> + polysim</td>
+<td>simulated conformations,
+<code>output/loci/&lt;locus&gt;/sims/</code></td>
+</tr>
+<tr>
+<td><code>analyzeCondition</code></td>
+<td><code>scripts/run_analysis_all.py</code></td>
+<td>contact maps, P(s), comparison with the experimental Hi-C</td>
+</tr>
+</tbody>
+</table>
+<p>The samplesheet (<code>ChromSimSamplesheet.txt</code>) supplies the
+inputs: metadata, <code>CTCF_Peaks</code>, <code>Hi-C</code>, and
+optionally <code>CTCF_BigWig</code> /
+<code>CTCF_Input_BigWig</code>.</p>
 <h3 id="setup-and-launch">Setup and launch</h3>
 <p>The workflow follows the PhanstielLab Snakemake pattern (bagPipes,
 dietJuicer): edit a samplesheet and a config, then submit one launcher.
@@ -401,9 +457,12 @@ building conda environments are all workflow steps.</p>
 <li><strong><code>ChromSimSamplesheet.txt</code></strong>: one
 tab-separated row per sample. The required columns are
 <code>CTCF_Peaks</code> and <code>Hi-C</code> (<code>NA</code> when a
-sample has no file of that kind); all other columns are metadata. Paths
-are <code>data/&lt;file&gt;</code>: each cluster links its own copies
-into <code>data/</code>, so one samplesheet serves every cluster.</li>
+sample has no file of that kind). <code>CTCF_BigWig</code> is optional,
+read only by <code>ctcf_capture: {by: occupancy}</code>;
+<code>CTCF_Input_BigWig</code> is optional on top of that (subtracted as
+background when given). All other columns are metadata. Paths are
+<code>data/&lt;file&gt;</code>: each cluster links its own copies into
+<code>data/</code>, so one samplesheet serves every cluster.</li>
 <li><strong><code>config/ChromSimConfig.yaml</code></strong>:
 <code>fileNamesFrom</code> names the samplesheet columns joined with
 <code>_</code> to name each sample. Conditions refer to samples by those
@@ -424,10 +483,9 @@ other SLURM cluster).</li>
 picks the profile and <code>CHROMSIM_OUTPUT_ROOT</code> is the folder a
 relative <code>outputDir</code> goes under (e.g. scratch).</li>
 </ol>
-<div class="sourceCode" id="cb2"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh        <span class="co"># whole workflow</span></span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> ChromSimPipe.sh <span class="at">-n</span>       <span class="co"># dry run</span></span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh <span class="at">--configfile</span> config/ChromSimConfig.test.yaml   <span class="co"># 10-job smoke test</span></span></code></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh        <span class="co"># whole workflow</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">bash</span> ChromSimPipe.sh <span class="at">-n</span>       <span class="co"># dry run</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">sbatch</span> ChromSimPipe.sh <span class="at">--configfile</span> config/ChromSimConfig.test.yaml   <span class="co"># 10-job smoke test</span></span></code></pre></div>
 <p><strong>Test config.</strong>
 <code>config/ChromSimConfig.test.yaml</code> is the same config with one
 condition, one replicate, one shard and 2,000 saved frames, written to
@@ -460,9 +518,12 @@ those sites. There are no placeholder sites.</p>
 set, a dict with <code>lifetime</code> (mean LEF timesteps before
 cohesin falls off), <code>separation</code> (spacing between cohesins)
 and <code>ctcf_capture</code> (probability of stalling per CTCF
-encounter), optionally overriding <code>vlef</code> and
-<code>life_boost_stalled</code> from the <code>polysim:</code> block.
-Defaults are the polysim bootcamp tutorial values.</p>
+encounter: one value, <code>{min, max}</code> by peak-signal rank,
+<code>{by: occupancy}</code> from the ChIP bigWig (minus input if
+given), or <code>{by: table, file}</code> per site), optionally
+overriding <code>vlef</code> and <code>life_boost_stalled</code> from
+the <code>polysim:</code> block. Defaults are the polysim bootcamp
+tutorial values.</p>
 <p><strong>Tiling.</strong> Rather than simulating one copy of the
 locus, the simulation runs a ~70,000-monomer chain of back-to-back
 copies (for chr1: 28 copies of 1,960 monomers + 270 padding on each
@@ -543,8 +604,7 @@ PhanstielLab pipelines: a samplesheet plus a config drive everything,
 every rule writes its own log and benchmark, rules carry no cluster
 resources (the profile does), and one <code>sbatch</code> launches it
 all.</p>
-<h3
-id="chromsimpipe.sh-sbatch-entry-point"><code>ChromSimPipe.sh</code>:
+<h3 id="chromsimpipe.sh-sbatch-entry-point"><code>ChromSimPipe.sh</code>:
 sbatch entry point</h3>
 <p>Submit with <code>sbatch ChromSimPipe.sh</code>. It:</p>
 <ol type="1">
@@ -556,7 +616,7 @@ sources its <code>env.sh</code>, which makes <code>python3</code> and
 <code>config/requirements.txt</code> (Snakemake 8.27.1 + the SLURM
 executor plugin).</li>
 <li>Runs
-<code>snakemake -s workflows/ChromSimPipe.snakefile --profile    &lt;hpcProfile&gt; --configfile &lt;config&gt; --rerun-incomplete --keep-going -p</code>,
+<code>snakemake -s workflows/ChromSimPipe.snakefile --profile &lt;hpcProfile&gt; --configfile &lt;config&gt; --rerun-incomplete --keep-going -p</code>,
 adding <code>--slurm-logdir &lt;outputDir&gt;/logs_slurm</code> when the
 profile uses the SLURM executor (<code>&lt;outputDir&gt;</code> resolved
 the same way as in <code>configs/parameters.py</code>, including
@@ -583,8 +643,7 @@ loop size; and the fraction of the chain inside a loop. Loops are every
 convergent CTCF pair between <code>--min-kb</code> and
 <code>--max-kb</code>, or those in <code>--loops</code>. Writes one TSV
 row per setting. No polymer, no GPU.</p>
-<h3
-id="check_inputs.sh-check-the-inputs-before-a-run"><code>check_inputs.sh</code>:
+<h3 id="check_inputs.sh-check-the-inputs-before-a-run"><code>check_inputs.sh</code>:
 check the inputs before a run</h3>
 <p><code>bash check_inputs.sh</code> finds the simulation conda
 environment with <code>scripts/sim_env.sh</code>, from
@@ -612,8 +671,7 @@ release lock after failure</h3>
 running. If the job dies without cleanup, the lock persists and the next
 run refuses to start. <code>bash unlock.sh</code> runs
 <code>snakemake --unlock</code> against the workflow to clear it.</p>
-<h3
-id="workflowschromsimpipe.snakefile-the-dag"><code>workflows/ChromSimPipe.snakefile</code>:
+<h3 id="workflowschromsimpipe.snakefile-the-dag"><code>workflows/ChromSimPipe.snakefile</code>:
 the DAG</h3>
 <table>
 <colgroup>
@@ -622,54 +680,71 @@ the DAG</h3>
 <col style="width: 53%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Rule</th>
 <th>Runs</th>
 <th>What it does</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>convertHic</code></td>
 <td>per Hi-C sample</td>
 <td><code>scripts/prepare_hic.py</code>: <code>.hic</code> (hic2cool),
 <code>.mcool</code> or <code>.cool</code> → one <code>.cool</code> at
 <code>resolution</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>getMotif</code></td>
 <td>once</td>
 <td><code>wget</code> the JASPAR motif (skipped when
 <code>ctcf_motif.meme</code> is set)</td>
 </tr>
-<tr class="odd">
+<tr>
+<td><code>preparePolysim</code></td>
+<td>once</td>
+<td>imports polysim so its Cython cohesin model is built once, before
+the shards</td>
+</tr>
+<tr>
 <td><code>orientCTCF</code></td>
-<td>per CTCF sample used by a condition</td>
+<td>per locus × CTCF sample used by a condition</td>
 <td><code>extract_ctcf_sites.py</code></td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>validateCTCF</code></td>
-<td>once</td>
+<td>per locus</td>
 <td><code>validate_ctcf.py</code>: sanity-checks all BED files</td>
 </tr>
-<tr class="odd">
+<tr>
+<td><code>ctcfOccupancy</code></td>
+<td>per locus × CTCF sample used by a
+<code>ctcf_capture: {by: occupancy}</code> condition</td>
+<td><code>ctcf_occupancy.py</code>: per-site occupancy from the ChIP
+bigWig, minus input when given (env
+<code>envs/ctcf_occupancy.yml</code>, config key
+<code>condaEnvs: occupancy</code>, optional)</td>
+</tr>
+<tr>
 <td><code>simulateShard</code></td>
-<td>condition × replicate × shard (GPU)</td>
-<td><code>run_simulation_shard.py</code>: 18 jobs with the example
-config</td>
+<td>locus × condition × replicate × shard (GPU)</td>
+<td><code>run_simulation_shard.py</code>: 18 jobs per locus with the
+example config</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>mergeShards</code></td>
-<td>condition × replicate</td>
-<td><code>merge_shards.py</code>: concatenates shard HDF5 streams</td>
+<td>locus × condition × replicate</td>
+<td><code>merge_shards.py</code>: concatenates shard HDF5 streams;
+deletes the shard folders afterwards (<code>cleanup.shards</code>)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>analyzeCondition</code></td>
-<td>per condition</td>
-<td><code>run_analysis_all.py</code>: contact maps, P(s), APA,
-figures</td>
+<td>locus × condition</td>
+<td><code>run_analysis_all.py</code>: contact maps, P(s), APA, figures;
+deletes the merged trajectories afterwards
+(<code>cleanup.blocks</code>)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>benchmarkSummary</code></td>
 <td>once</td>
 <td><code>workflows/utils/benchmarking.py</code></td>
@@ -679,14 +754,16 @@ figures</td>
 <p>Every rule has the same parts, following bagPipes:</p>
 <ul>
 <li><code>log:</code>: stdout / stderr to
-<code>output/logs/{rule}_{wildcards}.out|.err</code></li>
+<code>output/logs/{locus}/{rule}_{wildcards}.out|.err</code> (steps
+shared by all loci:
+<code>output/logs/{rule}_{wildcards}.out|.err</code>)</li>
 <li><code>benchmark:</code>:
 <code>output/benchmarks/{rule}_{wildcards}.tsv</code> (wall time,
 memory), summarised in
 <code>output/{runName}_benchmarking.tsv</code></li>
 <li><code>conda:</code>: an entry from <code>condaEnvs</code> in the
 config; the shell runs scripts with
-<code>"$CONDA_PREFIX/bin/python"</code>, that environment’s own
+<code>&quot;$CONDA_PREFIX/bin/python&quot;</code>, that environment’s own
 interpreter</li>
 <li><code>params:</code>: every value read from the config; nothing is
 typed in</li>
@@ -710,8 +787,7 @@ never fail the run, and handlers do not run on dry runs.</p>
 was given. Steps whose real outputs are directories (simulation, merge,
 analysis) are tracked through completion markers in
 <code>output/done/</code>.</p>
-<h3
-id="profilessiteconfig.yaml-scheduler-settings"><code>profiles/&lt;site&gt;/config.yaml</code>:
+<h3 id="profilessiteconfig.yaml-scheduler-settings"><code>profiles/&lt;site&gt;/config.yaml</code>:
 scheduler settings</h3>
 <p>This is the only place cluster details live. In
 <code>profiles/longleaf/</code>, <code>default-resources:</code> sets
@@ -722,16 +798,19 @@ pattern). <code>simulateShard</code> is sent to whichever of
 free node first, with <code>qos: gpu_access</code> and
 <code>gpu: 1</code>. <code>software-deployment-method: conda</code>
 makes Snakemake activate each rule’s environment.</p>
-<h3
-id="chromsimsamplesheet.txt-samples"><code>ChromSimSamplesheet.txt</code>:
+<h3 id="chromsimsamplesheet.txt-samples"><code>ChromSimSamplesheet.txt</code>:
 samples</h3>
 <pre><code>Project  Cell_Type  Condition   CTCF_Peaks                Hi-C
 STRS     HEK293T    condition1  data/control.narrowPeak   data/control.hic
 STRS     HEK293T    condition2  data/sorbitol.narrowPeak  data/sorbitol.hic</code></pre>
-<p>Relative paths resolve against the repo root, so
+<p>An optional <code>CTCF_BigWig</code> column (CTCF ChIP signal) is
+needed only by conditions with
+<code>ctcf_capture: {by: occupancy}</code>; an optional
+<code>CTCF_Input_BigWig</code> (its input) is subtracted as background
+when present. Relative paths resolve against the repo root, so
 <code>data/...</code> works on any cluster that has linked its files
 into <code>data/</code> (see <code>data/README.md</code>).</p>
-<p>With <code>fileNamesFrom: ['Condition']</code> the samples are
+<p>With <code>fileNamesFrom: [&#39;Condition&#39;]</code> the samples are
 <code>condition1</code> and <code>condition2</code>. Metadata values
 shared by every row (<code>STRS</code>, <code>HEK293T</code>) form the
 run name, <code>STRS_HEK293T</code>, used for run-level files. The
@@ -842,7 +921,7 @@ track and has a <code>name</code>
 <li><p><strong>Tiling</strong> (<code>TILING</code>,
 <code>locus_tiling(name)</code>). The locus is copied into one long
 chain (28× for chr1) for better contact statistics at no extra physics
-cost. <code>TILING["chrom_size"]</code> is the full chain length
+cost. <code>TILING[&quot;chrom_size&quot;]</code> is the full chain length
 (~70,000 monomers).</p></li>
 <li><p><strong>Run parameters</strong> (<code>SIM_RUN</code>).
 <code>seed_base</code>, <code>frames_per_replicate</code>,
@@ -892,8 +971,7 @@ quick-look plotter from the original lab project now live in
 <code>legacy/</code> (see <code>legacy/README.md</code>); they are not
 part of the workflow.</p>
 <h2 id="ctcf-annotation">3. CTCF annotation</h2>
-<h3
-id="scriptsextract_ctcf_sites.py"><code>scripts/extract_ctcf_sites.py</code></h3>
+<h3 id="scriptsextract_ctcf_sites.py"><code>scripts/extract_ctcf_sites.py</code></h3>
 <p><strong>Purpose.</strong> Given a CTCF ChIP-seq or CUT&amp;Tag peak
 file, a genome FASTA, and a CTCF motif (MEME format), run FIMO to assign
 strand orientation to each peak in the locus, and write an oriented BED6
@@ -902,30 +980,44 @@ file.</p>
 sample a condition uses as its <code>ctcf_type</code>; every argument
 comes from the config. To run manually (inside the <code>ctcf</code>
 environment):</p>
-<div class="sourceCode" id="cb5"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/extract_ctcf_sites.py <span class="dt">\</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--bed</span> /path/to/peaks.narrowPeak <span class="dt">\</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--region</span> chr1:64210000-66170000 <span class="dt">\</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--genome</span> /path/to/genome.fa <span class="dt">\</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--motif</span> output/motifs/MA0139.1.meme <span class="dt">\</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--assembly</span> hg38 <span class="dt">\</span></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--fimo-thresh</span> 1e-4 <span class="at">--flank</span> 250 <span class="at">--unoriented</span> drop <span class="at">--resolution</span> 1000 <span class="dt">\</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output</span> output/loci/chr1_fig1/ctcf/ctcf_oriented_hg38_condition1.bed</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/extract_ctcf_sites.py <span class="dt">\</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--bed</span> /path/to/peaks.narrowPeak <span class="dt">\</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--region</span> chr1:64210000-66170000 <span class="dt">\</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--genome</span> /path/to/genome.fa <span class="dt">\</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--motif</span> output/motifs/MA0139.1.meme <span class="dt">\</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--assembly</span> hg38 <span class="dt">\</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">--fimo-thresh</span> 1e-4 <span class="at">--flank</span> 250 <span class="at">--unoriented</span> drop <span class="at">--resolution</span> 1000 <span class="dt">\</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output</span> output/loci/chr1_fig1/ctcf/ctcf_oriented_hg38_condition1.bed</span></code></pre></div>
 <p><strong>Output:</strong> BED6, one row per peak with a FIMO hit;
 column 6 (<code>+</code>/<code>−</code>) is the motif strand.</p>
-<h3
-id="scriptsvalidate_ctcf.py"><code>scripts/validate_ctcf.py</code></h3>
+<h3 id="scriptsvalidate_ctcf.py"><code>scripts/validate_ctcf.py</code></h3>
 <p><strong>Purpose.</strong> Pre-flight sanity check before any
 simulation. Loads the oriented CTCF BEDs, converts genomic coordinates
 to monomer indices, and prints a report. Called by the
 <code>validateCTCF</code> Snakemake rule; also runnable standalone
 (inside the <code>sim</code> environment):</p>
-<div class="sourceCode" id="cb6"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/validate_ctcf.py</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/validate_ctcf.py</span></code></pre></div>
 <p>Checks: BED parses cleanly; all sites are inside the simulation
 window; coordinate → monomer-index mapping is monotone; prints counts
 per condition and sites gained / lost / shared. Exits non-zero on
 failure, including when a BED is missing.</p>
+<h3 id="scriptsctcf_occupancy.py"><code>scripts/ctcf_occupancy.py</code></h3>
+<p><strong>Purpose.</strong> CTCF occupancy per oriented site, for
+<code>ctcf_capture: {by: occupancy}</code>. Called by the
+<code>ctcfOccupancy</code> rule in its own small env
+(<code>envs/ctcf_occupancy.yml</code>: numpy + pyBigWig). For every CTCF
+peak on the locus chromosome: ChIP signal S = mean over the summit ±
+<code>window</code>/2, input I = mean over the summit ±
+<code>input_window</code>/2 (I = 0 when the sample has no
+<code>CTCF_Input_BigWig</code>), enrichment E = max(S − I, 0), and
+occupancy = E / ref clipped to [0, 1], where ref is the chromosome’s
+maximum E (or a percentile, <code>ref: p99</code>). So the strongest
+peak on the chromosome is 1 and a site at input level is 0. Each
+oriented site takes its peak’s value (sites without a matching peak are
+measured directly). Output:
+<code>output/loci/&lt;locus&gt;/ctcf/ctcf_occupancy_&lt;assembly&gt;_&lt;ctcf_type&gt;.tsv</code>
+(name, coordinates, chip, input, enrichment, occupancy), with the
+reference in the header comments.</p>
 <h2 id="the-simulation-model-polysim">4. The simulation model:
 polysim</h2>
 <p>ChromSimPipe simulates with the Hansen lab’s polysim package
@@ -941,40 +1033,41 @@ example and Goel et al. 2025.</p>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>polysim setting</th>
 <th>Comes from</th>
 <th>Default</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>life</code>, <code>sep</code></td>
 <td>condition <code>lifetime</code>, <code>separation</code></td>
 <td>75,000 timesteps, 240 monomers</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>vlef</code>, <code>lifebooststalled</code></td>
 <td><code>polysim:</code> block, or per-condition overrides</td>
 <td>0.0025, 4</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>ctcf_left</code>, <code>ctcf_right</code></td>
 <td>oriented CTCF sites (+ / −), each at the condition’s
-<code>ctcf_capture</code></td>
+<code>ctcf_capture</code> (one value, by rank, by occupancy, or from a
+table)</td>
 <td>0.5</td>
 </tr>
-<tr class="even">
+<tr>
 <td>polymer, integration, saving</td>
 <td><code>polysim:</code> block</td>
 <td>bootcamp values</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>npoly</code></td>
-<td>the locus’ tiled chain (<code>TILING["chrom_size"]</code>)</td>
+<td>the locus’ tiled chain (<code>TILING[&quot;chrom_size&quot;]</code>)</td>
 <td>~70,000</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>numsave</code></td>
 <td><code>sim_run.frames_per_replicate / n_shards</code></td>
 <td>5,000</td>
@@ -1001,34 +1094,34 @@ workflow sets.</p>
 <col style="width: 60%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Flag</th>
 <th>Meaning</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>--condition NAME</code></td>
 <td>One of the names in <code>SIMULATION_CONDITIONS</code>. Sets cohesin
 params + CTCF track.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>--replicate N</code></td>
 <td>Integer replicate index (drives the seed).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>--shard-index I</code></td>
 <td>Which shard of this replicate (0…<code>n_shards-1</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>--n-shards K</code></td>
 <td>Total shards per replicate.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>--gpu I</code></td>
 <td>CUDA device index.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>--output DIR</code></td>
 <td>The locus’ sims folder (the workflow passes
 <code>output/loci/&lt;locus&gt;/sims</code>).</td>
@@ -1054,7 +1147,14 @@ polysim’s <code>ctcf_left</code> / <code>ctcf_right</code> dicts
 rightward-moving ones. The probability is <code>ctcf_capture</code>, or,
 for <code>ctcf_capture: {min, max}</code>, each site’s rank by peak
 signal (<code>get_ctcf_signals</code>, the narrowPeak signalValue of the
-peak the site came from) mapped onto [min, max].</li>
+peak the site came from) mapped onto [min, max]. For
+<code>{by: occupancy}</code> and <code>{by: table}</code>,
+<code>get_ctcf_site_capture</code> reads each site’s value (the
+<code>ctcfOccupancy</code> table, mapped onto [min, max], or the user’s
+table by peak name), and
+<code>sim_features.stall_dicts(..., combine=&quot;independent&quot;)</code>
+combines sites of different peaks on one monomer as 1 − ∏(1 − p) (motifs
+of one peak count once).</li>
 <li><code>condition_features()</code> reads the peak files of the
 condition’s <code>sticky</code>, <code>loading</code> and
 <code>pausing</code> options (<code>condition_peak_files</code>, from
@@ -1112,35 +1212,35 @@ each a short documented function:</p>
 <col style="width: 33%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Step</th>
 <th>Function</th>
 <th>Writes</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td>1</td>
 <td><code>_pooled_contact_map</code></td>
 <td><code>&lt;prefix&gt;_contact_map.npy</code> (reused in resume
 mode)</td>
 </tr>
-<tr class="even">
+<tr>
 <td>2</td>
 <td><code>_pooled_ps_and_insulation</code></td>
 <td>P(s) curve and metrics, insulation</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>3</td>
 <td><code>_pooled_ctcf_and_apa</code></td>
 <td>CTCF overlay figure and relative BED, APA, loop strengths</td>
 </tr>
-<tr class="even">
+<tr>
 <td>4</td>
 <td><code>_pooled_hic_comparison</code></td>
 <td><code>&lt;prefix&gt;_metrics.json</code>, sim-vs-Hi-C figure</td>
 </tr>
-<tr class="odd">
+<tr>
 <td>5</td>
 <td><code>_pooled_msd_and_calibration</code></td>
 <td>MSD, polymer dynamics,
@@ -1156,13 +1256,12 @@ see <code>docs/ps.qmd</code>) and <code>_able_on_conserved_pairs</code>
 (loop strength at the MSD probe pairs). <code>&lt;prefix&gt;</code> is
 <code>&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_&lt;N&gt;blk_pooled</code>.</p>
 <p><strong>How to run directly</strong> (e.g. for one condition):</p>
-<div class="sourceCode" id="cb8"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/run_analysis_all.py <span class="dt">\</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--results-dir</span> output/loci/chr1_fig1/sims <span class="dt">\</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output-dir</span> output/loci/chr1_fig1/analysis/cond1_baseline <span class="dt">\</span></span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="dt">\</span></span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--hic-dir</span> output/mcool <span class="dt">\</span></span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--n-jobs</span> 4 <span class="at">--skip-existing</span> <span class="at">--no-msd</span></span></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="va">CHROMSIM_CONFIG</span><span class="op">=</span>config/ChromSimConfig.yaml <span class="ex">python</span> scripts/run_analysis_all.py <span class="dt">\</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--results-dir</span> output/loci/chr1_fig1/sims <span class="dt">\</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--output-dir</span> output/loci/chr1_fig1/analysis/cond1_baseline <span class="dt">\</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">--condition</span> cond1_baseline <span class="dt">\</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">--hic-dir</span> output/mcool <span class="dt">\</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">--n-jobs</span> 4 <span class="at">--skip-existing</span> <span class="at">--no-msd</span></span></code></pre></div>
 <p><strong>Selected flags:</strong></p>
 <table>
 <colgroup>
@@ -1170,48 +1269,48 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="
 <col style="width: 70%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Flag</th>
 <th>What it does</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>--results-dir DIR</code></td>
 <td>Where to find merged simulation directories.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>--output-dir DIR</code></td>
 <td>Where to write outputs.</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>--condition NAME</code></td>
 <td>Analyse one condition only.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>--n-jobs N</code></td>
 <td>Parallel workers for contact detection (default
 <code>analysis.n_jobs</code>).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>--skip-existing</code></td>
 <td>Skip dirs that already have <code>sim_contact_map.npy</code>.</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>--no-msd</code></td>
 <td>Skip MSD computation (the Snakemake rule adds this unless
 <code>analysis.msd: True</code>).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>--hic-dir DIR</code></td>
 <td>Where to find <code>&lt;compare_hic&gt;.cool</code> for each
 condition (falls back to <code>output/mcool/</code>).</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>--mcool TYPE=PATH</code></td>
 <td>Override the <code>.cool</code> for one Hi-C type (repeatable).</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>--ctcf-bed TYPE=PATH</code></td>
 <td>Override the oriented CTCF BED for one ctcf_type (repeatable).</td>
 </tr>
@@ -1225,41 +1324,41 @@ condition (falls back to <code>output/mcool/</code>).</td>
 <col style="width: 66%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>File</th>
 <th>What it is</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>sim_contact_map.npy</code></td>
 <td>2D contact matrix from 3D conformations</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>sim_ps_curve.npz</code></td>
 <td>Contact probability vs genomic distance</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>sim_insulation.npy</code></td>
 <td>Insulation score along the locus</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>apa_convergent.png</code></td>
 <td>Aggregate Peak Analysis at convergent CTCF pairs</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>sim_vs_exp_map.png</code></td>
 <td>Side-by-side sim vs experimental Hi-C heatmap</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>comparison_metrics.json</code></td>
 <td>Pearson + stratum-adjusted correlations with experimental Hi-C</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>msd_&lt;label&gt;.npz</code></td>
 <td>Two-point MSD curves (if <code>--no-msd</code> not set)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>calibration.json</code></td>
 <td>Physical-unit mapping: nm/monomer, sec/frame</td>
 </tr>
@@ -1284,45 +1383,45 @@ the reference’s.</p>
 <col style="width: 52%" />
 </colgroup>
 <thead>
-<tr class="header">
+<tr>
 <th>Module</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody>
-<tr class="odd">
+<tr>
 <td><code>contact_maps.py</code></td>
 <td>Contact matrix from conformations via
 <code>scipy.spatial.cKDTree</code>; also P(s), insulation, map-vs-map
 correlation</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>ps_curve.py</code></td>
 <td>Power-law fitting of P(s)</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>absolute_quant.py</code></td>
 <td>Aggregate Peak Analysis (APA) at convergent CTCF pairs</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>ctcf_plotting.py</code></td>
 <td>Contact-map heatmaps with CTCF arrow strips</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>experimental_compare.py</code></td>
 <td>Sim vs experimental Hi-C comparison (<code>.cool</code> and
 <code>.npy</code>)</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>msd_two_point.py</code></td>
 <td>Mean-squared displacement of monomer pairs; sub-diffusive exponent
 fit</td>
 </tr>
-<tr class="odd">
+<tr>
 <td><code>polymer_dynamics.py</code></td>
 <td>Radius of gyration, loop fractions, dwell-time distributions</td>
 </tr>
-<tr class="even">
+<tr>
 <td><code>calibration.py</code></td>
 <td>Map simulation units → physical units (nm/monomer, sec/frame)</td>
 </tr>
@@ -1332,10 +1431,9 @@ fit</td>
 <code>scripts/summarize_analysis.py</code></h3>
 <p>Collects scalar metrics from all conditions into one CSV/XLSX
 table:</p>
-<div class="sourceCode" id="cb9"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/summarize_analysis.py <span class="dt">\</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--analysis-dir</span> output/loci/chr1_fig1/analysis <span class="dt">\</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--reference-condition</span> cond1_baseline</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">python</span> scripts/summarize_analysis.py <span class="dt">\</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    <span class="at">--analysis-dir</span> output/loci/chr1_fig1/analysis <span class="dt">\</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">--reference-condition</span> cond1_baseline</span></code></pre></div>
 <h3 id="scripts-moved-to-legacy">Scripts moved to
 <code>legacy/</code></h3>
 <p><code>run_analysis_all_fastdyn.py</code>,
@@ -1382,7 +1480,10 @@ giving ~28× more contact statistics at no extra physics cost.
 Merged:
 <code>output/loci/&lt;locus&gt;/sims/merged_&lt;params_name&gt;_ctcf-&lt;ctcf_type&gt;_rep&lt;N&gt;/</code>.
 The <code>_ctcf-&lt;type&gt;</code> part separates runs with the same
-cohesin params but different CTCF tracks.</li>
+cohesin params but different CTCF tracks. By default
+(<code>cleanup:</code> in the config) the shard folders are deleted
+after merging, and the merged <code>blocks_*.h5</code> after the
+analysis; the analysis results stay.</li>
 <li><strong>RNG seed.</strong>
 <code>seed_base + replicate * 10000 + shard * 1000</code>
 (<code>seed_base</code> = 42 in the config). Always derived from indices
@@ -1392,9 +1493,15 @@ full parameter dict + CTCF type + replicate. If a result looks wrong,
 check <code>params.json</code> first.</li>
 <li><strong>Completion markers.</strong> Snakemake tracks simulation,
 merge, and analysis steps through <code>.done</code> files in
-<code>output/done/</code>. Delete the relevant <code>.done</code> file
-if you need to re-run a step (for example after changing a parameter
-that only the scripts read).</li>
+<code>output/loci/&lt;locus&gt;/done/</code>
+(<code>preparePolysim.done</code> is in <code>output/done/</code>).
+Delete the relevant <code>.done</code> file if you need to re-run a step
+(for example after changing a parameter that only the scripts read).
+With the default <code>cleanup:</code> settings the shard folders and
+merged trajectories are deleted once used, so re-running
+<code>mergeShards</code> or <code>analyzeCondition</code> means
+re-running the simulations too; set <code>cleanup.blocks: false</code>
+before a run you may want to re-analyse.</li>
 </ul>
 <h2 id="common-pitfalls">Common pitfalls</h2>
 <p><strong>CUDA architecture error.</strong>
@@ -1413,9 +1520,9 @@ the driver supports; <code>cuda-version</code> in
 driver of 550 or newer).</p>
 <p><strong>No Hi-C comparison in the analysis output.</strong> The
 analysis catches errors in each step, logs a warning and continues, so
-check <code>output/logs/analyzeCondition_*.err</code> for
+check <code>output/logs/&lt;locus&gt;/analyzeCondition_*.err</code> for
 <code>WARNING</code>. A missing normalization column
-(<code>no 'KR' normalization</code>) is fixed with
+(<code>no &#39;KR&#39; normalization</code>) is fixed with
 <code>analysis.hic_balance</code> (<code>auto</code>, or a column it
 lists).</p>
 <p><strong>Snakemake lock error after a failed run.</strong> Run
@@ -1424,7 +1531,7 @@ lists).</p>
 <code>analysis</code>.</strong> Every script in <code>scripts/</code>
 inserts the repo root onto <code>sys.path</code>. Run from the repo
 root, or set <code>PYTHONPATH=/path/to/ChromSimPipe</code>.</p>
-<p><strong><code>Samplesheet ... has no 'CTCF_Peaks' column</code>.</strong>
+<p><strong><code>Samplesheet ... has no &#39;CTCF_Peaks&#39; column</code>.</strong>
 <code>ChromSimSamplesheet.txt</code> must be tab-separated and include
 the headers <code>CTCF_Peaks</code> and <code>Hi-C</code>, plus every
 column named in <code>fileNamesFrom</code>.</p>
@@ -1437,7 +1544,7 @@ named there).</p>
 <p><strong>Analysis fails with “No results found”.</strong> Check that
 <code>output/loci/&lt;locus&gt;/sims/merged_*_rep*/</code> directories
 exist. If shards completed but the merged directory is missing, delete
-<code>output/done/mergeShards_&lt;condition&gt;_rep&lt;N&gt;.done</code>
+<code>output/loci/&lt;locus&gt;/done/mergeShards_&lt;condition&gt;_rep&lt;N&gt;.done</code>
 and resubmit.</p>
 <p><strong>No emails.</strong> Check <code>$CHROMSIM_EMAIL</code> is set
 in the shell you submit from (sbatch passes it on), and that
@@ -1455,9 +1562,20 @@ module and an <code>anaconda</code> module together. Load only the conda
 distribution in that site’s <code>env.sh</code>; it brings its own
 Python.</p>
 <p><strong>Where the logs are.</strong> Each job’s stdout / stderr:
-<code>output/logs/&lt;rule&gt;_&lt;wildcards&gt;.out|.err</code>.
-SLURM’s own job logs: <code>output/logs_slurm/</code>. The launcher
-(main Snakemake process): <code>ChromSimPipe-&lt;jobid&gt;.out</code> in
-the repo root.</p>
+<code>output/logs/&lt;locus&gt;/&lt;rule&gt;_&lt;wildcards&gt;.out|.err</code>
+(steps shared by all loci, such as <code>convertHic</code>, log to
+<code>output/logs/</code>). SLURM’s own job logs:
+<code>output/logs_slurm/</code>. The launcher (main Snakemake process):
+<code>ChromSimPipe-&lt;jobid&gt;.out</code> in the repo root.</p>
+<h2 id="rebuilding-this-guide">Rebuilding this guide</h2>
+<p><code>CODE_GUIDE.html</code> and <code>CODE_GUIDE.pdf</code> are
+built from this file. After editing it, rebuild both from the repo root.
+The HTML comes from pandoc, with the subway map built into the file and
+the extra styles in <code>docs/code-guide-style.html</code> (which keep
+long table entries on the page) added to pandoc’s own:</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pandoc</span> CODE_GUIDE.md <span class="at">-s</span> <span class="at">--toc</span> <span class="at">--toc-depth</span><span class="op">=</span>2 <span class="at">--embed-resources</span> <span class="at">--resource-path</span><span class="op">=</span>. <span class="at">-H</span> docs/code-guide-style.html <span class="at">-o</span> CODE_GUIDE.html</span></code></pre></div>
+<p>The PDF is that HTML printed by headless Chrome, without a header or
+footer (the path below is Chrome’s location on a Mac):</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="st">&quot;/Applications/Google Chrome.app/Contents/MacOS/Google Chrome&quot;</span> <span class="at">--headless</span><span class="op">=</span>new <span class="at">--no-pdf-header-footer</span> <span class="at">--print-to-pdf</span><span class="op">=</span>CODE_GUIDE.pdf <span class="st">&quot;file://</span><span class="va">$PWD</span><span class="st">/CODE_GUIDE.html&quot;</span></span></code></pre></div>
 </body>
 </html>
