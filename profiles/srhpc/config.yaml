@@ -1,0 +1,56 @@
+## San Raffaele HPC (SLURM; login node srhpclogin01). Values from `sinfo -s`,
+## `sacctmgr show assoc`, `sacctmgr show qos` and `scontrol show partition`.
+## Select it with `export CHROMSIM_PROFILE=profiles/srhpc` in ~/.bashrc.
+executor: slurm
+jobs: 100
+latency-wait: 500
+software-deployment-method: conda
+
+## The account's QOS (max_gpus_account) allows 2 GPUs at once: hold the rest
+## back here instead of leaving them pending in the queue.
+resources:
+  - gpu=2
+
+default-resources:
+  slurm_account: ric.gabriele     # QOS max_gpus_account: at most 2 GPUs for the account
+  slurm_partition: workq          # default CPU partition: 20 nodes, ~72 CPUs and ~384 GB each, no time limit
+  runtime: 4320                   # minutes
+  cpus_per_task: 1
+  mem_mb: 16000                   # set it: SLURM grants only 5 GB when no memory is asked
+  nodes: 1
+## SLURM job logs go to <outputDir>/logs_slurm (--slurm-logdir in ChromSimPipe.sh)
+
+## Per-rule resources (rules carry no resources of their own)
+set-resources:
+  convertHic:
+    runtime: 480                  # 1.6 h for a 3.7 GB .hic on Longleaf
+    cpus_per_task: 4
+    mem_mb: 32000
+  orientCTCF:
+    runtime: 60
+    cpus_per_task: 2
+    mem_mb: 16000
+  validateCTCF:
+    runtime: 15
+    mem_mb: 4000
+  preparePolysim:                 # builds polysim's Cython LEF model once
+    runtime: 30
+    mem_mb: 4000
+  simulateShard:
+    runtime: 720
+    slurm_partition: cuda         # one node (dgx01), 7 V100 32 GB, 3-day limit
+    gpu: 1                        # becomes --gpus=1 (checked: srun -p cuda --gpus=1 works)
+                                  # 720 min was timed on Longleaf; check V100 times with sacct
+    cpus_per_task: 4
+    mem_mb: 60000
+  mergeShards:
+    runtime: 120
+    cpus_per_task: 4
+    mem_mb: 64000
+  analyzeCondition:
+    runtime: 1440                 # 24 h; a full run (150,000 frames) took 4.5 h to > 6 h
+    cpus_per_task: 4              # keep >= analysis.n_jobs in the config
+    mem_mb: 64000
+  benchmarkSummary:
+    runtime: 15
+    mem_mb: 2000

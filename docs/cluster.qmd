@@ -14,6 +14,7 @@ The config, test config and samplesheet are the same on every cluster.
 |--------|-----|
 | `profiles/longleaf/` | UNC Longleaf (SLURM) |
 | `profiles/pioneer/` | Case Western Pioneer (SLURM) |
+| `profiles/srhpc/` | San Raffaele HPC (SLURM) |
 | `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
 | `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
 
@@ -94,6 +95,22 @@ Scratch is purged automatically, so copy `<outputDir>/analysis/` and
 | CPU partition | `batch` | `default-resources: slurm_partition` |
 | GPU partition | `gpu` (39 nodes, 114 GPUs), requested as `gpu: 1` (`--gpus=1`) | `set-resources: simulateShard` |
 | Software | your own Miniforge (Pioneer's `Miniconda3` modules ship conda 23.x) | `env.sh` |
+
+## San Raffaele HPC
+
+| Setting | Value | Where |
+|---------|-------|-------|
+| Account | `ric.gabriele` (QOS `max_gpus_account`: at most 2 GPUs at once for the account) | `default-resources: slurm_account`; `resources: gpu=2` |
+| CPU partition | `workq` (default; batch jobs only, so `srun` there is refused) | `default-resources: slurm_partition` |
+| GPU partition | `cuda`: one node, `dgx01`, with 7 V100 32 GB; 3-day limit; requested as `gpu: 1` (`--gpus=1`) | `set-resources: simulateShard` |
+| Memory | always requested: SLURM grants 5 GB when a job asks for none | `mem_mb` |
+| Software | your own Miniforge (no python or conda modules; the system `python3` is 3.9) | `env.sh` |
+| Output | `/beegfs` (1.3 PB); `/home` is shared and nearly full | `CHROMSIM_OUTPUT_ROOT` |
+
+With 2 GPUs, simulation shards run two at a time: a run with N shards takes
+about N / 2 rounds of `simulateShard`. The `simulateShard` time (720 min) was measured on
+Longleaf; check the V100 times of a first run with `sacct` or the run's
+`*_benchmarking.tsv` and adjust it.
 
 ## SLURM account and partition (Longleaf)
 

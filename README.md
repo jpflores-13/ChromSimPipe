@@ -316,6 +316,7 @@ the SLURM jobs inherit these variables.
 |--------|-----|
 | `profiles/longleaf/` | UNC Longleaf (SLURM) |
 | `profiles/pioneer/` | Case Western Pioneer (SLURM) |
+| `profiles/srhpc/` | San Raffaele HPC (SLURM) |
 | `profiles/slurm-template/` | Any other SLURM cluster: copy and fill in the `<...>` values |
 | `profiles/local/` | One machine with no scheduler (a workstation, or an interactive GPU node) |
 
